@@ -16,7 +16,7 @@
 	"Installed": false,
 	"Modules": [
 		{
-			"Name": "LiteRTLMCore",
+			"Name": "LiteRTLMUnreal",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault"
 		}

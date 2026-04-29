@@ -2,9 +2,9 @@
 #include "Modules/ModuleManager.h"
 
 /**
- * Primary module implementation for LiteRTLMCore.
+ * Primary module implementation for LiteRTLMUnreal.
  */
-class FLiteRTLMCoreModule : public IModuleInterface
+class FLiteRTLMUnrealModule : public IModuleInterface
 {
 public:
     virtual void StartupModule() override
@@ -18,4 +18,4 @@ public:
     }
 };
 
-IMPLEMENT_MODULE(FLiteRTLMCoreModule, LiteRTLMCore)
+IMPLEMENT_MODULE(FLiteRTLMUnrealModule, LiteRTLMUnreal)

@@ -1,9 +1,9 @@
 using UnrealBuildTool;
 using System.IO;
 
-public class LiteRTLMCore : ModuleRules
+public class LiteRTLMUnreal : ModuleRules
 {
-	public LiteRTLMCore(ReadOnlyTargetRules Target) : base(Target)
+	public LiteRTLMUnreal(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 

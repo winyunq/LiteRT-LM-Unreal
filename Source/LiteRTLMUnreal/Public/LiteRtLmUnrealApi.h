@@ -9,7 +9,7 @@
  * High-level configuration for LiteRT-LM engine.
  */
 USTRUCT(BlueprintType)
-struct LITERTLMCORE_API FLiteRtLmConfig
+struct LITERTLMUNREAL_API FLiteRtLmConfig
 {
     GENERATED_BODY()
 
@@ -51,7 +51,7 @@ enum class ELiteRtLmConstraintType : uint8
  * High-level sampling parameters for LiteRT-LM.
  */
 USTRUCT(BlueprintType)
-struct LITERTLMCORE_API FLiteRtLmSamplingParams
+struct LITERTLMUNREAL_API FLiteRtLmSamplingParams
 {
     GENERATED_BODY()
 
@@ -78,7 +78,7 @@ struct LITERTLMCORE_API FLiteRtLmSamplingParams
  * Result structure for inference completion.
  */
 USTRUCT(BlueprintType)
-struct LITERTLMCORE_API FLiteRtLmResult
+struct LITERTLMUNREAL_API FLiteRtLmResult
 {
     GENERATED_BODY()
 
@@ -111,7 +111,7 @@ DECLARE_DELEGATE_OneParam(FLiteRtLmDoneCallback, const FLiteRtLmResult& /*Result
 /**
  * The Unreal-facing API for LiteRT-LM.
  */
-class LITERTLMCORE_API FLiteRtLmUnrealApi
+class LITERTLMUNREAL_API FLiteRtLmUnrealApi
 {
 public:
     // Lifecycle

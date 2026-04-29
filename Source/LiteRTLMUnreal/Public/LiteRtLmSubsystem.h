@@ -10,7 +10,7 @@
  * Global Subsystem to manage LiteRT-LM resources.
  */
 UCLASS()
-class LITERTLMCORE_API ULiteRtLmSubsystem : public UEngineSubsystem
+class LITERTLMUNREAL_API ULiteRtLmSubsystem : public UEngineSubsystem
 {
     GENERATED_BODY()
 
