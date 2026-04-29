@@ -1,0 +1,8 @@
+﻿Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+.vscode/
+.vs/
+*.sln
+*.suo
