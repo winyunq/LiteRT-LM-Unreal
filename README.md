@@ -19,7 +19,7 @@ The **LiteRT-LM-Unreal** plugin is built on three pillars:
 ### 1. Configuration & Lifecycle
 
 #### LiteRtLm_Config
-`cpp
+```cpp
 struct LiteRtLm_Config {
     const char* model_path;      // Path to the .bin/model file
     const char* backend;         // "cpu", "gpu" (vulkan/webgpu)
@@ -29,7 +29,7 @@ struct LiteRtLm_Config {
     bool optimize_shader;        // Enable shader optimization (Windows recommended)
     bool enable_streaming;       // Enable streaming chunk callbacks
 };
-`
+```
 
 | Function | Description |
 | :--- | :--- |
@@ -44,7 +44,7 @@ struct LiteRtLm_Config {
 | Function | Scenario & Strategy |
 | :--- | :--- |
 | **LiteRtLm_GenerateOnce** | **One-Shot Task**. Stateless inference; cache is destroyed immediately. |
-| **LiteRtLm_ChatWithPrompt** | **Agent Startup**. Creates a persistent session for a given oid* ctx. |
+| **LiteRtLm_ChatWithPrompt** | **Agent Startup**. Creates a persistent session for a given void* ctx. |
 | **LiteRtLm_ChatWithContext** | **Conversational Flow**. Triggers Cache-Hit via ctx for incremental prefill. |
 
 ---
@@ -53,7 +53,7 @@ struct LiteRtLm_Config {
 
 #### Example: Multi-turn Conversation (Cache-Hit)
 
-`cpp
+```cpp
 // 1. Setup
 FLiteRtLmConfig Config;
 Config.ModelPath = TEXT("D:/Models/gemma-2b-it.bin");
@@ -67,7 +67,7 @@ FLiteRtLmUnrealApi::ChatWithPrompt(this, "You are a guide.", "Hello!", OnChunk, 
 // Using the same 'this' pointer triggers a cache-hit. 
 // Only the new message is processed, resulting in near-instant response.
 FLiteRtLmUnrealApi::ChatWithContext(this, HistoryJson, OnChunk, OnDone);
-`
+```
 
 ---
 
