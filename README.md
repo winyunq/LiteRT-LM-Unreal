@@ -1,6 +1,6 @@
 ﻿# LiteRT-LM Unreal (v1.0)
 
-High-performance, local LLM inference integration for Unreal Engine 5, powered by **Google's LiteRT (formerly MediaPipe LLM Inference)**. 
+High-performance, local LLM inference integration for Unreal Engine 5, powered by **[Google's LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM)**. 
 
 This plugin provides a clean, zero-dependency C++ API to run Google's LiteRT-LM models with ultra-low latency and strategic KV-cache management, optimized for real-time applications and game agents.
 
@@ -85,3 +85,4 @@ FLiteRtLmUnrealApi::ChatWithContext(this, HistoryJson, OnChunk, OnDone);
 
 ---
 *Open Sourced under MIT License. Developed by Winyunq Core Engineering.*
+
