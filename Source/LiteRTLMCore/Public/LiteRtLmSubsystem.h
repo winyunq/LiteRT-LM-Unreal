@@ -22,7 +22,7 @@ public:
     void UnloadModel();
 
     // Session Management
-    void* GetOrCreateSession(void* Ctx);
+    void* GetOrCreateSession(void* Ctx, const FString& JsonPreface = TEXT(""));
     void ReleaseSession(void* Ctx);
 
     // Getters

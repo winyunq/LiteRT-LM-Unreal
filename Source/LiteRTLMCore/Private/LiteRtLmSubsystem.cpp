@@ -52,7 +52,7 @@ void ULiteRtLmSubsystem::UnloadModel()
     EngineHandle = nullptr;
 }
 
-void* ULiteRtLmSubsystem::GetOrCreateSession(void* Ctx)
+void* ULiteRtLmSubsystem::GetOrCreateSession(void* Ctx, const FString& JsonPreface)
 {
     if (!IsModelLoaded()) return nullptr;
 
@@ -61,14 +61,27 @@ void* ULiteRtLmSubsystem::GetOrCreateSession(void* Ctx)
         return *Found;
     }
 
-    if (FLiteRtLmWrapperLoader::CreateConversation)
+    void* NewSession = nullptr;
+
+    if (!JsonPreface.IsEmpty() && FLiteRtLmWrapperLoader::CreateConversationWithConfig)
     {
-        void* NewSession = FLiteRtLmWrapperLoader::CreateConversation(EngineHandle);
-        if (NewSession)
-        {
-            SessionMap.Add(Ctx, NewSession);
-            return NewSession;
-        }
+        // 1: Enable constrained decoding if JsonPreface is provided (assuming it might contain schema)
+        // In a more complex version, this could be a parameter.
+        NewSession = FLiteRtLmWrapperLoader::CreateConversationWithConfig(
+            EngineHandle, 
+            TCHAR_TO_UTF8(*JsonPreface),
+            1 
+        );
+    }
+    else if (FLiteRtLmWrapperLoader::CreateConversation)
+    {
+        NewSession = FLiteRtLmWrapperLoader::CreateConversation(EngineHandle);
+    }
+
+    if (NewSession)
+    {
+        SessionMap.Add(Ctx, NewSession);
+        return NewSession;
     }
 
     return nullptr;
