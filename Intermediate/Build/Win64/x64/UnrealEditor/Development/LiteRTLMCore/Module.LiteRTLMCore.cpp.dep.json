@@ -1,0 +1,15 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "d:\\ue5project\\fabumgmcp\\plugins\\litert-lm-unreal\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\litertlmcore\\module.litertlmcore.cpp",
+        "ProvidedModule": "",
+        "PCH": "d:\\ue5project\\fabumgmcp\\intermediate\\build\\win64\\x64\\fabumgmcpeditor\\development\\unrealed\\sharedpch.unrealed.project.valapi.valexpapi.cpp20.h.pch",
+        "Includes": [
+            "d:\\ue5project\\fabumgmcp\\plugins\\litert-lm-unreal\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\litertlmcore\\definitions.litertlmcore.h",
+            "d:\\ue5project\\fabumgmcp\\plugins\\litert-lm-unreal\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\litertlmcore\\permoduleinline.gen.cpp",
+            "d:\\ue_5.6\\engine\\source\\runtime\\core\\public\\hal\\permoduleinline.inl"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

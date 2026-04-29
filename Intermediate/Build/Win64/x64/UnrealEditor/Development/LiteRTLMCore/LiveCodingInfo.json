@@ -1,0 +1,8 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.LiteRTLMCore.cpp.obj": [
+			"PerModuleInline.gen.cpp.obj"
+		]
+	}
+}
