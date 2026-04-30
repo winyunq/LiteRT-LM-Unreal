@@ -23,16 +23,18 @@ bool FLiteRtLmWrapperLoader::LoadDll()
 {
     if (DllHandle) return true;
 
-    FString BaseDir = IPluginManager::Get().FindPlugin(TEXT("LiteRT-LM-Unreal"))->GetBaseDir();
-    FString DllPath = FPaths::Combine(*BaseDir, TEXT("ThirdParty/LiteRtLm/Binaries/Win64/litert_lm_wrapper.dll"));
+    FString DllPath = FPaths::Combine(FPlatformProcess::BaseDir(), TEXT("litert_lm_wrapper.dll"));
 
     if (!FPaths::FileExists(DllPath))
     {
+        // Fallback to plugin directory if not in binaries (e.g. during development/unbuilt)
+        // But since we use RuntimeDependencies, it should be in BaseDir.
         UE_LOG(LogTemp, Error, TEXT("LiteRT-LM DLL not found at: %s"), *DllPath);
         return false;
     }
 
     DllHandle = FPlatformProcess::GetDllHandle(*DllPath);
+
     if (!DllHandle)
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to load LiteRT-LM DLL: %s"), *DllPath);
