@@ -10,7 +10,7 @@ public class LiteRTLMUnreal : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Projects" });
 
 		// ThirdParty Path
-		string ThirdPartyPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "../../ThirdParty/LiteRtLm"));
+		string ThirdPartyPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "ThirdParty/LiteRtLm"));
 		PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "Include"));
 
 		if (Target.Platform == UnrealTargetPlatform.Win64)
