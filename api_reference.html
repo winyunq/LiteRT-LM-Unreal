@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Architecture | LiteRT-LM & UE5 Integration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#3B82F6',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#3B82F6',
+                lineColor: '#60A5FA',
+                secondaryColor: '#161617',
+                tertiaryColor: '#161617'
+            }
+        });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        
+        :root {
+            --bg-deep: #0A0A0B;
+            --bg-card: #121214;
+            --accent-blue: #3B82F6;
+            --accent-purple: #8B5CF6;
+            --text-main: #F1F5F9;
+            --text-dim: #64748B;
+            --border-color: #1E1E22;
+        }
+
+        body { 
+            background-color: var(--bg-deep); 
+            color: var(--text-main); 
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        .sidebar { background-color: var(--bg-card); border-right: 1px solid var(--border-color); }
+        .nav-item { transition: all 0.2s; border-left: 3px solid transparent; }
+        .nav-item:hover { background: #1A1A1D; color: white; }
+        .nav-item.active { background: #1E293B; border-left-color: var(--accent-blue); color: white; }
+
+        .content-card { background-color: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
+        
+        .feature-badge {
+            font-size: 0.6rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 99px;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+
+        .winyunq-title {
+            background: linear-gradient(to right, #60A5FA, #A78BFA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .thread-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        .tag-game { background: #10B981; color: white; }
+        .tag-worker { background: #3B82F6; color: white; }
+        .tag-gpu { background: #F59E0B; color: white; }
+
+        pre { border-radius: 12px !important; border: 1px solid #222 !important; }
+        .mermaid { background: #000; padding: 2rem; border-radius: 20px; border: 1px solid #1A1A1D; }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-80 fixed h-full hidden lg:flex flex-col p-8 z-50">
+        <div class="mb-12">
+            <div class="flex items-center gap-2 text-white font-black text-2xl italic tracking-tighter">
+                <span class="text-blue-500">LITERT</span>-LM <span class="text-xs align-top font-normal text-gray-500">UE5</span>
+            </div>
+            <div class="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">Strategic Architecture Manual</div>
+        </div>
+        
+        <nav class="space-y-8 flex-1 overflow-y-auto">
+            <div>
+                <p class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-4">Core Concepts</p>
+                <div class="space-y-1">
+                    <a href="#layers" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
+                        <i data-lucide="layers" class="w-4 h-4"></i> 三层渐进架构
+                    </a>
+                    <a href="#incremental" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
+                        <i data-lucide="zap" class="w-4 h-4"></i> 增量同步模型
+                    </a>
+                    <a href="#threads" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
+                        <i data-lucide="cpu" class="w-4 h-4"></i> 线程协同序列
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-4">Implementation</p>
+                <div class="space-y-1">
+                    <a href="#normalization" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> 角色归一化逻辑
+                    </a>
+                    <a href="#toolcall" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
+                        <i data-lucide="box" class="w-4 h-4"></i> Tool Call 闭环
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="mt-8 pt-8 border-t border-gray-900">
+            <div class="text-[10px] text-gray-500 font-bold uppercase mb-2 italic">战略由人，战术由 AI</div>
+            <p class="text-[9px] text-gray-700 leading-loose">
+                Winyunq Core Engineering v2.5<br/>
+                Proprietary Architecture Document
+            </p>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 lg:ml-80 p-8 md:p-16 lg:p-24 overflow-x-hidden">
+        <div class="max-w-5xl mx-auto">
+            
+            <header class="mb-32">
+                <div class="inline-block px-4 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest mb-6">
+                    System Full View
+                </div>
+                <h1 class="text-7xl font-black text-white mb-10 tracking-tighter leading-none">
+                    系统全貌：从 <span class="winyunq-title italic">UE5</span> 到 <span class="text-blue-500">Core</span>
+                </h1>
+                <p class="text-2xl text-gray-500 leading-relaxed max-w-4xl font-light">
+                    LiteRT-LM 的价值不在于单一的推理，而在于这套针对<strong>虚幻引擎长对话场景</strong>深度优化的增量架构。
+                </p>
+            </header>
+
+            <!-- Section: Layers -->
+            <section id="layers" class="mb-40">
+                <div class="flex items-center gap-4 mb-12">
+                    <div class="h-10 w-2 bg-blue-600 rounded-full"></div>
+                    <h2 class="text-4xl font-black text-white tracking-tight">三层渐进式架构 (Progressive Architecture)</h2>
+                </div>
+                
+                <div class="content-card p-12 rounded-[40px] mb-12">
+                    <div class="mermaid mb-12">
+                        graph TD
+                            subgraph UE5[虚幻业务层 - UmgMcp Provider]
+                                Agent[Agent Object]
+                                Tools[Tool Definitions]
+                            end
+                            subgraph UnrealApi[集成抽象层 - LiteRtLmUnrealApi]
+                                Subsystem[Global Subsystem]
+                                Sync[Incremental Sync Engine]
+                                Norm[Role Normalizer]
+                            end
+                            subgraph DLL[隔离驱动层 - litert_lm_wrapper.dll]
+                                ABI[ABI Firewall]
+                                Worker[Background Inference Thread]
+                            end
+                            subgraph Core[推理核心 - LiteRT Core]
+                                GPU[GPU Inference]
+                                KV[Persistent KV Cache]
+                            end
+
+                            Agent --> Subsystem
+                            Subsystem --> Sync
+                            Sync --> Norm
+                            Norm --> ABI
+                            ABI --> Worker
+                            Worker --> GPU
+                            GPU --- KV
+                            
+                            style DLL fill:#1E293B,stroke:#3B82F6,stroke-width:2px
+                            style Core fill:#000,stroke:#8B5CF6,stroke-width:2px
+                    </div>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div>
+                            <h4 class="font-black text-blue-400 mb-3 uppercase text-xs tracking-widest">业务集成</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">处理 FabServer 消息模型，将游戏内的 NPC 逻辑映射为 AI 请求。</p>
+                        </div>
+                        <div>
+                            <h4 class="font-black text-purple-400 mb-3 uppercase text-xs tracking-widest">集成抽象</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">实现增量消息同步。维护 Session 与 Agent 的一对一持久映射关系。</p>
+                        </div>
+                        <div>
+                            <h4 class="font-black text-emerald-400 mb-3 uppercase text-xs tracking-widest">物理隔离</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">通过 ABI 防火墙彻底解决符号冲突。后台线程驱动 WaitUntilDone 心跳。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Incremental Sync -->
+            <section id="incremental" class="mb-40">
+                <div class="flex items-center gap-4 mb-12">
+                    <div class="h-10 w-2 bg-emerald-500 rounded-full"></div>
+                    <h2 class="text-4xl font-black text-white tracking-tight">增量同步模型 (Incremental Sync)</h2>
+                </div>
+                
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <div class="mermaid">
+                            sequenceDiagram
+                                participant UE as UE5 Subsystem
+                                participant DLL as Wrapper Session
+                                
+                                Note over UE,DLL: Round 1: 初次对话
+                                UE->>DLL: Append(Msg 1-3)
+                                UE->>DLL: RunInference()
+                                Note right of DLL: 显存存入 KV Cache
+                                
+                                Note over UE,DLL: Round 2: 追问
+                                UE->>UE: 检测已同步 = 3
+                                UE->>DLL: 仅同步新消息 (Msg 4)
+                                UE->>DLL: RunInference()
+                                Note right of DLL: 命中缓存，$O(\Delta N)$ 计算
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-3xl">
+                            <h3 class="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                                <i data-lucide="check-circle" class="w-5 h-5"></i> 物理 KV Cache 持久性
+                            </h3>
+                            <p class="text-sm text-gray-500 leading-loose">
+                                在 <code>LiteRtLmUnrealApi.cpp</code> 中，系统通过 <code>SessionMsgCountMap</code> 精确跟踪每个 Agent 已同步的消息索引。切换 Agent 就像在 GPU 显存中切换指针，实现了零开销的多 Agent 交互。
+                            </p>
+                        </div>
+                        <div class="p-8 bg-blue-500/5 border border-blue-500/20 rounded-3xl text-xs text-gray-400 leading-loose italic">
+                            "这是将首字延迟 (TTFT) 从秒级降低到毫秒级的核心黑科技。"
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Normalization -->
+            <section id="normalization" class="mb-40">
+                <div class="flex items-center gap-4 mb-12">
+                    <div class="h-10 w-2 bg-purple-500 rounded-full"></div>
+                    <h2 class="text-4xl font-black text-white tracking-tight">角色归一化逻辑 (Normalization)</h2>
+                </div>
+                
+                <div class="content-card p-12 rounded-[40px]">
+                    <p class="text-gray-400 mb-10 leading-relaxed">
+                        由于底层模型（如 Gemma-2）不原生支持 <code>system</code> 或 <code>tool</code> 角色，<code>UnrealApi</code> 层执行了复杂的协议降级：
+                    </p>
+                    <div class="grid md:grid-cols-2 gap-10">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 bg-black/40 rounded-xl">
+                                <span class="text-xs font-bold text-gray-500">System Message</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4 text-purple-500"></i>
+                                <span class="text-xs font-bold text-blue-400">Merged into User</span>
+                            </div>
+                            <div class="flex items-center justify-between p-4 bg-black/40 rounded-xl">
+                                <span class="text-xs font-bold text-gray-500">Tool Result</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4 text-purple-500"></i>
+                                <span class="text-xs font-bold text-emerald-400">Structured User Msg</span>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-black/20 rounded-2xl border border-gray-800">
+                            <h5 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest">代码片段 (Normalization logic)</h5>
+                            <pre class="text-[10px] text-gray-500"><code>if (Role == "tool") {
+  NewMsg->SetStringField("role", "user");
+  NewMsg->SetStringField("content", 
+    "[Tool Result] (id: " + id + ")\n" + Content);
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Threads -->
+            <section id="threads" class="mb-40">
+                <div class="flex items-center gap-4 mb-12">
+                    <div class="h-10 w-2 bg-yellow-500 rounded-full"></div>
+                    <h2 class="text-4xl font-black text-white tracking-tight">线程协同序列 (Inference Driving)</h2>
+                </div>
+                
+                <div class="content-card p-12 rounded-[40px]">
+                    <div class="mermaid">
+                        sequenceDiagram
+                            participant GT as Game Thread (UE5)
+                            participant BT as Background Worker
+                            participant DLL as Wrapper DLL (C)
+                            participant GPU as GPU Queue
+                            
+                            GT->>BT: AsyncTask: RunInference
+                            activate BT
+                            BT->>DLL: LiteRtLm_RunInference()
+                            DLL->>GPU: Submit Task
+                            loop Driving Loop
+                                BT->>DLL: WaitUntilDone(blocking)
+                                GPU-->>DLL: Output Token
+                                DLL-->>GT: Callback (AsyncTask/GameThread)
+                                GT->>GT: Update STextBlock UI
+                            end
+                            BT->>GT: Signal Completion
+                            deactivate BT
+                    </div>
+                    <div class="mt-12 flex flex-wrap gap-4 justify-center">
+                        <span class="thread-tag tag-game">GameThread: UI & Logic</span>
+                        <span class="thread-tag tag-worker">Worker: WaitUntilDone (Engine Heartbeat)</span>
+                        <span class="thread-tag tag-gpu">GPU: Heavy Lifting</span>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="pt-24 border-t border-gray-900 text-center md:text-left flex flex-col md:flex-row justify-between items-center">
+                <div>
+                    <div class="text-lg font-black text-white italic mb-2 tracking-tighter">Winyunq <span class="text-blue-500">Core</span></div>
+                    <p class="text-xs text-gray-700 tracking-[0.2em] uppercase">Built for Unreal Engine 5.5+ Integration</p>
+                </div>
+                <div class="text-[9px] text-gray-800 font-bold uppercase tracking-widest mt-8 md:mt-0">
+                    © 2026 LiteRT-LM Internal Documentation
+                </div>
+            </footer>
+
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+    <script>
+        lucide.createIcons();
+        
+        // Scroll tracking
+        const navItems = document.querySelectorAll('.nav-item');
+        const sections = document.querySelectorAll('section');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 400) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

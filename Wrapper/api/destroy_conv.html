@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteRtLm_DestroyConversation - LiteRT-LM API Reference</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        .content-card { background: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; padding: 2.5rem; margin-bottom: 2.5rem; }
+        h1 { color: #FFFFFF; font-weight: 800; letter-spacing: -0.02em; }
+        .mermaid { background: #000; padding: 1.5rem; border-radius: 1rem; border: 1px solid #111; }
+        code { font-family: 'Fira Code', monospace; color: #60A5FA; }
+        .api-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .api-table th { text-align: left; padding: 1rem; border-bottom: 2px solid #1A1A1A; color: #3B82F6; text-transform: uppercase; }
+        .api-table td { padding: 1rem; border-bottom: 1px solid #111; vertical-align: top; }
+        pre { background: #080808; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #111; overflow-x: auto; }
+    </style>
+</head>
+<body class="p-12 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        </a>
+
+        <header class="mb-16">
+            <h1 class="text-5xl mb-4 font-black">LiteRtLm_DestroyConversation</h1>
+            <p class="text-gray-500 text-lg">销毁会话。释放该会话在 GPU 中占用的 KV Cache 槽位，并清理所有历史消息内存。</p>
+        </header>
+
+        <!-- Section 1: Eviction Diagram -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 显存资源回收流</h3>
+            <div class="content-card">
+                <div class="mermaid">
+                    graph TD
+                        Conv[Conversation Handle] -->|Destroy| Pool[VRAM KV Cache Pool]
+                        Pool -->|Free Slot| Empty[可用显存空位]
+                        Conv -->|Clear| History[RAM 历史消息缓冲区]
+                </div>
+                <p class="text-xs text-gray-600 mt-6 italic">
+                    调用此函数是维持长时间运行稳定性的关键。对于不再活跃的对话（如已关闭的 UI 窗口或销毁的 NPC Actor），必须显式调用以防显存碎片化或耗尽。
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: Function Definition -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数定义</h3>
+            <div class="content-card">
+                <pre><code class="language-c">void LiteRtLm_DestroyConversation(void* conv_ptr);</code></pre>
+                <table class="api-table mt-8">
+                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><code>conv_ptr</code></td>
+                            <td>要销毁的会话句柄。调用后，该指针及相关的 KV Cache 将被立即置为不可用。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 3: Usage Example -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 标准清理模式</h3>
+            <div class="content-card">
+                <pre><code>// 结束对话并回收显存
+if (ActiveConversation) {
+    LiteRtLm_DestroyConversation(ActiveConversation);
+    ActiveConversation = nullptr;
+}</code></pre>
+            </div>
+        </section>
+
+        <footer class="pt-12 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between">
+            <div>LiteRT-LM Engineering Standard</div>
+            <div>© 2026 Winyunq</div>
+        </footer>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

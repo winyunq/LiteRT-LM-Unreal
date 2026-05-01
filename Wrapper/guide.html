@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Guide - LiteRT-LM API Reference</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        .content-card { background: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; padding: 2rem; margin-bottom: 2rem; }
+        h1, h2, h3 { color: #FFFFFF; font-weight: 800; letter-spacing: -0.02em; }
+        .mermaid { background: #000; padding: 1.5rem; border-radius: 1rem; border: 1px solid #111; margin: 1.5rem 0; }
+        code { font-family: 'Fira Code', monospace; color: #60A5FA; }
+        pre { background: #080808; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #111; overflow-x: auto; font-size: 0.75rem; line-height: 1.4; }
+        .tab-tag { font-size: 0.6rem; background: #3B82F6; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 900; margin-bottom: 0.5rem; display: inline-block; }
+    </style>
+</head>
+<body class="p-12 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        <a href="index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Home
+        </a>
+
+        <header class="mb-16">
+            <h1 class="text-5xl mb-4 font-black italic tracking-tighter">实战集成导引</h1>
+            <p class="text-gray-500 text-lg leading-relaxed">
+                本页汇总了 LiteRT-LM 的核心集成模式。从底层的硬件探测流程到完整的 C++ Demo，提供了全维度的工程参考。
+            </p>
+        </header>
+
+        <!-- 1. Discovery Flow (PREVIOUS CHART KEPT) -->
+        <section class="mb-20">
+            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="search" class="text-blue-500"></i> 1. 硬件探测与初始化流</h2>
+            <div class="content-card">
+                <div class="mermaid">
+                    graph TD
+                        Start[App Startup] --> Probe[GetAvailableBackends]
+                        Probe --> Detect{检测计算设备}
+                        Detect -->|Found GPU| ConfigGPU["Config.backend = 'gpu'"]
+                        Detect -->|CPU Only| ConfigCPU["Config.backend = 'cpu'"]
+                        ConfigGPU --> Create[CreateEngine]
+                        ConfigCPU --> Create
+                </div>
+                <p class="text-xs text-gray-600 mt-6 italic">这是系统启动时的标准逻辑，用于确保模型在当前环境下以最优性能运行。</p>
+            </div>
+        </section>
+
+        <!-- 2. Interaction Model (PREVIOUS CHART KEPT) -->
+        <section class="mb-20">
+            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="refresh-cw" class="text-blue-500"></i> 2. 消息堆叠与推理时序</h2>
+            <div class="content-card">
+                <div class="mermaid">
+                    sequenceDiagram
+                        participant User as User / App
+                        participant DLL as Wrapper DLL
+                        User->>DLL: AppendUserMessage (Stacking)
+                        User->>DLL: RunInference (Trigger)
+                        loop Driving Loop
+                            User->>DLL: WaitUntilDone (Crankshaft Drive)
+                            DLL-->>User: Streaming Callback (Result)
+                        end
+                </div>
+                <p class="text-xs text-gray-600 mt-6 italic">揭示了“任务堆叠”与“异步驱动”的分离逻辑，这是高性能 DLL 调用的核心。</p>
+            </div>
+        </section>
+
+        <!-- 3. Full Demo Source -->
+        <section class="mb-20">
+            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="terminal" class="text-blue-500"></i> 3. 完整演示源码 (main.cpp)</h2>
+            <div class="content-card p-4">
+                <div class="tab-tag">WinyunqDebug/main.cpp</div>
+                <pre><code class="language-cpp">// --- 完整 C++ Demo 实现 ---
+#include &lt;iostream&gt;
+#include &lt;windows.h&gt;
+#include &lt;string&gt;
+#include &lt;atomic&gt;
+
+// [此处省略部分 typedef 以节省篇幅，实际应用中请参考 api/ 页面]
+typedef struct { const char* model_path; const char* backend; int max_num_tokens; int num_threads; int bEnableBenchmark; int bOptimizeShader; } LiteRtLm_Config;
+typedef struct { float temperature; float top_p; int top_k; int max_tokens; int constraint_type; const char* constraint_string; } LiteRtLm_SamplingParams;
+typedef struct { const char* text_chunk; const char* full_json_chunk; const char* error_msg; int bIsDone; float tokens_per_sec; } LiteRtLm_Result;
+typedef void (*LiteRtLmCallback)(LiteRtLm_Result result, void* user_ptr);
+
+typedef void* (*PN_CreateEngine)(LiteRtLm_Config config);
+typedef void (*PN_DestroyEngine)(void* engine_ptr);
+typedef void* (*PN_CreateConversation)(void* engine_ptr);
+typedef void (*PN_AppendUserMessage)(void* conv_ptr, const char* text);
+typedef void (*PN_RunInference)(void* conv_ptr, LiteRtLm_SamplingParams params, LiteRtLmCallback callback, void* user_ptr);
+typedef int (*PN_WaitUntilDone)(void* engine_ptr, int timeout_sec);
+
+std::atomic&lt;bool&gt; g_IsDone{false};
+void MyCallback(LiteRtLm_Result res, void*) {
+    if (res.text_chunk) std::cout << res.text_chunk << std::flush;
+    if (res.bIsDone) g_IsDone = true;
+}
+
+int main() {
+    HMODULE hDll = LoadLibraryA("litert_lm_wrapper.dll");
+    if (!hDll) return 1;
+
+    auto CreateEngine = (PN_CreateEngine)GetProcAddress(hDll, "LiteRtLm_CreateEngine");
+    auto CreateConversation = (PN_CreateConversation)GetProcAddress(hDll, "LiteRtLm_CreateConversation");
+    auto RunInference = (PN_RunInference)GetProcAddress(hDll, "LiteRtLm_RunInference");
+    auto WaitUntilDone = (PN_WaitUntilDone)GetProcAddress(hDll, "LiteRtLm_WaitUntilDone");
+
+    LiteRtLm_Config config = {"D:\\gemma-2b.litertlm", "gpu", 2048, 8, 0, 1};
+    void* engine = CreateEngine(config);
+    void* conv = CreateConversation(engine);
+
+    std::string input;
+    while (true) {
+        std::cout << "\nUser >> ";
+        if (!std::getline(cin, input) || input == "exit") break;
+
+        LiteRtLm_AppendUserMessage(conv, input.c_str());
+        LiteRtLm_SamplingParams params = {0.7f, 0.9f, 40, 512, 0, nullptr};
+        
+        std::cout << "AI >> ";
+        g_IsDone = false;
+        RunInference(conv, params, MyCallback, nullptr);
+
+        while (!g_IsDone) { WaitUntilDone(engine, 1); }
+    }
+    FreeLibrary(hDll);
+    return 0;
+}</code></pre>
+            </div>
+        </section>
+
+        <!-- 4. Deployment -->
+        <section class="mb-32">
+            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="box" class="text-blue-500"></i> 4. 部署与编译</h2>
+            <div class="content-card">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-xs font-black text-white uppercase mb-4 tracking-widest">编译指令 (MSVC)</h4>
+                        <code class="block bg-black p-4 border border-gray-900 rounded text-[10px]">cl.exe /EHsc main.cpp /link User32.lib</code>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-black text-white uppercase mb-4 tracking-widest">运行时依赖</h4>
+                        <ul class="text-[10px] text-gray-500 space-y-1">
+                            <li>• litert_lm_wrapper.dll</li>
+                            <li>• libLiteRt.dll</li>
+                            <li>• libLiteRtWebGpuAccelerator.dll</li>
+                            <li>• dxcompiler.dll / dxil.dll</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="pt-12 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between italic">
+            <div>LiteRT-LM Integration Guide</div>
+            <div>© 2026 Winyunq Standard</div>
+        </footer>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

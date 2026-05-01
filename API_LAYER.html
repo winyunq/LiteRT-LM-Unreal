@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>底层核心原理 | Visual Atlas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #050505; color: #888; font-family: 'Inter', system-ui, sans-serif; }
+        .canvas { background: #0A0A0A; border: 1px solid #1A1A1A; border-radius: 20px; padding: 2rem; margin: 2rem 0; }
+        .label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #444; }
+        .tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: #3B82F6; color: white; }
+        .contract-box { background: #0F0F0F; border-left: 2px solid #3B82F6; padding: 1.5rem; margin: 1rem 0; }
+        b { color: #DDD; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.9em; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+
+    <header class="mb-20">
+        <h1 class="text-5xl font-black text-white tracking-tighter italic mb-4">PHYSICAL LOGIC <span class="text-blue-500">ATLAS</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-xs pl-1">Stage: Bottom Layer (C-ABI)</p>
+    </header>
+
+    <!-- Concept 1: ABI Barrier -->
+    <section class="mb-32">
+        <div class="label mb-4">Concept 01 / ABI Firewall</div>
+        <h2 class="text-2xl font-bold text-white mb-6">物理隔离：ABI 防火墙机制</h2>
+        
+        <div class="canvas">
+            <svg viewBox="0 0 800 240" class="w-full">
+                <!-- UE5 Side -->
+                <rect x="50" y="40" width="250" height="160" rx="10" fill="#0E1729" stroke="#1E40AF" stroke-width="2"/>
+                <text x="175" y="30" text-anchor="middle" fill="#3B82F6" font-size="12" font-weight="bold">Unreal Engine 5 (User Space)</text>
+                <text x="175" y="110" text-anchor="middle" fill="#4B5563" font-size="10">UObject, Blueprints, Game Thread</text>
+                
+                <!-- The Firewall -->
+                <rect x="360" y="20" width="80" height="200" rx="4" fill="#3B82F6" fill-opacity="0.2" stroke="#3B82F6" stroke-dasharray="4,4"/>
+                <text x="400" y="125" text-anchor="middle" fill="#3B82F6" font-weight="bold" font-size="14" transform="rotate(-90 400,125)">LITERT_LM_WRAPPER.DLL</text>
+                
+                <!-- Google Side -->
+                <rect x="500" y="40" width="250" height="160" rx="10" fill="#18181B" stroke="#3F3F46" stroke-width="2"/>
+                <text x="625" y="30" text-anchor="middle" fill="#71717A" font-size="12" font-weight="bold">Google SDK (Engine Core)</text>
+                <text x="625" y="110" text-anchor="middle" fill="#3F3F46" font-size="10">Abseil, Protobuf, Minja, WebGPU</text>
+
+                <!-- Pointer Interaction -->
+                <path d="M 300 120 L 360 120" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow-blue)"/>
+                <text x="330" y="110" text-anchor="middle" fill="#3B82F6" font-size="9">void* handle</text>
+                
+                <defs>
+                    <marker id="arrow-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3B82F6" />
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-10">
+            <div class="contract-box">
+                <b>物理契约：</b> 虚幻侧仅持有 <code>void*</code>。底层所有 C++ 对象的生命周期、符号链接、内存布局均被 DLL 彻底遮蔽。
+            </div>
+            <div class="contract-box">
+                <b>后果：</b> 即使底层 Google SDK 版本升级，虚幻项目的二进制文件也无需重新编译。彻底解决了“符号冲突”这一大项目顽疾。
+            </div>
+        </div>
+    </section>
+
+    <!-- Concept 2: KV Cache Persistence -->
+    <section class="mb-32">
+        <div class="label mb-4">Concept 02 / KV Cache persistence</div>
+        <h2 class="text-2xl font-bold text-white mb-6">持久化：多会话 KV Cache 映射</h2>
+        
+        <div class="canvas">
+            <svg viewBox="0 0 800 240" class="w-full">
+                <!-- GPU VRAM -->
+                <rect x="50" y="50" width="700" height="140" rx="12" fill="#000" stroke="#222" stroke-width="1"/>
+                <text x="70" y="40" fill="#444" font-size="10">GPU VRAM ADDRESS SPACE</text>
+
+                <!-- Static Weights -->
+                <rect x="60" y="60" width="200" height="120" rx="8" fill="#111" stroke="#333"/>
+                <text x="160" y="125" text-anchor="middle" fill="#333" font-size="11">Model Weights (Frozen)</text>
+
+                <!-- Conversation Slots -->
+                <g>
+                    <rect x="280" y="60" width="140" height="120" rx="8" fill="#1E3A8A40" stroke="#3B82F6" stroke-width="2"/>
+                    <text x="350" y="115" text-anchor="middle" fill="#3B82F6" font-weight="bold" font-size="10">Conv_A (NPC 1)</text>
+                    <text x="350" y="135" text-anchor="middle" fill="#1E3A8A" font-size="9">KV Cache Slot 0</text>
+                </g>
+
+                <g>
+                    <rect x="440" y="60" width="140" height="120" rx="8" fill="#111" stroke="#222"/>
+                    <text x="510" y="125" text-anchor="middle" fill="#222" font-size="10">Conv_B (NPC 2)</text>
+                </g>
+
+                <g>
+                    <rect x="600" y="60" width="140" height="120" rx="8" fill="#111" stroke="#222"/>
+                    <text x="670" y="125" text-anchor="middle" fill="#222" font-size="10">Conv_C (NPC 3)</text>
+                </g>
+            </svg>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-10">
+            <div class="contract-box">
+                <b>物理映射：</b> 每一个 <code>Conversation</code> 句柄在显存中独占一个 <code>max_num_tokens</code> 大小的物理分片。
+            </div>
+            <div class="contract-box">
+                <b>瞬间切换：</b> 切换对话对象只需在 <code>RunInference</code> 时传入不同的句柄。<strong>切换开销 &lt; 1ms</strong>，因为记忆已经在显存中“静止”等待。
+            </div>
+        </div>
+    </section>
+
+    <!-- Concept 3: The Pump -->
+    <section class="mb-32">
+        <div class="label mb-4">Concept 03 / Inference Heartbeat</div>
+        <h2 class="text-2xl font-bold text-white mb-6">执行驱动：推理心脏泵</h2>
+        
+        <div class="canvas">
+            <svg viewBox="0 0 800 240" class="w-full">
+                <!-- UE5 Thread -->
+                <circle cx="100" cy="120" r="40" fill="#0E1729" stroke="#3B82F6" stroke-width="2"/>
+                <text x="100" y="125" text-anchor="middle" fill="#3B82F6" font-size="10" font-weight="bold">Game Thread</text>
+
+                <!-- Async Pipe -->
+                <path d="M 140 120 L 250 120" stroke="#333" stroke-width="20" stroke-linecap="round"/>
+                <text x="195" y="110" text-anchor="middle" fill="#555" font-size="9">LiteRtLm_RunInference</text>
+
+                <!-- Bottom Pump -->
+                <rect x="300" y="60" width="200" height="120" rx="100" fill="#111" stroke="#EF4444" stroke-width="2" stroke-dasharray="8,4"/>
+                <text x="400" y="125" text-anchor="middle" fill="#EF4444" font-weight="bold" font-size="12">INFERENCE PUMP</text>
+                <text x="400" y="145" text-anchor="middle" fill="#444" font-size="9">LiteRtLm_WaitUntilDone</text>
+
+                <!-- Callback loop -->
+                <path d="M 400 60 Q 400 20 100 80" fill="none" stroke="#10B981" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrow-green)"/>
+                <text x="250" y="30" text-anchor="middle" fill="#10B981" font-size="10">OnChunk (Callback)</text>
+
+                <defs>
+                    <marker id="arrow-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10B981" />
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="contract-box">
+            <b>核心动力契约：</b> <code>RunInference</code> 仅仅是向 GPU 提交了计算工单。<strong>必须</strong>在后台线程中通过 <code>WaitUntilDone</code> 不断“泵送”引擎，计算结果才会通过回调吐回给 <code>Game Thread</code>。
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / v1.0</p>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

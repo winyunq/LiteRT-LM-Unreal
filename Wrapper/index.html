@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteRT-LM DLL Architecture Specification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        window.mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .toc-item { transition: all 0.2s; border-left: 2px solid transparent; cursor: pointer; }
+        .toc-item:hover { color: #3B82F6; border-left-color: #3B82F6; background: #0F0F0F; }
+        .content-card { background: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; padding: 2rem; margin-bottom: 2rem; }
+        h1, h2, h3 { color: #FFFFFF; font-weight: 800; letter-spacing: -0.02em; }
+        .mermaid { background: #000; padding: 1.5rem; border-radius: 1rem; border: 1px solid #111; margin: 1rem 0; }
+        code { font-family: 'Fira Code', monospace; background: #1A1A1D; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.7em; color: #60A5FA; }
+        .giant-table { width: 100%; border-collapse: collapse; font-size: 0.65rem; color: #9CA3AF; }
+        .giant-table th { text-align: left; padding: 0.8rem 0.5rem; border-bottom: 2px solid #1A1A1A; color: #3B82F6; text-transform: uppercase; letter-spacing: 0.1em; }
+        .giant-table td { padding: 0.6rem 0.5rem; border-bottom: 1px solid #111; vertical-align: top; }
+        .patch-tag { font-size: 0.5rem; background: #1E1B4B; color: #818CF8; border: 1px solid #312E81; padding: 1px 4px; border-radius: 3px; font-weight: bold; }
+        .integrated-tag { font-size: 0.5rem; background: #064E3B; color: #34D399; border: 1px solid #065F46; padding: 1px 4px; border-radius: 3px; font-weight: bold; }
+        .license-tag { font-size: 0.5rem; background: #111; color: #6B7280; border: 1px solid #222; padding: 1px 4px; border-radius: 3px; }
+        .repo-link { color: #3B82F6; text-decoration: none; }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar TOC -->
+    <aside class="w-80 fixed h-full bg-[#080808] border-r border-gray-900 p-8 hidden lg:flex flex-col overflow-y-auto">
+        <a href="../index.html" class="mb-10 text-gray-500 hover:text-blue-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all">
+            <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回主手册
+        </a>
+        <div class="mb-4 text-white font-black text-lg tracking-tighter uppercase">LiteRT-LM Core</div>
+        <div class="text-[9px] font-black text-blue-500/50 uppercase tracking-[0.3em] mb-10 italic">Part 5: 底层核心原理</div>
+        <nav class="space-y-1">
+            <a href="#overview" class="toc-item block px-4 py-2 text-xs font-bold">01. 核心综述</a>
+            <a href="#workload" class="toc-item block px-4 py-2 text-xs font-bold">02. 全量集成清单</a>
+            
+            <p class="text-[9px] uppercase font-black text-gray-600 mt-6 mb-2 tracking-widest px-4">API Reference</p>
+            <div class="space-y-4 ml-4 border-l border-gray-900">
+                <div>
+                    <p class="text-[8px] text-gray-700 uppercase font-black px-3 mb-1">Data Structs</p>
+                    <a href="api/struct_config.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">LiteRtLm_Config</a>
+                    <a href="api/struct_sampling.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">LiteRtLm_SamplingParams</a>
+                    <a href="api/struct_result.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">LiteRtLm_Result</a>
+                    <a href="api/callback_typedef.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">LiteRtLmCallback</a>
+                </div>
+                <div>
+                    <p class="text-[8px] text-gray-700 uppercase font-black px-3 mb-1">Lifecycle</p>
+                    <a href="api/get_backends.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">GetAvailableBackends</a>
+                    <a href="api/create_engine.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">CreateEngine</a>
+                    <a href="api/destroy_engine.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">DestroyEngine</a>
+                </div>
+                <div>
+                    <p class="text-[8px] text-gray-700 uppercase font-black px-3 mb-1">Conversations</p>
+                    <a href="api/create_conv.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">CreateConversation</a>
+                    <a href="api/create_conv_config.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">CreateWithConfig</a>
+                    <a href="api/destroy_conv.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">DestroyConversation</a>
+                </div>
+                <div>
+                    <p class="text-[8px] text-gray-700 uppercase font-black px-3 mb-1">Messages</p>
+                    <a href="api/append_user.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">AppendUser</a>
+                    <a href="api/append_json.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">AppendJson</a>
+                    <a href="api/append_assistant.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">AppendAssistant</a>
+                </div>
+                <div>
+                    <p class="text-[8px] text-gray-700 uppercase font-black px-3 mb-1">Inference</p>
+                    <a href="api/run_inference.html" class="block py-1 px-3 text-[10px] text-blue-400 font-bold hover:text-blue-500">RunInference</a>
+                    <a href="api/stop_message.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">StopMessage</a>
+                    <a href="api/wait_until_done.html" class="block py-1 px-3 text-[10px] text-gray-500 hover:text-blue-500">WaitUntilDone</a>
+                </div>
+                <a href="guide.html" class="block py-1 px-3 text-[10px] text-blue-500 font-black italic">Full Demo (main.cpp)</a>
+            </div>
+
+            <a href="#topology" class="toc-item block px-4 py-2 text-xs font-bold mt-6">03. 换入换出显存拓扑</a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 lg:ml-80 p-12 md:p-20">
+        <div class="max-w-5xl mx-auto">
+            
+            <header id="overview" class="mb-24">
+                <h1 class="text-6xl mb-6 italic tracking-tight font-black">架构总览</h1>
+                <p class="text-gray-500 text-lg leading-relaxed">
+                    <code>litert_lm_wrapper.dll</code> 是对 <b>70+</b> 项工业级集成项的深度汇聚。本页完整罗列了每一个参与编译与链接的工程组件。这些数据的广度即是我们工作的厚度。
+                </p>
+            </header>
+
+            <!-- I. Core Inference -->
+            <section id="cat-core" class="mb-20">
+                <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2"><div class="w-1 h-4 bg-blue-500"></div> I. 核心推理框架</h3>
+                <div class="content-card">
+                    <table class="giant-table">
+                        <thead><tr><th class="w-1/3">组件</th><th class="w-1/6">协议</th><th class="w-1/6">状态</th><th>集成职责</th></tr></thead>
+                        <tbody>
+                            <tr><td><a href="https://github.com/google-ai-edge/LiteRT" class="repo-link">LiteRT (Google)</a></td><td>Apache-2.0</td><td><span class="patch-tag">PATCHED</span></td><td>核心推理内核，重构包含路径并修复 MSVC 符号冲突。</td></tr>
+                            <tr><td><a href="https://github.com/tensorflow/tensorflow" class="repo-link">TensorFlow Core</a></td><td>Apache-2.0</td><td><span class="patch-tag">PATCHED</span></td><td>基础算子库与多线程调度优化。</td></tr>
+                            <tr><td><a href="https://github.com/google-ml-infra/rules_ml_toolchain" class="repo-link">rules_ml_toolchain</a></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>管理 GPU (CUDA/CUDNN) 编译环境的密闭性。</td></tr>
+                            <tr><td><a href="https://github.com/bazelbuild/bazel-toolchains" class="repo-link">bazel-toolchains</a></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>跨平台工具链配置集。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- II. Logic & Parsers -->
+            <section id="cat-logic" class="mb-20">
+                <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2"><div class="w-1 h-4 bg-blue-500"></div> II. 逻辑约束与整合解析矩阵</h3>
+                <div class="content-card">
+                    <table class="giant-table">
+                        <tbody>
+                            <tr><td class="w-1/3"><a href="https://github.com/microsoft/llguidance" class="repo-link">llguidance</a></td><td class="w-1/6">MIT</td><td class="w-1/6"><span class="patch-tag">5x PATCHED</span></td><td>微软约束框架。包含 RegexVec, Grammar, Parser 等子模块深度调优。</td></tr>
+                            <tr><td><code>toktrie</code></td><td>MIT</td><td><span class="patch-tag">PATCHED</span></td><td>高效的 Token 检索 Trie 树，支持复杂语法判定。</td></tr>
+                            <tr><td><a href="https://github.com/antlr/antlr4rust" class="repo-link">antlr4rust</a></td><td>BSD-3-Clause</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Rust 语法分析器内核，支撑结构化输出解析。</td></tr>
+                            <tr><td><code>antlr_fc_tool_call_parser</code></td><td>Custom</td><td><span class="integrated-tag">INTEGRATED</span></td><td>整合的 Function Call 工具调用解析器 A。</td></tr>
+                            <tr><td><code>antlr_python_tool_call_parser</code></td><td>Custom</td><td><span class="integrated-tag">INTEGRATED</span></td><td>整合的 Python 风格工具调用解析器 B。</td></tr>
+                            <tr><td><code>json_parser</code></td><td>Custom</td><td><span class="integrated-tag">INTEGRATED</span></td><td>专用的 JSON 结构合法性校验解析器。</td></tr>
+                            <tr><td><code>python_parser</code></td><td>Custom</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Python 代码块语义解析组件。</td></tr>
+                            <tr><td><code>fc_parser</code></td><td>Custom</td><td><span class="integrated-tag">INTEGRATED</span></td><td>通用工具调用协议转换解析器。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- III. Tokenization -->
+            <section id="cat-token" class="mb-20">
+                <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2"><div class="w-1 h-4 bg-blue-500"></div> III. 分词与模板渲染系统</h3>
+                <div class="content-card">
+                    <table class="giant-table">
+                        <tbody>
+                            <tr><td class="w-1/3"><a href="https://github.com/google/sentencepiece" class="repo-link">sentencepiece</a></td><td class="w-1/6">Apache-2.0</td><td class="w-1/6"><span class="patch-tag">REFACTORED</span></td><td>分词器源码重构，切断全量 Abseil 依赖以适配虚幻环境。</td></tr>
+                            <tr><td><a href="https://github.com/google/minja" class="repo-link">Minja (C++)</a></td><td>Apache-2.0</td><td><span class="patch-tag">PATCHED</span></td><td>修复了在处理特大型 JSON 载荷时的解析器崩溃。</td></tr>
+                            <tr><td><a href="https://github.com/mitsuhiko/minijinja" class="repo-link">minijinja (Rust)</a></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Rust 版高效模板引擎。</td></tr>
+                            <tr><td><a href="https://github.com/mlc-ai/tokenizers-cpp" class="repo-link">tokenizers-cpp</a></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>HuggingFace 协议 C++ 桥接。</td></tr>
+                            <tr><td><a href="https://github.com/huggingface/tokenizers" class="repo-link">tokenizers (Rust)</a></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>HuggingFace 分词核心 Rust 运行时。</td></tr>
+                            <tr><td><a href="https://github.com/ianhbell/nanobind_json" class="repo-link">nanobind_json</a></td><td>MIT</td><td><span class="patch-tag">PATCHED</span></td><td>JSON 绑定层适配补丁。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- IV. Build -->
+            <section id="cat-build" class="mb-20">
+                <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2"><div class="w-1 h-4 bg-blue-500"></div> IV. 构建规则与工具链支持</h3>
+                <div class="content-card">
+                    <table class="giant-table">
+                        <tbody>
+                            <tr><td class="w-1/3"><code>rules_rust</code></td><td class="w-1/6">Apache-2.0</td><td class="w-1/6"><span class="patch-tag">PATCHED</span></td><td>管理 Rust 编译链，处理 Windows 下的符号可见性。</td></tr>
+                            <tr><td><code>rules_python</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>密闭式 Python 构建环境。</td></tr>
+                            <tr><td><code>rules_apple</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>iOS 平台构建支撑。</td></tr>
+                            <tr><td><code>rules_swift</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Swift 运行库集成。</td></tr>
+                            <tr><td><code>rules_kotlin</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Android Kotlin 支持。</td></tr>
+                            <tr><td><code>rules_shell</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>跨平台脚本执行规则。</td></tr>
+                            <tr><td><code>rules_platform</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>平台抽象描述。</td></tr>
+                            <tr><td><code>platforms</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>基础平台配置。</td></tr>
+                            <tr><td><code>bazel_features</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>版本特性探测库。</td></tr>
+                            <tr><td><code>apple_support</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Apple 编译辅助集。</td></tr>
+                            <tr><td><code>rules_jvm_external</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Java 依赖项管理。</td></tr>
+                            <tr><td><a href="https://github.com/dtolnay/cxx" class="repo-link">cxxbridge_cmd</a></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>C++/Rust 桥接代码生成器。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- V. Rust Dependencies -->
+            <section id="cat-rust" class="mb-20">
+                <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2"><div class="w-1 h-4 bg-blue-500"></div> V. Rust 核心集成依赖项</h3>
+                <div class="content-card">
+                    <table class="giant-table">
+                        <tbody>
+                            <tr><td class="w-1/3"><code>serde</code> / <code>serde_json</code></td><td class="w-1/6">MIT/Apache</td><td class="w-1/6"><span class="integrated-tag">INTEGRATED</span></td><td>Rust 下的高效序列化。</td></tr>
+                            <tr><td><code>ahash</code> / <code>foldhash</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>高性能哈希实现。</td></tr>
+                            <tr><td><code>indexmap</code> / <code>hashbrown</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>极速容器库。</td></tr>
+                            <tr><td><code>parking_lot</code> / <code>lock_api</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>轻量级并发锁。</td></tr>
+                            <tr><td><code>anyhow</code> / <code>chrono</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>鲁棒错误处理与时间戳。</td></tr>
+                            <tr><td><code>syn</code> / <code>quote</code> / <code>paste</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>编译期元编程生成器。</td></tr>
+                            <tr><td><code>bytemuck</code> / <code>zerocopy</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>零拷贝内存映射工具。</td></tr>
+                            <tr><td><code>regex-syntax</code> / <code>aho-corasick</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>正则编译与字符串搜索内核。</td></tr>
+                            <tr><td><code>once_cell</code> / <code>lazy_static</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>单例与延迟初始化逻辑。</td></tr>
+                            <tr><td><code>memchr</code> / <code>bit-set</code></td><td>MIT/Apache</td><td><span class="integrated-tag">INTEGRATED</span></td><td>位运算与内存扫描加速。</td></tr>
+                            <tr><td><code>better_any</code> / <code>typed-arena</code></td><td>MIT</td><td><span class="integrated-tag">INTEGRATED</span></td><td>高级类型系统扩展与内存池。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- VI. Utility -->
+            <section id="cat-util" class="mb-20">
+                <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2"><div class="w-1 h-4 bg-blue-500"></div> VI. 底层工具与媒体库整合</h3>
+                <div class="content-card">
+                    <table class="giant-table">
+                        <tbody>
+                            <tr><td class="w-1/3"><code>nlohmann_json</code></td><td class="w-1/6">MIT</td><td class="w-1/6"><span class="integrated-tag">INTEGRATED</span></td><td>C++ 核心 JSON 解析协议。</td></tr>
+                            <tr><td><code>minizip</code> (zlib)</td><td>Zlib</td><td><span class="integrated-tag">INTEGRATED</span></td><td>模型压缩包解析。</td></tr>
+                            <tr><td><code>miniaudio</code></td><td>MIT/Public</td><td><span class="integrated-tag">INTEGRATED</span></td><td>基础音频流 IO 支撑。</td></tr>
+                            <tr><td><code>stb</code></td><td>MIT/Public</td><td><span class="integrated-tag">INTEGRATED</span></td><td>图像加载与算法加速。</td></tr>
+                            <tr><td><code>absl_py</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Python 运行时工具集。</td></tr>
+                            <tr><td><code>javax_json</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>JSON API 支撑。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- VII. Hardware -->
+            <section id="cat-hw" class="mb-20">
+                <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 flex items-center gap-2"><div class="w-1 h-4 bg-blue-500"></div> VII. 硬件厂商加速适配层</h3>
+                <div class="content-card">
+                    <table class="giant-table">
+                        <tbody>
+                            <tr><td class="w-1/3"><code>Qualcomm QAIRT</code></td><td class="w-1/6">Proprietary</td><td class="w-1/6"><span class="integrated-tag">INTEGRATED</span></td><td>骁龙 NPU 驱动级整合。</td></tr>
+                            <tr><td><code>MediaTek NeuroPilot</code></td><td>Proprietary</td><td><span class="integrated-tag">INTEGRATED</span></td><td>天玑 APU 适配层集成。</td></tr>
+                            <tr><td><code>Google Tensor SDK</code></td><td>Proprietary</td><td><span class="integrated-tag">INTEGRATED</span></td><td>Pixel TPU 硬件加速项。</td></tr>
+                            <tr><td><code>WebGPU (Dawn/WGPU)</code></td><td>BSD-3-Clause</td><td><span class="integrated-tag">INTEGRATED</span></td><td>跨平台 GPU 推理抽象。</td></tr>
+                            <tr><td><code>XNNPACK</code></td><td>Apache-2.0</td><td><span class="integrated-tag">INTEGRATED</span></td><td>高性能 CPU 推理算子加速。</td></tr>
+                            <tr><td><code>CUDA / CUDNN / NCCL</code></td><td>NVIDIA</td><td><span class="integrated-tag">INTEGRATED</span></td><td>桌面端显卡深度计算项。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 4: Symbol Index -->
+            <section id="api-index" class="mb-40">
+                <h2 class="text-3xl mb-12 flex items-center gap-3 font-black italic">
+                    <i data-lucide="code" class="text-blue-500"></i> API 符号索引 (Symbol Index)
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Data Structs -->
+                    <a href="api/struct_config.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-gray-600 mb-2">STRUCT</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLm_Config</div>
+                    </a>
+                    <a href="api/struct_sampling.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-gray-600 mb-2">STRUCT</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLm_SamplingParams</div>
+                    </a>
+                    <a href="api/struct_result.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-gray-600 mb-2">STRUCT</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLm_Result</div>
+                    </a>
+                    <a href="api/callback_typedef.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-gray-600 mb-2">TYPEDEF</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLmCallback</div>
+                    </a>
+                    <!-- Lifecycle -->
+                    <a href="api/get_backends.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">GetAvailableBackends</div>
+                    </a>
+                    <a href="api/create_engine.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLm_CreateEngine</div>
+                    </a>
+                    <a href="api/destroy_engine.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLm_DestroyEngine</div>
+                    </a>
+                    <!-- Conv -->
+                    <a href="api/create_conv.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">CreateConversation</div>
+                    </a>
+                    <a href="api/create_conv_config.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">CreateWithConfig</div>
+                    </a>
+                    <a href="api/destroy_conv.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">DestroyConversation</div>
+                    </a>
+                    <!-- Messages -->
+                    <a href="api/append_user.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">AppendUserMessage</div>
+                    </a>
+                    <a href="api/append_json.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">AppendMessageJson</div>
+                    </a>
+                    <a href="api/append_assistant.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">AppendAssistantMessage</div>
+                    </a>
+                    <!-- Inference -->
+                    <a href="api/run_inference.html" class="content-card p-6 border-blue-900/50 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-500 mb-2 font-black">CORE</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLm_RunInference</div>
+                    </a>
+                    <a href="api/stop_message.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLm_StopMessage</div>
+                    </a>
+                    <a href="api/wait_until_done.html" class="content-card p-6 hover:border-blue-500 transition-all group">
+                        <div class="text-[10px] text-blue-900 mb-2">FUNCTION</div>
+                        <div class="text-xs font-bold text-white group-hover:text-blue-500">LiteRtLm_WaitUntilDone</div>
+                    </a>
+                </div>
+                <div class="mt-8">
+                    <a href="guide.html" class="content-card p-8 border-dashed border-blue-500/30 flex items-center justify-between hover:border-blue-500 transition-all group">
+                        <div>
+                            <div class="text-[10px] text-blue-500 mb-2 uppercase font-black tracking-widest">Full Integration Blueprint</div>
+                            <div class="text-xl font-black italic text-white group-hover:text-blue-500">WinyunqDebug/main.cpp Guide</div>
+                        </div>
+                        <i data-lucide="arrow-right" class="text-blue-500 group-hover:translate-x-2 transition-transform"></i>
+                    </a>
+                </div>
+            </section>
+            
+            <!-- Topology -->
+            <section id="topology" class="mb-40">
+                <h2 class="text-3xl mb-12 flex items-center gap-3 italic font-black"><i data-lucide="layers" class="text-blue-500"></i> 换入换出显存拓扑</h2>
+                <div class="winyunq-card p-12">
+                    <div class="mermaid">
+                        graph TD
+                            subgraph GPU[GPU VRAM - 热区]
+                                W[Model Weights]
+                                AC[Active KV Cache]
+                            end
+                            subgraph RAM[System RAM - 冷区]
+                                IC[Inactive Agent Caches]
+                            end
+                            AC --- RAM
+                    </div>
+                </div>
+            </section>
+
+            <footer class="pt-20 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between italic">
+                <div>Full Integration Workload Manifest</div>
+                <div>© 2026 Winyunq Standard</div>
+            </footer>
+
+        </div>
+    </main>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

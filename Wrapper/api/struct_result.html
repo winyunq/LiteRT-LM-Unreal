@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteRtLm_Result - LiteRT-LM API Reference</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        .content-card { background: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; padding: 2.5rem; margin-bottom: 2.5rem; }
+        h1 { color: #FFFFFF; font-weight: 800; letter-spacing: -0.02em; }
+        .mermaid { background: #000; padding: 1.5rem; border-radius: 1rem; border: 1px solid #111; }
+        code { font-family: 'Fira Code', monospace; color: #60A5FA; }
+        .api-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .api-table th { text-align: left; padding: 1rem; border-bottom: 2px solid #1A1A1A; color: #3B82F6; text-transform: uppercase; }
+        .api-table td { padding: 1rem; border-bottom: 1px solid #111; vertical-align: top; }
+        pre { background: #080808; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #111; overflow-x: auto; }
+        .danger-box { border-left: 4px solid #991B1B; background: rgba(153, 27, 27, 0.1); padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-12 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        </a>
+
+        <header class="mb-16">
+            <h1 class="text-5xl mb-4 font-black">LiteRtLm_Result</h1>
+            <p class="text-gray-500 text-lg">推理结果封装结构体。在回调函数中传递增量文本、完整 JSON 数据及引擎生成状态。</p>
+        </header>
+
+        <!-- Section 1: Lifecycle / Memory Contract Diagram -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 内存有效性时域图 (关键契约)</h3>
+            <div class="content-card">
+                <div class="mermaid">
+                    sequenceDiagram
+                        participant DLL as Wrapper DLL Internal
+                        participant App as User Callback Function
+                        DLL->>App: 调用 LiteRtLmCallback(Result)
+                        Note over App: [指针 text_chunk 有效区]
+                        App->>App: 必须在此期间执行字符串拷贝 (strcpy/FString)
+                        App-->>DLL: 回调函数返回 (Exit Scope)
+                        Note over DLL: [指针指向的内存已释放/重用]
+                        Note right of App: 严禁在回调外访问 text_chunk!
+                </div>
+                <div class="danger-box text-[10px] uppercase font-bold tracking-widest mt-6">
+                    <i data-lucide="alert-triangle" class="inline w-3 h-3 mr-1"></i> Memory Contract Warning
+                </div>
+                <p class="text-xs text-gray-400 mt-2 italic leading-relaxed">
+                    <code>text_chunk</code> 和 <code>full_json_chunk</code> 指向的是 DLL 内部的环形缓冲区。一旦回调函数执行完毕并返回，这些内存地址可能会被立即重写。
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: Fields Table -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 成员变量详解</h3>
+            <div class="content-card">
+                <table class="api-table">
+                    <thead>
+                        <tr>
+                            <th class="w-1/4">成员变量</th>
+                            <th class="w-1/6">类型</th>
+                            <th>职责说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>text_chunk</code></td>
+                            <td><code>const char*</code></td>
+                            <td>
+                                <b>增量文本片段。</b><br/>
+                                仅包含本次生成的字符。用于流式打字机效果显示。
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>full_json_chunk</code></td>
+                            <td><code>const char*</code></td>
+                            <td>
+                                <b>完整响应 JSON。</b><br/>
+                                包含 tool_calls, content, stats 等全量信息。建议在生成结束时解析此字段以获取结构化数据。
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>bIsDone</code></td>
+                            <td><code>int</code></td>
+                            <td>
+                                <b>终止标记。</b><br/>
+                                1 表示推理完成（或已中断），0 表示仍在生成中。
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>tokens_per_sec</code></td>
+                            <td><code>float</code></td>
+                            <td>
+                                <b>瞬时生成速率。</b><br/>
+                                每秒生成的 Token 数，用于实时 UI 性能监控。
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 3: Usage Example -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 虚幻引擎 (UE5) 集成示例</h3>
+            <div class="content-card">
+                <pre><code>void OnInferenceResult(LiteRtLm_Result Result, void* UserPtr) {
+    // 1. 内存安全：立即转换为引擎安全类型 (深拷贝)
+    FString ChunkString(UTF8_TO_TCHAR(Result.text_chunk));
+    
+    // 2. 调度到主线程 UI
+    AsyncTask(ENamedThreads::GameThread, [ChunkString, bDone = Result.bIsDone]() {
+        // 更新 UI 文本框...
+        if (bDone) {
+            UE_LOG(LogTemp, Log, TEXT("Generation Finished"));
+        }
+    });
+}</code></pre>
+            </div>
+        </section>
+
+        <footer class="pt-12 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between">
+            <div>LiteRT-LM Engineering Standard</div>
+            <div>© 2026 Winyunq</div>
+        </footer>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

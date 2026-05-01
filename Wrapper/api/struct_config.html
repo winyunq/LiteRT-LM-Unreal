@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteRtLm_Config - LiteRT-LM API Reference</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        .content-card { background: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; padding: 2.5rem; margin-bottom: 2.5rem; }
+        h1 { color: #FFFFFF; font-weight: 800; letter-spacing: -0.02em; }
+        .mermaid { background: #000; padding: 1.5rem; border-radius: 1rem; border: 1px solid #111; }
+        code { font-family: 'Fira Code', monospace; color: #60A5FA; }
+        .api-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .api-table th { text-align: left; padding: 1rem; border-bottom: 2px solid #1A1A1A; color: #3B82F6; text-transform: uppercase; }
+        .api-table td { padding: 1rem; border-bottom: 1px solid #111; vertical-align: top; }
+        pre { background: #080808; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #111; overflow-x: auto; }
+    </style>
+</head>
+<body class="p-12 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        </a>
+
+        <header class="mb-16">
+            <h1 class="text-5xl mb-4 font-black">LiteRtLm_Config</h1>
+            <p class="text-gray-500 text-lg">引擎初始化参数结构体。定义了模型权重加载路径、计算后端拓扑及资源预分配策略。</p>
+        </header>
+
+        <!-- Section 1: Lifecycle / Context Diagram -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 上下文生命周期图</h3>
+            <div class="content-card">
+                <div class="mermaid">
+                    graph LR
+                        Config[LiteRtLm_Config] -->|Input| Create[LiteRtLm_CreateEngine]
+                        Create -->|Success| Handle[void* Engine Handle]
+                        Create -->|Fail| Null[NULL / Error Log]
+                        
+                        subgraph HW_Binding [计算绑定]
+                            Config -.-> Backend[选择计算后端: GPU/CPU]
+                            Config -.-> VRAM[锁定模型权重缓冲区]
+                        end
+                </div>
+                <p class="text-xs text-gray-600 mt-6 italic">
+                    Config 结构体是整个推理管线的“种子”。它在内存中被填充后，直接传递给 CreateEngine 函数，随后配置信息被固化到引擎实例中，直至引擎销毁。
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: Fields Table -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 成员变量详解</h3>
+            <div class="content-card">
+                <table class="api-table">
+                    <thead>
+                        <tr>
+                            <th class="w-1/4">成员变量</th>
+                            <th class="w-1/6">类型</th>
+                            <th>物理职责与 Doxygen 说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>model_path</code></td>
+                            <td><code>const char*</code></td>
+                            <td>
+                                <b>模型文件绝对路径。</b><br/>
+                                必须指向有效的 .bin 或 .tflite 模型权重文件。DLL 会使用只读模式打开该文件。
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>backend</code></td>
+                            <td><code>const char*</code></td>
+                            <td>
+                                <b>推理后端链。</b><br/>
+                                示例: <code>"gpu"</code>, <code>"cpu"</code>, <code>"gpu,cpu"</code>。<br/>
+                                指定推理任务的首选设备。多个设备以逗号分隔，按优先级尝试。
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>max_num_tokens</code></td>
+                            <td><code>int</code></td>
+                            <td>
+                                <b>KV Cache 上下文总量。</b><br/>
+                                决定了 GPU 预分配 KV Cache Buffer 的尺寸。建议设置为模型支持的最大长度（如 2048, 4096）。
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>num_threads</code></td>
+                            <td><code>int</code></td>
+                            <td>
+                                <b>CPU 并行度。</b><br/>
+                                仅在 <code>backend</code> 包含 CPU 时生效。决定了 XNNPACK 算子库的线程池大小。
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>bOptimizeShader</code></td>
+                            <td><code>int</code></td>
+                            <td>
+                                <b>[UE5 专项] 着色器优化开关。</b><br/>
+                                设为 1 时，DLL 将在 WebGPU 初始化阶段进行指令预编译。减少推理时的瞬时卡顿（Stutter）。
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 3: Usage Example -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. C 语言调用示例</h3>
+            <div class="content-card">
+                <pre><code>// 1. 初始化配置对象
+LiteRtLm_Config config = {0};
+config.model_path = "D:/Models/Gemma-2b-it.tflite";
+config.backend = "gpu";         // 优先使用 WebGPU 加速
+config.max_num_tokens = 2048;   // 预留 2k 上下文
+config.num_threads = 8;         // CPU 降级时使用 8 线程
+config.bOptimizeShader = 1;     // 开启着色器预优化
+
+// 2. 传递给引擎创建函数
+void* engine = LiteRtLm_CreateEngine(config);
+
+if (engine == NULL) {
+    // 处理初始化失败...
+}</code></pre>
+            </div>
+        </section>
+
+        <footer class="pt-12 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between">
+            <div>LiteRT-LM Engineering Standard</div>
+            <div>© 2026 Winyunq</div>
+        </footer>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

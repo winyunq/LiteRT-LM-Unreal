@@ -8,140 +8,122 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background-color: #121212; color: #E0E0E0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-        .sidebar { background-color: #1A1A1B; border-right: 1px solid #333; }
-        .nav-item:hover { background-color: #2A2A2B; }
-        .nav-item.active { background-color: #2A2A2B; border-left: 4px solid #3B82F6; }
-        .content-card { background-color: #1A1A1B; border: 1px solid #333; }
-        code { font-family: 'Fira Code', 'Courier New', monospace; }
-        padding-top: 2rem;
-        pre { border-radius: 8px !important; margin: 1.5rem 0 !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        .sidebar { background-color: #080808; border-right: 1px solid #111; }
+        .nav-item { transition: all 0.2s; border-left: 2px solid transparent; }
+        .nav-item:hover { background-color: #0F0F0F; color: #3B82F6; }
+        .nav-item.active { background-color: #0F0F0F; color: #3B82F6; border-left-color: #3B82F6; }
+        .content-card { background-color: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; }
         .winyunq-gradient { background: linear-gradient(90deg, #3B82F6 0%, #2DD4BF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        code { font-family: 'Fira Code', monospace; font-size: 0.85em; color: #60A5FA; }
+        .pillar-badge { font-size: 0.6rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: #111; border: 1px solid #222; color: #666; margin-right: 8px; }
     </style>
 </head>
 <body class="flex min-h-screen">
 
     <!-- Sidebar -->
-    <aside class="sidebar w-64 fixed h-full hidden md:flex flex-col p-6 overflow-y-auto">
-        <div class="flex items-center gap-2 mb-10">
-            <i data-lucide="cpu" class="text-blue-500"></i>
-            <span class="text-xl font-bold tracking-tight text-white">LiteRT-LM <span class="text-blue-500">UE</span></span>
+    <aside class="sidebar w-72 fixed h-full hidden md:flex flex-col p-8 overflow-y-auto">
+        <div class="flex items-center gap-3 mb-12">
+            <i data-lucide="cpu" class="text-blue-500 w-6 h-6"></i>
+            <span class="text-xl font-black tracking-tighter text-white uppercase">LiteRT-LM <span class="text-blue-500">UE</span></span>
         </div>
         
         <nav class="space-y-1">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">Getting Started</p>
-            <a href="#" class="nav-item active flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-white">
-                <i data-lucide="home" class="w-4 h-4"></i> 欢迎使用
-            </a>
-            <a href="GETTING_STARTED.md" class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-gray-400 hover:text-white">
-                <i data-lucide="zap" class="w-4 h-4"></i> 快速开始 (MD)
-            </a>
+            <p class="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 px-3">开发者路线图</p>
             
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-8 mb-2 px-3">Core Concept</p>
-            <a href="MODEL_MANAGEMENT.md" class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-gray-400 hover:text-white">
-                <i data-lucide="box" class="w-4 h-4"></i> 模型管理
+            <a href="index.html" class="nav-item active flex items-center px-3 py-2 rounded-lg text-xs font-bold transition-all">
+                <span class="pillar-badge">01</span> 关于与背景
             </a>
-            <a href="#" class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-gray-400 hover:text-white">
-                <i data-lucide="database" class="w-4 h-4"></i> 显存优化 (VRAM)
+            <a href="QUICK_START.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
+                <span class="pillar-badge">02</span> 快速入门
             </a>
-            
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-8 mb-2 px-3">Reference</p>
-            <a href="API_REFERENCE.md" class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-gray-400 hover:text-white">
-                <i data-lucide="code" class="w-4 h-4"></i> API 参考
+            <a href="APP_LAYER.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
+                <span class="pillar-badge">03</span> 应用接口层
+            </a>
+            <a href="SERVICE_LAYER.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
+                <span class="pillar-badge">04</span> 插件工作流
+            </a>
+            <a href="Wrapper/index.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all hover:text-blue-500">
+                <span class="pillar-badge">05</span> 底层核心原理
+            </a>
+            <a href="DEMO_CASES.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
+                <span class="pillar-badge">06</span> 实战 Demo
+            </a>
+            <a href="SHIPPING.md" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
+                <span class="pillar-badge">07</span> 打包与发布
             </a>
         </nav>
 
-        <div class="mt-auto pt-10 text-[10px] text-gray-600 uppercase tracking-[2px]">
-            Powered by Winyunq
+        <div class="mt-auto pt-10 text-[10px] text-gray-800 font-black uppercase tracking-[3px] italic">
+            Winyunq Engineering
         </div>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 md:ml-64 p-8 md:p-12 lg:p-20">
-        <header class="max-w-4xl mx-auto mb-12">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-4">
-                <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                </span>
-                v1.0 Stable Release
-            </div>
-            <h1 class="text-4xl md:text-5xl font-black text-white mb-6 tracking-tighter">
-                让您的虚幻项目具备 <span class="winyunq-gradient">本地 AI 之魂</span>
-            </h1>
-            <p class="text-lg text-gray-400 leading-relaxed max-w-2xl">
-                LiteRT-LM Unreal 是专为虚幻引擎打造的高性能、轻量级本地大模型集成方案。仅需 $19，即可在 RTX 4060 上实现秒级 Agent 切换与流式推理。
-            </p>
-        </header>
+    <main class="flex-1 md:ml-72 p-12 md:p-16 lg:p-24">
+        <div class="max-w-4xl mx-auto">
+            <header class="mb-20">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/5 border border-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-widest mb-8">
+                    Strategy by Winyunq Core
+                </div>
+                <h1 class="text-6xl font-black text-white mb-8 tracking-tighter leading-none italic">
+                    让您的虚幻项目具备 <br/><span class="winyunq-gradient">本地 AI 之魂</span>
+                </h1>
+                <p class="text-xl text-gray-500 leading-relaxed max-w-2xl font-medium">
+                    超脱传统的源码注释，深挖物理逻辑的深度。LiteRT-LM Unreal 是专为 AAA 级项目设计的本地高性能 Agent 推理方案。
+                </p>
+            </header>
 
-        <div class="max-w-4xl mx-auto space-y-12">
-            <!-- Getting Started Section -->
-            <section class="content-card p-8 rounded-2xl">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <i data-lucide="terminal" class="w-5 h-5 text-blue-500"></i>
+            <div class="space-y-16">
+                <!-- ABI Firewall Section -->
+                <section class="content-card p-10 border-l-4 border-l-blue-500">
+                    <h2 class="text-2xl font-black text-white mb-6 italic tracking-tight flex items-center gap-3">
+                        <i data-lucide="shield" class="text-blue-500"></i> ABI 防火墙：零部署集成
+                    </h2>
+                    <p class="text-gray-400 leading-relaxed mb-8 text-sm">
+                        我们通过 <code>litert_lm_wrapper.dll</code> 建立了一道物理隔绝的 ABI 防火墙。这意味着您在集成 70+ 个底层依赖项（Bazel, Rust, TensorFlow, WebGPU）时，<b>无需在宿主机器上安装任何复杂的编译环境</b>。插件即插即用。
+                    </p>
+                    <div class="bg-black/50 rounded-xl p-6 border border-white/5">
+                        <p class="text-[10px] uppercase font-black text-gray-600 mb-4 tracking-[0.2em]">底层技术栈一瞥</p>
+                        <div class="flex flex-wrap gap-4 text-[9px] font-bold text-gray-400">
+                            <span class="px-2 py-1 bg-blue-500/10 rounded">GOOGLE LITERT</span>
+                            <span class="px-2 py-1 bg-green-500/10 rounded">WEBGPU / VULKAN</span>
+                            <span class="px-2 py-1 bg-orange-500/10 rounded">RUST CRATES</span>
+                            <span class="px-2 py-1 bg-purple-500/10 rounded">LLGUIDANCE</span>
+                        </div>
                     </div>
-                    <h2 class="text-2xl font-bold text-white">快速集成示例 (C++)</h2>
-                </div>
+                </section>
 
-                <div class="prose prose-invert max-w-none text-gray-300">
-                    <p class="mb-4">在您的 <code>Actor</code> 中仅需几行代码即可唤醒 AI。我们独特的 Session 映射机制确保了 KV Cache 的极速命中。</p>
-                    
-                    <pre class="language-cpp"><code>// 1. 加载模型
-FLiteRtLmConfig Config;
-Config.ModelPath = TEXT("D:/Models/gemma.bin");
-FLiteRtLmUnrealApi::LoadModel(Config);
-
-// 2. 发起对话 (Context-Aware)
-FLiteRtLmUnrealApi::ChatWithPrompt(
-    this, 
-    TEXT("你好，请介绍一下你自己。"),
-    TEXT("你是一个乐于助人的游戏向导。"),
-    FLiteRtLmChunkCallback::CreateLambda([](const FString& Chunk) {
-        // 实时打字机效果
-        UE_LOG(LogTemp, Warning, TEXT("AI: %s"), *Chunk);
-    }),
-    FLiteRtLmDoneCallback::CreateLambda([](const FLiteRtLmResult& Result) {
-        UE_LOG(LogTemp, Display, TEXT("推理耗时: %.2f ms"), Result.TimeMs);
-    })
-);</code></pre>
-                </div>
-            </section>
-
-            <!-- Features Grid -->
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="content-card p-6 rounded-2xl">
-                    <i data-lucide="zap" class="w-8 h-8 text-yellow-500 mb-4"></i>
-                    <h3 class="text-lg font-bold text-white mb-2">极速切换</h3>
-                    <p class="text-sm text-gray-400">利用 Session 指针管理，多 Agent 切换耗时 &lt; 1ms，显存占用极其克制。</p>
-                </div>
-                <div class="content-card p-6 rounded-2xl">
-                    <i data-lucide="shield-check" class="w-8 h-8 text-green-500 mb-4"></i>
-                    <h3 class="text-lg font-bold text-white mb-2">纯本地推理</h3>
-                    <p class="text-sm text-gray-400">无需 API Key，无需联网。您的模型和数据永远留在用户的本地硬件上。</p>
+                <!-- Core Pillars Grid -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all">
+                        <i data-lucide="zap" class="w-10 h-10 text-yellow-500 mb-6 group-hover:scale-110 transition-transform"></i>
+                        <h3 class="text-xl font-black text-white mb-3 italic">物理级 KV 命中</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">基于底层 C-API 的 Session 指针管理，实现多 Agent 瞬间切换，KV Cache 命中率提升至 98% 以上。</p>
+                    </div>
+                    <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all">
+                        <i data-lucide="cpu" class="w-10 h-10 text-blue-500 mb-6 group-hover:scale-110 transition-transform"></i>
+                        <h3 class="text-xl font-black text-white mb-3 italic">极致显存管控</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">全自动显存预算分配。支持热-冷显存换入换出，在 8G 显存下也能流畅运行 7B 级多 Agent 对话。</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Strategy Footer -->
-            <footer class="pt-12 border-t border-gray-800 text-center md:text-left">
-                <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div>
-                        <p class="text-sm text-gray-500">© 2026 Winyunq Core Engineering. All rights reserved.</p>
-                        <p class="text-xs text-gray-600 mt-1 uppercase tracking-widest">战略由人，战术由 AI</p>
-                    </div>
-                    <div class="flex gap-4">
-                        <a href="#" class="px-6 py-2 rounded-full bg-white text-black text-sm font-bold hover:bg-gray-200 transition-all">购买插件 ($19)</a>
-                        <a href="#" class="px-6 py-2 rounded-full border border-gray-700 text-white text-sm font-bold hover:bg-gray-800 transition-all">GitHub Repo</a>
-                    </div>
+            <!-- Footer -->
+            <footer class="mt-32 pt-12 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-8">
+                <div class="text-[10px] text-gray-800 font-black uppercase tracking-[0.3em]">
+                    战略由人 · 战术由 AI
+                </div>
+                <div class="flex gap-4">
+                    <a href="Wrapper/index.html" class="px-8 py-3 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">
+                        探索底层原理 (Part 5)
+                    </a>
                 </div>
             </footer>
         </div>
     </main>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
-    <script>
-        lucide.createIcons();
-    </script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteRtLm_CreateConversation - LiteRT-LM API Reference</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        .content-card { background: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; padding: 2.5rem; margin-bottom: 2.5rem; }
+        h1 { color: #FFFFFF; font-weight: 800; letter-spacing: -0.02em; }
+        .mermaid { background: #000; padding: 1.5rem; border-radius: 1rem; border: 1px solid #111; }
+        code { font-family: 'Fira Code', monospace; color: #60A5FA; }
+        .api-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .api-table th { text-align: left; padding: 1rem; border-bottom: 2px solid #1A1A1A; color: #3B82F6; text-transform: uppercase; }
+        .api-table td { padding: 1rem; border-bottom: 1px solid #111; vertical-align: top; }
+        pre { background: #080808; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #111; overflow-x: auto; }
+    </style>
+</head>
+<body class="p-12 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        </a>
+
+        <header class="mb-16">
+            <h1 class="text-5xl mb-4 font-black">LiteRtLm_CreateConversation</h1>
+            <p class="text-gray-500 text-lg">创建基础对话会话。在引擎内部分配一个新的 KV Cache 槽位及上下文管理器。</p>
+        </header>
+
+        <!-- Section 1: Session Diagram -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 会话分配逻辑</h3>
+            <div class="content-card">
+                <div class="mermaid">
+                    graph LR
+                        Engine[LiteRT-LM Engine] -->|Spawn| Conv[Conversation Object]
+                        subgraph KV_Pool [显存 KV 池]
+                            Slot1[Session 1 Cache]
+                            Slot2[Session 2 Cache]
+                        end
+                        Conv -->|Owner| Slot1
+                </div>
+                <p class="text-xs text-gray-600 mt-6 italic">
+                    每一个 Conversation 句柄都持有一个独立的上下文状态机。它负责记录对话历史，并占用由 <code>max_num_tokens</code> 定义的显存空间。
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: Function Definition -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数与返回值</h3>
+            <div class="content-card">
+                <pre><code class="language-c">void* LiteRtLm_CreateConversation(void* engine_ptr);</code></pre>
+                <table class="api-table mt-8">
+                    <thead><tr><th class="w-1/4">参数/返回值</th><th>详细描述</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><code>engine_ptr</code></td>
+                            <td>由 <code>CreateEngine</code> 返回的有效引擎指针。</td>
+                        </tr>
+                        <tr>
+                            <td><code>返回值 (void*)</code></td>
+                            <td>
+                                <b>会话句柄。</b><br/>
+                                用于后续的消息追加与推理触发。若创建失败（如显存不足以分配新槽位），返回 NULL。
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 3: Usage Example -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 简单初始化示例</h3>
+            <div class="content-card">
+                <pre><code>// 创建一个没有任何历史记录的新会话
+void* MyConversation = LiteRtLm_CreateConversation(EngineHandle);
+
+if (MyConversation) {
+    // 准备开始对话...
+}</code></pre>
+            </div>
+        </section>
+
+        <footer class="pt-12 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between">
+            <div>LiteRT-LM Engineering Standard</div>
+            <div>© 2026 Winyunq</div>
+        </footer>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

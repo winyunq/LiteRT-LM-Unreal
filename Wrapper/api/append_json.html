@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteRtLm_AppendMessageJson - LiteRT-LM API Reference</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        .content-card { background: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; padding: 2.5rem; margin-bottom: 2.5rem; }
+        h1 { color: #FFFFFF; font-weight: 800; letter-spacing: -0.02em; }
+        .mermaid { background: #000; padding: 1.5rem; border-radius: 1rem; border: 1px solid #111; }
+        code { font-family: 'Fira Code', monospace; color: #60A5FA; }
+        .api-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .api-table th { text-align: left; padding: 1rem; border-bottom: 2px solid #1A1A1A; color: #3B82F6; text-transform: uppercase; }
+        .api-table td { padding: 1rem; border-bottom: 1px solid #111; vertical-align: top; }
+        pre { background: #080808; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #111; overflow-x: auto; }
+        .info-box { border-left: 4px solid #8B5CF6; background: rgba(139, 92, 246, 0.1); padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-12 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        </a>
+
+        <header class="mb-16">
+            <h1 class="text-5xl mb-4 font-black">LiteRtLm_AppendMessageJson</h1>
+            <p class="text-gray-500 text-lg">追加多模态或复杂 JSON 消息。支持发送图片、指定 Role（如 tool/user/assistant）及注入工具执行结果。</p>
+        </header>
+
+        <!-- Section 1: Multimodal Diagram -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 复杂内容注入流</h3>
+            <div class="content-card">
+                <div class="mermaid">
+                    graph TD
+                        JSON[JSON String] -->|Parse| Internal[Internal History Buffer]
+                        subgraph Content_Types [内容类型]
+                            Text[纯文本]
+                            Image[Base64 编码图片]
+                            Tool[工具调用结果: Tool Outputs]
+                        end
+                        JSON -.-> Content_Types
+                </div>
+                <div class="info-box text-xs">
+                    <b>核心用途：</b> 当你需要 AI “看图说话”或在 AI 触发 <code>tool_calls</code> 后，将宿主环境执行的结果喂回给 AI 时，必须使用此接口。
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Function Definition -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数定义</h3>
+            <div class="content-card">
+                <pre><code class="language-c">void LiteRtLm_AppendMessageJson(void* conv_ptr, const char* json_msg);</code></pre>
+                <table class="api-table mt-8">
+                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><code>conv_ptr</code></td>
+                            <td>有效的会话句柄。</td>
+                        </tr>
+                        <tr>
+                            <td><code>json_msg</code></td>
+                            <td>
+                                <b>符合 OpenAI 格式的 JSON 消息字符串。</b><br/>
+                                示例: <code>{"role": "user", "content": [...]}</code>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 3: Usage Example -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 视觉注入代码示例 (Base64)</h3>
+            <div class="content-card">
+                <pre><code>const char* ImageJson = 
+    "{"
+    "  \"role\": \"user\","
+    "  \"content\": ["
+    "    {\"type\": \"text\", \"text\": \"分析这张图片中的物体\"},"
+    "    {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/jpeg;base64,...\"}}"
+    "  ]"
+    "}";
+
+LiteRtLm_AppendMessageJson(MyConv, ImageJson);</code></pre>
+            </div>
+        </section>
+
+        <footer class="pt-12 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between">
+            <div>LiteRT-LM Engineering Standard</div>
+            <div>© 2026 Winyunq</div>
+        </footer>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

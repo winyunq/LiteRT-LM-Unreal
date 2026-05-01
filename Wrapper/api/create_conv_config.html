@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteRtLm_CreateConversationWithConfig - LiteRT-LM API Reference</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        body { background: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        .content-card { background: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; padding: 2.5rem; margin-bottom: 2.5rem; }
+        h1 { color: #FFFFFF; font-weight: 800; letter-spacing: -0.02em; }
+        .mermaid { background: #000; padding: 1.5rem; border-radius: 1rem; border: 1px solid #111; }
+        code { font-family: 'Fira Code', monospace; color: #60A5FA; }
+        .api-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .api-table th { text-align: left; padding: 1rem; border-bottom: 2px solid #1A1A1A; color: #3B82F6; text-transform: uppercase; }
+        .api-table td { padding: 1rem; border-bottom: 1px solid #111; vertical-align: top; }
+        pre { background: #080808; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #111; overflow-x: auto; }
+        .info-box { border-left: 4px solid #10B981; background: rgba(16, 185, 129, 0.1); padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-12 md:p-20">
+    <div class="max-w-4xl mx-auto">
+        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        </a>
+
+        <header class="mb-16">
+            <h1 class="text-5xl mb-4 font-black">LiteRtLm_CreateConversationWithConfig</h1>
+            <p class="text-gray-500 text-lg">带预设的高级会话创建。允许在初始化时注入系统提示词、多轮历史消息及工具 (Tools) 架构定义。</p>
+        </header>
+
+        <!-- Section 1: Context Diagram -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 预设注入流程</h3>
+            <div class="content-card">
+                <div class="mermaid">
+                    graph TD
+                        JSON[Json Preface String] -->|Parse| Parser[Internal JSON Parser]
+                        Parser -->|Apply| System[System Prompt]
+                        Parser -->|Fill| History[Messages History]
+                        Parser -->|Register| Tools[Function Tools Definition]
+                        subgraph State_Machine [会话初始状态机]
+                            System
+                            History
+                            Tools
+                        end
+                        State_Machine --> Result[void* Configured Conv Handle]
+                </div>
+                <div class="info-box text-xs">
+                    <b>应用场景：</b> 用于快速“复活”历史会话，或者在 NPC 初始化阶段注入其性格设定（System Prompt）和可调用的动作接口（Tools）。
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Parameters -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数详细定义</h3>
+            <div class="content-card">
+                <pre><code class="language-c">void* LiteRtLm_CreateConversationWithConfig(
+    void* engine_ptr, 
+    const char* json_preface_str,
+    int bEnableConstrainedDecoding
+);</code></pre>
+                <table class="api-table mt-8">
+                    <thead><tr><th class="w-1/3">参数名称</th><th>职责说明</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><code>json_preface_str</code></td>
+                            <td>
+                                <b>JSON 格式的预设字符串。</b><br/>
+                                包含 <code>"messages"</code> 数组和 <code>"tools"</code> 定义。必须符合 OpenAI API 格式标准的子集。
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>bEnableConstrainedDecoding</code></td>
+                            <td>
+                                <b>强制约束开关。</b><br/>
+                                设为 1 时，引擎将根据 <code>tools</code> 定义自动启用 JSON 强约束，确保 AI 必须按格式输出工具调用。
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 3: JSON Format Example -->
+        <section class="mb-16">
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. JsonPreface 标准格式示例</h3>
+            <div class="content-card">
+                <pre><code class="language-json">{
+  "messages": [
+    {"role": "system", "content": "You are a helpful companion."},
+    {"role": "user", "content": "Hello!"}
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "parameters": { "type": "object", "properties": {...} }
+      }
+    }
+  ]
+}</code></pre>
+            </div>
+        </section>
+
+        <footer class="pt-12 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between">
+            <div>LiteRT-LM Engineering Standard</div>
+            <div>© 2026 Winyunq</div>
+        </footer>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
