@@ -7,7 +7,7 @@ public class LiteRTLMUnreal : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Projects" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Projects", "Json" });
 
 		// ThirdParty Path
 		string ThirdPartyPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "ThirdParty/LiteRtLm"));

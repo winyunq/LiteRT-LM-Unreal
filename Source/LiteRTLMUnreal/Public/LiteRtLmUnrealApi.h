@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "Dom/JsonObject.h"
 #include "LiteRtLmUnrealApi.generated.h"
 
 /**
@@ -102,6 +103,9 @@ struct LITERTLMUNREAL_API FLiteRtLmResult
 
     UPROPERTY(BlueprintReadOnly, Category = "LiteRT-LM")
     bool bIsDone = false;
+
+    /** Structured tool_calls parsed from full_json_chunk (OpenAI-compatible format). */
+    TArray<TSharedPtr<FJsonObject>> ToolCalls;
 };
 
 // Callback delegates
@@ -110,55 +114,47 @@ DECLARE_DELEGATE_OneParam(FLiteRtLmDoneCallback, const FLiteRtLmResult& /*Result
 
 /**
  * The Unreal-facing API for LiteRT-LM.
+ * Acts as an "API provider" – callers only need to call SendChatRequest().
  */
 class LITERTLMUNREAL_API FLiteRtLmUnrealApi
 {
 public:
-    // Lifecycle
-    static FLiteRtLmConfig GetAutoConfig(int32 TargetVramMB);
+    // ===== Lifecycle =====
+
+    /**
+     * Automatically detect available VRAM and build a config.
+     * Default cap: 4GB. Uses DXGI real-time query on Windows.
+     */
+    static FLiteRtLmConfig GetAutoConfig();
     static bool LoadModel(const FLiteRtLmConfig& Config);
     static void UnloadModel();
+    static bool IsModelLoaded();
 
-    // Inference
-    
-    /**
-     * Stateless single-turn generation.
-     */
-    static void GenerateOnce(
-        const FString& Prompt, 
-        FLiteRtLmChunkCallback OnChunk = FLiteRtLmChunkCallback(), 
-        FLiteRtLmDoneCallback OnDone = FLiteRtLmDoneCallback(),
-        const FLiteRtLmSamplingParams& Params = FLiteRtLmSamplingParams()
-    );
-    
-    /**
-     * Agent Startup / Persistent Session.
-     * @param Ctx The context pointer (e.g. the Agent object) used to identify the session.
-     */
-    static void ChatWithPrompt(
-        void* Ctx, 
-        const FString& UserMsg, 
-        const FString& SystemPrompt = TEXT(""),
-        FLiteRtLmChunkCallback OnChunk = FLiteRtLmChunkCallback(), 
-        FLiteRtLmDoneCallback OnDone = FLiteRtLmDoneCallback(),
-        const FLiteRtLmSamplingParams& Params = FLiteRtLmSamplingParams()
-    );
+    // ===== Core API: SendChatRequest =====
 
     /**
-     * Send raw JSON message (for Multi-modal or Tool results).
+     * Send a chat request – analogous to Google's generateContent.
+     * Internally handles session management, incremental message sync,
+     * tool injection via json_preface, and structured tool_call parsing.
+     *
+     * @param SessionKey  Unique key for session (typically the Agent pointer).
+     * @param Messages    Complete conversation history (role/content JSON objects).
+     * @param ToolsJson   Tool definitions JSON array string (can be empty).
+     *                    Format: [{"name":"...", "parameters":{...}}]
+     * @param OnChunk     Streaming text callback (game thread).
+     * @param OnDone      Completion callback with FullText + ToolCalls (game thread).
+     * @param Params      Sampling parameters.
      */
-    static void AppendMessageJson(void* Ctx, const FString& JsonMsg);
-
-    /**
-     * Multi-turn Conversation with Cache-Hit.
-     */
-    static void ChatWithContext(
-        void* Ctx, 
-        const FString& HistoryJson, 
-        FLiteRtLmChunkCallback OnChunk = FLiteRtLmChunkCallback(), 
+    static void SendChatRequest(
+        void* SessionKey,
+        const TArray<TSharedPtr<FJsonObject>>& Messages,
+        const FString& ToolsJson,
+        FLiteRtLmChunkCallback OnChunk = FLiteRtLmChunkCallback(),
         FLiteRtLmDoneCallback OnDone = FLiteRtLmDoneCallback(),
         const FLiteRtLmSamplingParams& Params = FLiteRtLmSamplingParams()
     );
 
-    static float GetVRAMUsage();
+    // ===== Session Management =====
+
+    static void ReleaseSession(void* SessionKey);
 };

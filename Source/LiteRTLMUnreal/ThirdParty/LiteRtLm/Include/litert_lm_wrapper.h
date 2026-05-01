@@ -80,7 +80,7 @@ extern "C" {
     // json_preface 格式参考 JsonPreface 结构，包含 messages, tools, extra_context
     DLL_EXPORT void* LiteRtLm_CreateConversationWithConfig(
         void* engine_ptr, 
-        const char* json_preface,
+        const char* json_preface_str,
         int bEnableConstrainedDecoding
     );
 
@@ -107,6 +107,19 @@ extern "C" {
 
     // 中断推理
     DLL_EXPORT void LiteRtLm_StopMessage(void* conv_ptr);
+
+    /**
+     * @brief 阻塞等待引擎完成所有异步任务（推理生成）。
+     * 
+     * RunInference 是非阻塞的（仅提交任务到 WebGPU 队列），
+     * 必须在 RunInference 之后调用此函数驱动回调分发。
+     * 典型用法：在后台线程中依次调用 RunInference + WaitUntilDone。
+     * 
+     * @param engine_ptr  CreateEngine 返回的引擎指针
+     * @param timeout_sec 超时秒数 (<=0 使用引擎默认超时 10 分钟)
+     * @return 0=成功, 1=超时, -1=错误
+     */
+    DLL_EXPORT int LiteRtLm_WaitUntilDone(void* engine_ptr, int timeout_sec);
 
 #ifdef __cplusplus
 }
