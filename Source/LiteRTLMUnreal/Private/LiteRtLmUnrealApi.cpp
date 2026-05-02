@@ -371,7 +371,7 @@ void FLiteRtLmUnrealApi::SendChatRequest(
         return;
     }
 
-    // 3. Incremental message sync – ONLY append NEW messages to the persistent session
+    // 3. Incremental message sync – only append new messages
     int32 LastSentCount = Subsystem->GetSessionMsgCount(SessionKey);
 
     // If history shrank (agent was reset), drop session and recreate
@@ -395,38 +395,42 @@ void FLiteRtLmUnrealApi::SendChatRequest(
 
     const int32 LastMsgIdx = NormMessages.Num() - 1;
 
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Incremental Sync: Total=%d, AlreadySent=%d, NewToSync=%d"), 
-        NormMessages.Num(), LastSentCount, LastMsgIdx - LastSentCount);
-
-    // Append new history messages (all except the very last one)
+    // Append all history messages except the last one (which triggers inference)
     for (int32 i = LastSentCount; i < LastMsgIdx; ++i)
     {
         FString Role = NormMessages[i]->GetStringField(TEXT("role"));
         FString Content = NormMessages[i]->GetStringField(TEXT("content"));
 
-        if (Role == TEXT("assistant"))
-        {
-            FLiteRtLmWrapperLoader::AppendAssistantMessage(Session, TCHAR_TO_UTF8(*Content));
-        }
-        else
-        {
-            FLiteRtLmWrapperLoader::AppendUserMessage(Session, TCHAR_TO_UTF8(*Content));
-        }
+        TSharedPtr<FJsonObject> MsgObj = MakeShared<FJsonObject>();
+        MsgObj->SetStringField(TEXT("role"), Role);
+        MsgObj->SetStringField(TEXT("content"), Content);
+        FString MsgJson;
+        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MsgJson);
+        FJsonSerializer::Serialize(MsgObj.ToSharedRef(), Writer);
+
+        FLiteRtLmWrapperLoader::AppendMessageJson(Session, TCHAR_TO_UTF8(*MsgJson));
     }
 
-    // 4. Handle the last message (the one we want the AI to respond to)
+    // 4. Append the last user message to trigger inference
     FString LastRole = NormMessages[LastMsgIdx]->GetStringField(TEXT("role"));
     FString LastContent = NormMessages[LastMsgIdx]->GetStringField(TEXT("content"));
 
     if (LastRole == TEXT("assistant"))
     {
         // Edge case: last message is assistant – append it and ask for continuation
-        FLiteRtLmWrapperLoader::AppendAssistantMessage(Session, TCHAR_TO_UTF8(*LastContent));
+        FString AsJson;
+        TSharedRef<TJsonWriter<>> W = TJsonWriterFactory<>::Create(&AsJson);
+        TSharedPtr<FJsonObject> MsgObj = MakeShared<FJsonObject>();
+        MsgObj->SetStringField(TEXT("role"), TEXT("assistant"));
+        MsgObj->SetStringField(TEXT("content"), LastContent);
+        FJsonSerializer::Serialize(MsgObj.ToSharedRef(), W);
+        FLiteRtLmWrapperLoader::AppendMessageJson(Session, TCHAR_TO_UTF8(*AsJson));
+
         FLiteRtLmWrapperLoader::AppendUserMessage(Session, TCHAR_TO_UTF8(*FString(TEXT("Please continue."))));
     }
     else
     {
-        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] AppendUserMessage (Trigger): %s"), *LastContent.Left(100));
+        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] AppendUserMessage: %s"), *LastContent.Left(100));
         FLiteRtLmWrapperLoader::AppendUserMessage(Session, TCHAR_TO_UTF8(*LastContent));
     }
 
