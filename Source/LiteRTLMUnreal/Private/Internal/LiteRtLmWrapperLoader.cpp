@@ -75,19 +75,23 @@ bool FLiteRtLmWrapperLoader::LoadDll()
 
     if (!FPaths::FileExists(DllPath))
     {
-        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] DLL not found at BaseDir: %s. Searching plugin directory..."), *DllPath);
+        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] DLL not found at BaseDir: %s. Performing global adaptive search..."), *DllPath);
 
-        // 2. Adaptive Fallback: Search the entire plugin directory
-        TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("LiteRT-LM-Unreal"));
-        if (Plugin.IsValid())
+        // 2. Adaptive Search: Scan project and engine plugins directories
+        // This removes dependency on a specific plugin name ("LiteRT-LM-Unreal")
+        TArray<FString> SearchRoots;
+        SearchRoots.Add(FPaths::ProjectPluginsDir());
+        SearchRoots.Add(FPaths::EnginePluginsDir());
+
+        for (const FString& Root : SearchRoots)
         {
-            FString SearchRoot = Plugin->GetBaseDir();
-            DllPath = FindFileRecursive(SearchRoot, TargetDllName);
+            DllPath = FindFileRecursive(Root, TargetDllName);
+            if (!DllPath.IsEmpty()) break;
         }
 
         if (DllPath.IsEmpty() || !FPaths::FileExists(DllPath))
         {
-            UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] DLL not found anywhere in the plugin directory."));
+            UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] DLL not found in any plugin directory."));
             return false;
         }
     }
