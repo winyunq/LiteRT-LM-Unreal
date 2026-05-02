@@ -1,6 +1,7 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
 #include "LiteRtLmUnrealApi.h"
 #include "LiteRtLmSubsystem.h"
+#include "Engine/Engine.h"
 #include "Internal/LiteRtLmWrapperLoader.h"
 #include "Async/Async.h"
 #include "Serialization/JsonSerializer.h"
@@ -371,8 +372,27 @@ void FLiteRtLmUnrealApi::SendChatRequest(
     }
 
     // 3. Incremental message sync – ONLY append NEW messages to the persistent session
-    // According to HANDOVER.md, the Conversation handle keeps the KV Cache.
     int32 LastSentCount = Subsystem->GetSessionMsgCount(SessionKey);
+
+    // If history shrank (agent was reset), drop session and recreate
+    if (LastSentCount > NormMessages.Num())
+    {
+        Subsystem->ReleaseSession(SessionKey);
+        Session = Subsystem->GetOrCreateSession(SessionKey, ToolsJson);
+        if (!Session)
+        {
+            if (OnDone.IsBound())
+            {
+                FLiteRtLmResult ErrResult;
+                ErrResult.ErrorMsg = TEXT("Failed to recreate LiteRT-LM session after reset.");
+                ErrResult.bIsDone = true;
+                OnDone.ExecuteIfBound(ErrResult);
+            }
+            return;
+        }
+        LastSentCount = 0;
+    }
+
     const int32 LastMsgIdx = NormMessages.Num() - 1;
 
     UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Incremental Sync: Total=%d, AlreadySent=%d, NewToSync=%d"), 
@@ -386,12 +406,10 @@ void FLiteRtLmUnrealApi::SendChatRequest(
 
         if (Role == TEXT("assistant"))
         {
-            // Use the specific assistant sync API (HANDOVER.md section 2.1)
             FLiteRtLmWrapperLoader::AppendAssistantMessage(Session, TCHAR_TO_UTF8(*Content));
         }
         else
         {
-            // Use direct user message API for history as well – safer than JSON
             FLiteRtLmWrapperLoader::AppendUserMessage(Session, TCHAR_TO_UTF8(*Content));
         }
     }
@@ -402,7 +420,9 @@ void FLiteRtLmUnrealApi::SendChatRequest(
 
     if (LastRole == TEXT("assistant"))
     {
+        // Edge case: last message is assistant – append it and ask for continuation
         FLiteRtLmWrapperLoader::AppendAssistantMessage(Session, TCHAR_TO_UTF8(*LastContent));
+        FLiteRtLmWrapperLoader::AppendUserMessage(Session, TCHAR_TO_UTF8(*FString(TEXT("Please continue."))));
     }
     else
     {

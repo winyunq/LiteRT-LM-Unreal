@@ -1,3 +1,4 @@
+// Copyright (c) 2025-2026 Winyunq. All rights reserved.
 using UnrealBuildTool;
 using System.IO;
 
@@ -6,11 +7,12 @@ public class LiteRTLMUnreal : ModuleRules
 	public LiteRTLMUnreal(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Projects", "Json" });
 
 		// ThirdParty Path
-		string ThirdPartyPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "ThirdParty/LiteRtLm"));
+		string ThirdPartyPath = Path.GetFullPath(Path.Combine(PluginDirectory, "Source/ThirdParty/LiteRtLm"));
 		PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "Include"));
 
 		if (Target.Platform == UnrealTargetPlatform.Win64)

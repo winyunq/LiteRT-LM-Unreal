@@ -40,6 +40,12 @@ public:
      */
     static int32 QueryAvailableVramMB(int32 DefaultMB = 4096);
 
+    /**
+     * Query available GPU VRAM via DXGI (Windows only).
+     * Returns available VRAM in MB, or DefaultMB if query fails.
+     */
+    static int32 QueryAvailableVramMB(int32 DefaultMB = 4096);
+
 private:
     void* EngineHandle = nullptr;
     TMap<void*, void*> SessionMap;
