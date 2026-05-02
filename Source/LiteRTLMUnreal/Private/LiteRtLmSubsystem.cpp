@@ -65,7 +65,16 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 
 void ULiteRtLmSubsystem::UnloadModel()
 {
-    if (!EngineHandle) return;
+    if (!EngineHandle)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] UnloadModel called but EngineHandle is already NULL."));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] CRITICAL: Unloading model and releasing GPU resources..."));
+
+    // 0. Stop all active inference first to unlock GPU resources
+    // StopMessage();
 
     // Release all sessions first
     for (auto& It : SessionMap)
@@ -79,9 +88,17 @@ void ULiteRtLmSubsystem::UnloadModel()
     SessionMsgCountMap.Empty();
     SessionToolsMap.Empty();
 
+    if (FLiteRtLmWrapperLoader::WaitUntilDone)
+    {
+        // 强制等待 GPU 完成当前可能的挂起任务 (Force wait for GPU)
+        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Flushing GPU commands before engine destruction..."));
+        FLiteRtLmWrapperLoader::WaitUntilDone(EngineHandle, 2); // Wait at most 2 seconds
+    }
+
     if (FLiteRtLmWrapperLoader::DestroyEngine)
     {
         FLiteRtLmWrapperLoader::DestroyEngine(EngineHandle);
+        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] Native Engine Destroyed."));
     }
     EngineHandle = nullptr;
 }

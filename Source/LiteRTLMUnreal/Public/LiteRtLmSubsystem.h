@@ -32,6 +32,7 @@ public:
     // Getters
     void* GetEngineHandle() const { return EngineHandle; }
     bool IsModelLoaded() const { return EngineHandle != nullptr; }
+    FLiteRtLmConfig GetCurrentConfig() const { return CurrentConfig; }
 
     /**
      * Query available GPU VRAM via DXGI (Windows only).
