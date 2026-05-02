@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LiteRtLm_DestroyConversation - LiteRT-LM API Reference</title>
+    <title>LiteRtLm_AppendUserMessage - LiteRT-LM API Reference</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script type="module">
@@ -26,46 +26,49 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-end gap-4 mb-6">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="destroy_conv_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="append_user.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
 
-        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        <a href="../index_zh.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回总览
         </a>
 
         <header class="mb-16">
-            <h1 class="text-5xl mb-4 font-black">LiteRtLm_DestroyConversation</h1>
-            <p class="text-gray-500 text-lg">Destroys a conversation session. Releases the KV Cache slot occupied by this session in the GPU and cleans up all historical message memory.</p>
+            <h1 class="text-5xl mb-4 font-black">LiteRtLm_AppendUserMessage</h1>
+            <p class="text-gray-500 text-lg">追加用户纯文本消息。将会话状态更新为“等待响应”状态。</p>
         </header>
 
-        <!-- Section 1: Eviction Diagram -->
+        <!-- Section 1: Stacking Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. VRAM Resource Recovery Flow</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 消息入队逻辑</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
-                        Conv[Conversation Handle] -->|Destroy| Pool[VRAM KV Cache Pool]
-                        Pool -->|Free Slot| Empty[Available VRAM Slot]
-                        Conv -->|Clear| History[RAM History Buffer]
+                        Input[User Text] -->|Append| History[Session History List]
+                        History -->|State| Pending[Wait for RunInference]
                 </div>
                 <p class="text-xs text-gray-600 mt-6 italic">
-                    Calling this function is critical to maintaining long-term operational stability. For conversations that are no longer active (e.g., closed UI windows or destroyed NPC Actors), it must be explicitly called to prevent VRAM fragmentation or exhaustion.
+                    此函数仅负责将文本同步到会话的内部缓冲区。为了获得 AI 响应，必须在追加消息后显式调用 <code>LiteRtLm_RunInference</code>。
                 </p>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Parameter Definition</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数定义</h3>
             <div class="content-card">
-                <pre><code class="language-c">void LiteRtLm_DestroyConversation(void* conv_ptr);</code></pre>
+                <pre><code class="language-c">void LiteRtLm_AppendUserMessage(void* conv_ptr, const char* text);</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">Parameter</th><th>Description</th></tr></thead>
+                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>conv_ptr</code></td>
-                            <td>The session handle to destroy. After invocation, this pointer and the associated KV Cache will be immediately invalidated.</td>
+                            <td>有效的会话句柄。</td>
+                        </tr>
+                        <tr>
+                            <td><code>text</code></td>
+                            <td>用户输入的纯文本内容。</td>
                         </tr>
                     </tbody>
                 </table>
@@ -74,13 +77,13 @@
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Standard Cleanup Pattern</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 简单交互代码</h3>
             <div class="content-card">
-                <pre><code>// End conversation and recover VRAM
-if (ActiveConversation) {
-    LiteRtLm_DestroyConversation(ActiveConversation);
-    ActiveConversation = nullptr;
-}</code></pre>
+                <pre><code>// 1. 追加用户消息
+LiteRtLm_AppendUserMessage(MyConv, "告诉我关于虚幻引擎 5 的事情。");
+
+// 2. 触发推理 (后续步骤)
+LiteRtLm_RunInference(MyConv, MySamplingParams, MyCallback, NULL);</code></pre>
             </div>
         </section>
 

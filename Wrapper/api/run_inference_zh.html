@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,45 +27,45 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-end gap-4 mb-6">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="run_inference_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="run_inference.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
 
-        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        <a href="../index_zh.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回总览
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_RunInference</h1>
-            <p class="text-gray-500 text-lg">Triggers asynchronous incremental inference. Submits the request to the computation queue and returns immediately. Results are pushed via a callback function.</p>
+            <p class="text-gray-500 text-lg">触发异步增量推理。将推理请求提交至计算队列并立即返回。推理结果通过回调函数流式推送。</p>
         </header>
 
         <!-- Section 1: Async Pipeline Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Async Task Submission Flow</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 异步任务提交流程</h3>
             <div class="content-card">
                 <div class="mermaid">
                     sequenceDiagram
-                        participant App as Host App (Worker Thread)
+                        participant App as 宿主应用 (Worker Thread)
                         participant DLL as Wrapper DLL
                         participant GPU as WebGPU / CPU Device
-                        App->>DLL: Call RunInference
-                        DLL->>GPU: Submit Token Generation Task to Queue
-                        DLL-->>App: Immediate Return (Non-blocking)
-                        Note over App: Callback not yet triggered
-                        App->>DLL: Call WaitUntilDone (Drive Task)
-                        GPU->>DLL: Produce Incremental Token
-                        DLL->>App: Trigger LiteRtLmCallback
+                        App->>DLL: 调用 RunInference
+                        DLL->>GPU: 提交 Token 生成任务到队列
+                        DLL-->>App: 立即返回 (Non-blocking)
+                        Note over App: 此时回调尚未触发
+                        App->>DLL: 调用 WaitUntilDone (泵送任务)
+                        GPU->>DLL: 产生增量 Token
+                        DLL->>App: 触发 LiteRtLmCallback
                 </div>
                 <div class="important-box text-xs">
-                    <b>Non-blocking Design:</b> <code>RunInference</code> itself does not perform computation; it only "ignites" the process. Actual computation driving and callback dispatching must be completed through subsequent calls to <code>LiteRtLm_WaitUntilDone</code>.
+                    <b>非阻塞设计：</b> RunInference 自身不执行计算，它只负责“点火”。实际的计算驱动和回调分发必须通过后续调用 <code>LiteRtLm_WaitUntilDone</code> 来完成。
                 </div>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Detailed Parameter Definition</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数详细定义</h3>
             <div class="content-card">
                 <pre><code class="language-c">void LiteRtLm_RunInference(
     void* conv_ptr, 
@@ -74,23 +74,23 @@
     void* user_ptr
 );</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">Parameter</th><th>Description</th></tr></thead>
+                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>conv_ptr</code></td>
-                            <td>The session handle to execute inference on.</td>
+                            <td>要执行推理的会话句柄。</td>
                         </tr>
                         <tr>
                             <td><code>params</code></td>
-                            <td>Sampling and constraint parameters. See <a href="struct_sampling.html" class="text-blue-500">LiteRtLm_SamplingParams</a>.</td>
+                            <td>采样与约束参数。详见 <a href="struct_sampling_zh.html" class="text-blue-500">LiteRtLm_SamplingParams</a>。</td>
                         </tr>
                         <tr>
                             <td><code>callback</code></td>
-                            <td>Streaming result callback function pointer.</td>
+                            <td>流式结果回调函数指针。</td>
                         </tr>
                         <tr>
                             <td><code>user_ptr</code></td>
-                            <td>User context pointer, passed through to the callback.</td>
+                            <td>用户上下文指针，将原样透传给回调函数。</td>
                         </tr>
                     </tbody>
                 </table>
@@ -99,17 +99,17 @@
 
         <!-- Section 3: Usage Pattern -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Standard Invocation Sequence</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 标准调用时序代码</h3>
             <div class="content-card">
-                <pre><code>// Recommended to run this loop in a background thread
+                <pre><code>// 建议在后台线程执行此循环
 void BackgroundInferenceThread() {
-    // 1. Submit Task
+    // 1. 提交任务
     LiteRtLm_RunInference(Conv, MyParams, MyCallback, this);
     
-    // 2. Enter driving loop until inference ends
+    // 2. 进入驱动循环，直到推理结束
     int Status = 0;
     while (Status == 0) {
-        // Pump results every 100ms, or block until a token is produced
+        // 每 100ms 泵送一次结果，或阻塞直到产生 Token
         Status = LiteRtLm_WaitUntilDone(Engine, 1); 
         if (bInterruptFlag) break;
     }

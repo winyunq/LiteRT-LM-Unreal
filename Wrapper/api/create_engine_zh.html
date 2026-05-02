@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,58 +27,58 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-end gap-4 mb-6">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="create_engine_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="create_engine.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
 
-        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        <a href="../index_zh.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回总览
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_CreateEngine</h1>
-            <p class="text-gray-500 text-lg">Engine constructor. Loads weights, allocates VRAM, and initializes the computation pipeline. This is the most time-consuming operation in the entire system.</p>
+            <p class="text-gray-500 text-lg">引擎构造函数。加载权重、分配显存并初始化计算管线。这是整个系统最耗时的操作。</p>
         </header>
 
         <!-- Section 1: Context Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Physical Behavior during Construction</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 构造期物理行为</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
                         Config[LiteRtLm_Config] --> Call[CreateEngine]
-                        subgraph Runtime_Init [Internal Engine Initialization Logic]
-                            Load[Model File Loading: RAM] --> Alloc[Memory Allocation: VRAM]
-                            Alloc --> Shader[Shader Compilation/Pre-optimization]
-                            Shader --> Pipeline[Build Inference Computation Graph]
+                        subgraph Runtime_Init [引擎初始化内部逻辑]
+                            Load[模型文件加载: RAM] --> Alloc[显存分配: VRAM]
+                            Alloc --> Shader[着色器编译/预优化]
+                            Shader --> Pipeline[构建推理计算图]
                         end
                         Call --> Runtime_Init
-                        Runtime_Init -->|Success| Ptr["Return void* Engine Handle"]
+                        Runtime_Init -->|Success| Ptr["返回 void* Engine Handle"]
                         Runtime_Init -->|Fail| Null[NULL]
                 </div>
                 <div class="important-box text-xs leading-relaxed">
-                    <b>Latency Warning:</b> Initialization can take 2~10 seconds (depending on model size and hardware performance). In Unreal Engine, <b>it is strictly forbidden to call this function on the GameThread (Main Thread)</b>, as it will cause the screen to freeze completely.
+                    <b>耗时警告：</b> 初始化可能长达 2~10 秒（取决于模型大小和硬件性能）。在虚幻引擎中，<b>严禁在 GameThread (主线程) 调用此函数</b>，否则会导致画面彻底冻结。
                 </div>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Parameter and Return Value</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数与返回值</h3>
             <div class="content-card">
                 <pre><code class="language-c">void* LiteRtLm_CreateEngine(LiteRtLm_Config config);</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">Parameter / Return Value</th><th>Detailed Description</th></tr></thead>
+                    <thead><tr><th class="w-1/4">参数/返回值</th><th>详细描述</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>config</code></td>
-                            <td>Initialization configuration structure. See details in <a href="struct_config.html" class="text-blue-500">LiteRtLm_Config</a>.</td>
+                            <td>初始化配置结构体。详见 <a href="struct_config.html" class="text-blue-500">LiteRtLm_Config</a>。</td>
                         </tr>
                         <tr>
-                            <td><code>Return Value (void*)</code></td>
+                            <td><code>返回值 (void*)</code></td>
                             <td>
-                                <b>Engine instance handle.</b><br/>
-                                This is an Opaque Pointer used for all subsequent API calls. Returns NULL if it fails; please check the console error logs.
+                                <b>引擎实例句柄。</b><br/>
+                                这是一个不透明指针（Opaque Pointer），用于后续所有 API 调用。如果失败返回 NULL，请检查控制台错误日志。
                             </td>
                         </tr>
                     </tbody>
@@ -88,9 +88,9 @@
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Asynchronous Creation Code Paradigm</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 异步创建代码范式</h3>
             <div class="content-card">
-                <pre><code>// Execute initialization in a background thread
+                <pre><code>// 在后台线程执行初始化
 AsyncTask(ENamedThreads::AnyBackgroundHiPriTask, [this]() {
     LiteRtLm_Config MyConfig = GetDefaultConfig();
     void* NewEngine = LiteRtLm_CreateEngine(MyConfig);

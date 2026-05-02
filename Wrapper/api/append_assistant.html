@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,47 +25,52 @@
 </head>
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
+        <div class="flex justify-end gap-4 mb-6">
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
+            <a href="append_assistant_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+        </div>
+
         <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
             <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_AppendAssistantMessage</h1>
-            <p class="text-gray-500 text-lg">追加助理（AI）消息。用于将会话状态同步为“已回复”状态，通常用于恢复历史对话。</p>
+            <p class="text-gray-500 text-lg">Appends an assistant (AI) message. Used to synchronize the Session state to the "Replied" state, typically for restoring historical dialogues.</p>
         </header>
 
         <!-- Section 1: Context Loading Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 历史恢复逻辑</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. History Restoration Logic</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph LR
-                        DB[(外部数据库/存档)] -->|Restore| Conv[Conversation]
+                        DB[(External DB/Archive)] -->|Restore| Conv[Conversation]
                         Conv -->|1. AppendUser| History[History List]
                         Conv -->|2. AppendAssistant| History
                         History -->|Ready| NewPrompt[Next User Input]
                 </div>
                 <p class="text-xs text-gray-600 mt-6 italic">
-                    此接口确保会话的历史链路完整。如果不追加 Assistant 的回复而直接追加下一条 User 消息，AI 可能会由于上下文断裂而产生重复响应。
+                    This interface ensures the integrity of the conversation's historical chain. If a new User message is appended directly without appending the Assistant's reply, the AI might generate redundant responses due to context breakage.
                 </p>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数定义</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Parameter Definitions</h3>
             <div class="content-card">
                 <pre><code class="language-c">void LiteRtLm_AppendAssistantMessage(void* conv_ptr, const char* text);</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
+                    <thead><tr><th class="w-1/4">Parameter</th><th>Responsibility</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>conv_ptr</code></td>
-                            <td>有效的会话句柄。</td>
+                            <td>Valid Session handle.</td>
                         </tr>
                         <tr>
                             <td><code>text</code></td>
-                            <td>要追加的 AI 响应纯文本内容。</td>
+                            <td>The AI response plain text content to append.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -74,14 +79,14 @@
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 存档恢复代码示例</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Archive Restoration Code Example</h3>
             <div class="content-card">
-                <pre><code>// 恢复之前的对话轮次
-LiteRtLm_AppendUserMessage(Conv, "你好");
-LiteRtLm_AppendAssistantMessage(Conv, "你好！我是你的 AI 助手。");
+                <pre><code>// Restore previous conversation turns
+LiteRtLm_AppendUserMessage(Conv, "Hello");
+LiteRtLm_AppendAssistantMessage(Conv, "Hello! I am your AI assistant.");
 
-// 此时会话已处于“已回复”状态，等待下一条用户消息
-LiteRtLm_AppendUserMessage(Conv, "帮我写段 C++ 代码");</code></pre>
+// The Session is now in the "Replied" state, waiting for the next user message
+LiteRtLm_AppendUserMessage(Conv, "Help me write some C++ code");</code></pre>
             </div>
         </section>
 

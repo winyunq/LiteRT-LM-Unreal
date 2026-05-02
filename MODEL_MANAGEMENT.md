@@ -1,39 +1,41 @@
-# 模型管理指南 (Model Management)
+**EN** | [中文](MODEL_MANAGEMENT_zh.md)
 
-在 **LiteRT-LM-Unreal** 中，模型是驱动智能体验的核心。本插件针对虚幻引擎的生产环境进行了深度优化，确保模型加载高效且运行稳定。
+# Model Management Guide
 
-## 1. 模型存储规范
+In **LiteRT-LM-Unreal**, the model is the core driving the intelligent experience. This plugin is deeply optimized for Unreal Engine's production environment, ensuring efficient loading and stable operation.
 
-为了保证跨平台打包的兼容性，建议将 `.bin` 或 `.gguf` 模型文件存放在项目的特定目录下：
+## 1. Model Storage Specification
 
-- **推荐路径**：`Content/LiteRT/Models/`
-- **文件格式**：支持 Google LiteRT-LM 专用格式（通常为 `.bin` 或经转换的 `.tflite` 兼容格式）。
+To ensure compatibility across platforms after packaging, it is recommended to store `.bin` or `.gguf` model files in a specific directory within your project:
 
-> **⚠️ 注意**：虚幻引擎默认不会将非 `.uasset` 文件包含在打包包中。本插件会自动识别该路径，但请确保在 `Project Settings -> Packaging -> Additional Non-Asset Directories to Copy` 中手动添加此文件夹，以确保发布版能够读取。
+- **Recommended Path**: `Content/LiteRT/Models/`
+- **File Format**: Supports Google LiteRT-LM specific formats (usually `.bin` or converted `.tflite` compatible formats).
 
-## 2. 在编辑器中配置模型
+> **⚠️ Note**: Unreal Engine does not include non-`.uasset` files in the packaged build by default. While this plugin automatically identifies the path, please ensure you manually add this folder in `Project Settings -> Packaging -> Additional Non-Asset Directories to Copy` to ensure the release version can read it.
 
-您可以直接在虚幻引擎编辑器的全局 Subsystem 设置中进行初步配置，或者通过代码动态加载。
+## 2. Configure Models in the Editor
 
-### 配置参数说明
+You can perform initial configuration directly in the Global Subsystem settings within the Unreal Editor or load models dynamically via code.
 
-| 参数名称 | 描述 | 推荐值 |
+### Configuration Parameter Description
+
+| Parameter Name | Description | Recommended Value |
 | :--- | :--- | :--- |
-| **Model Path** | 模型的磁盘绝对路径或相对路径。 | `D:/Models/gemma-2b.bin` |
-| **Backend** | 推理后端选择。`gpu` 适用于现代显卡，`cpu` 适用于低配设备。 | `gpu` |
-| **Max Num Tokens** | KV Cache 预分配的大小，直接影响 VRAM 占用。 | `2048` |
-| **Optimize Shader** | 是否启用着色器编译优化（Windows/Vulkan 环境必选）。 | `true` |
+| **Model Path** | Absolute or relative disk path to the model. | `D:/Models/gemma-2b.bin` |
+| **Backend** | Inference backend selection. `gpu` for modern graphics cards, `cpu` for lower-end devices. | `gpu` |
+| **Max Num Tokens** | Size of the KV Cache pre-allocation, directly affecting VRAM usage. | `2048` |
+| **Optimize Shader** | Whether to enable shader compilation optimization (Mandatory for Windows/Vulkan). | `true` |
 
-## 3. 动态加载与切换
+## 3. Dynamic Loading & Switching
 
-通过 `ULiteRtLmSubsystem`，您可以在运行时随时切换模型：
+Via `ULiteRtLmSubsystem`, you can switch models at any time during runtime:
 
 ```cpp
 FLiteRtLmConfig MyConfig;
 MyConfig.ModelPath = TEXT("D:/Models/gemma-2b-it.bin");
 MyConfig.Backend = TEXT("gpu");
 
-// 自动根据 VRAM 预算调整配置 (可选)
+// Automatically adjust configuration based on VRAM budget (Optional)
 // MyConfig = FLiteRtLmUnrealApi::GetAutoConfig(4096); 
 
 if (ULiteRtLmSubsystem::Get()->LoadModel(MyConfig))
@@ -42,13 +44,13 @@ if (ULiteRtLmSubsystem::Get()->LoadModel(MyConfig))
 }
 ```
 
-## 4. VRAM 内存管理
+## 4. VRAM Memory Management
 
-插件内置了基于 **LRU (Least Recently Used)** 的会话清理机制。
+The plugin has a built-in session cleanup mechanism based on **LRU (Least Recently Used)**.
 
-- **多 Agent 支持**：您可以同时为多个 NPC 开启会话。
-- **自动释放**：当显存不足时，系统会自动销毁最久未使用的 Session 指针。
-- **性能监控**：使用 `FLiteRtLmUnrealApi::GetVRAMUsage()` 可以实时获取当前模型占用的显存大小（MB）。
+- **Multi-Agent Support**: You can open sessions for multiple NPCs simultaneously.
+- **Automatic Release**: When VRAM is insufficient, the system automatically destroys the least recently used Session pointer.
+- **Performance Monitoring**: Use `FLiteRtLmUnrealApi::GetVRAMUsage()` to get the current model's VRAM usage (MB) in real-time.
 
 ---
-*Powered by Winyunq Core Engineering - 提升每一兆显存的推理价值。*
+*Powered by Winyunq Core Engineering - Maximizing inference value for every MB of VRAM.*

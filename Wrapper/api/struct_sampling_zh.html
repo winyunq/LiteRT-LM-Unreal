@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,50 +27,50 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-end gap-4 mb-6">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="struct_sampling_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="struct_sampling.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
 
-        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        <a href="../index_zh.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回总览
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_SamplingParams</h1>
-            <p class="text-gray-500 text-lg">Sampling and constraint parameter structure. Controls the creativity of text generation (Temperature/Top-P) and hard constraints on output format (JSON/Regex).</p>
+            <p class="text-gray-500 text-lg">采样与约束参数结构体。控制文本生成的创造度（Temperature/Top-P）及输出格式的硬性约束（JSON/Regex）。</p>
         </header>
 
         <!-- Section 1: Lifecycle / Context Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Role Context in Generation Loop</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 生成循环中的作用上下文</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
                         Params[LiteRtLm_SamplingParams] -->|Input| Run[LiteRtLm_RunInference]
-                        subgraph Inference_Loop [Kernel Generation Loop]
-                            Logits[Raw Logits] --> Sampling[Sampling Logic: Temp/Top-P]
-                            Sampling --> Constraint[Constraint Correction: LLGuidance]
+                        subgraph Inference_Loop [内核生成循环]
+                            Logits[Raw Logits] --> Sampling[采样逻辑: Temp/Top-P]
+                            Sampling --> Constraint[约束修正: LLGuidance]
                             Constraint -->|Next Token| Result[Append to Result]
                         end
-                        Params -.->|Controls| Sampling
-                        Params -.->|Provides Grammar/Regex| Constraint
+                        Params -.->|控制| Sampling
+                        Params -.->|提供语法/正则| Constraint
                 </div>
                 <p class="text-xs text-gray-600 mt-6 italic">
-                    <code>SamplingParams</code> not only determines the "personality" of the AI but also, through the llguidance integration layer, forces the output to conform to a specific Schema (like JSON).
+                    SamplingParams 不仅决定了 AI 的“性格”，还通过 llguidance 整合层，强制输出符合特定 Schema（如 JSON）的文本。
                 </p>
             </div>
         </section>
 
         <!-- Section 2: Fields Table -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Member Variable Details</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 成员变量详解</h3>
             <div class="content-card">
                 <table class="api-table">
                     <thead>
                         <tr>
-                            <th class="w-1/4">Member</th>
-                            <th class="w-1/6">Type</th>
-                            <th>Description & Constraints</th>
+                            <th class="w-1/4">成员变量</th>
+                            <th class="w-1/6">类型</th>
+                            <th>功能描述与约束说明</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,63 +78,63 @@
                             <td><code>temperature</code></td>
                             <td><code>float</code></td>
                             <td>
-                                <b>Sampling Temperature.</b> Range [0.0, 2.0].<br/>
-                                0.0 indicates Greedy search for deterministic results; 1.0 is standard creativity.
+                                <b>采样温度。</b> 范围 [0.0, 2.0]。<br/>
+                                0.0 表示贪婪搜索（Greedy），结果最确定。1.0 为标准创造力。
                             </td>
                         </tr>
                         <tr>
                             <td><code>top_p</code></td>
                             <td><code>float</code></td>
                             <td>
-                                <b>Nucleus Sampling.</b> Range [0.0, 1.0].<br/>
-                                Samples only from the set of candidates whose cumulative probability reaches P. Usually set to 0.9.
+                                <b>核采样。</b> 范围 [0.0, 1.0]。<br/>
+                                仅从累计概率达到 P 的候选集中采样。通常设为 0.9。
                             </td>
                         </tr>
                         <tr>
                             <td><code>max_tokens</code></td>
                             <td><code>int</code></td>
                             <td>
-                                <b>Generation Limit.</b><br/>
-                                Forcibly stops after this many tokens, regardless of whether an EOF token was generated.
+                                <b>本次生成上限。</b><br/>
+                                达到此 Token 数后强行停止，无论是否生成结束符。
                             </td>
                         </tr>
                         <tr>
                             <td><code>constraint_type</code></td>
                             <td><code>int</code></td>
                             <td>
-                                <b>Hard Constraint Type.</b><br/>
-                                0: No constraint | 1: Regex | 2: JSON Schema | 3: Lark Grammar.
+                                <b>硬约束类型。</b><br/>
+                                0: 无约束 | 1: Regex (正则表达式) | 2: JSON Schema | 3: Lark Grammar。
                             </td>
                         </tr>
                         <tr>
                             <td><code>constraint_string</code></td>
                             <td><code>const char*</code></td>
                             <td>
-                                <b>Constraint Description String.</b><br/>
-                                Passes the corresponding Regex or JSON Schema based on <code>constraint_type</code>.
+                                <b>约束描述字符串。</b><br/>
+                                根据 <code>constraint_type</code> 的选择，传入对应的正则或 JSON Schema。
                             </td>
                         </tr>
                     </tbody>
                 </table>
                 <div class="warning-box text-xs">
-                    <b>Note:</b> When <code>constraint_type > 0</code>, the first token latency might increase slightly due to the initialization of the llguidance grammar state machine.
+                    <b>注意：</b> 当 <code>constraint_type > 0</code> 时，生成的首个 Token 延迟可能会由于 llguidance 语法状态机的初始化而略有增加。
                 </div>
             </div>
         </section>
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. C Language Usage Example (JSON Constraint)</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. C 语言调用示例 (JSON 强约束)</h3>
             <div class="content-card">
                 <pre><code>LiteRtLm_SamplingParams params = {0};
-params.temperature = 0.0f; // 0 temperature is recommended for structured output
+params.temperature = 0.0f; // 结构化输出通常建议 0 温度
 params.max_tokens = 512;
 
-// Enable hard JSON Schema constraint
+// 开启 JSON 格式强约束
 params.constraint_type = 2; 
 params.constraint_string = "{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}}}";
 
-// Apply to inference
+// 应用于推理
 LiteRtLm_RunInference(conversation, params, MyCallback, NULL);</code></pre>
             </div>
         </section>

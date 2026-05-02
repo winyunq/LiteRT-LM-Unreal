@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,60 +27,60 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-end gap-4 mb-6">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="wait_until_done_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="wait_until_done.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
 
-        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        <a href="../index_zh.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回总览
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_WaitUntilDone</h1>
-            <p class="text-gray-500 text-lg">Engine heartbeat drive interface. Blocks the current thread and pumps asynchronous computation tasks. It is the sole bridge connecting "task submission" and "result callbacks."</p>
+            <p class="text-gray-500 text-lg">引擎心跳驱动接口。阻塞当前线程并泵送异步计算任务。它是连接“任务提交”与“结果回调”的唯一桥梁。</p>
         </header>
 
         <!-- Section 1: Heartbeat Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Engine Crankshaft Drive Principle</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 引擎曲轴驱动原理</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
-                        Thread[Background Heartbeat Thread] -->|Loop Call| API[WaitUntilDone]
+                        Thread[后台心跳线程] -->|Loop Call| API[WaitUntilDone]
                         API -->|1. Poll| GPU[GPU Command Queue]
                         GPU -->|2. Event| API
                         API -->|3. Trigger| Callback[LiteRtLmCallback]
                         Callback -->|4. Resume| Thread
                 </div>
                 <div class="important-box text-xs leading-relaxed">
-                    <b>Core Design Philosophy:</b> The DLL does not forcibly create background threads; instead, it hands the "driving authority" to the host. If this function is not called in a loop, tokens produced by the GPU will accumulate in internal queues, and callbacks will never be dispatched.
+                    <b>核心设计哲学：</b> DLL 内部不强制创建后台线程，而是将“驱动权”交给宿主。如果不循环调用此函数，GPU 产生的 Token 将堆积在内部队列中，回调函数永远不会被分发。
                 </div>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Parameter & Return Value Definition</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数与返回值定义</h3>
             <div class="content-card">
                 <pre><code class="language-c">int LiteRtLm_WaitUntilDone(void* engine_ptr, int timeout_sec);</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">Param/Return</th><th>Description</th></tr></thead>
+                    <thead><tr><th class="w-1/4">参数/返回值</th><th>详细描述</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>engine_ptr</code></td>
-                            <td>Handle to the engine instance to drive.</td>
+                            <td>要驱动的引擎实例句柄。</td>
                         </tr>
                         <tr>
                             <td><code>timeout_sec</code></td>
-                            <td>Timeout for a single blocking call. Set to 0 for default timeout (typically 600 seconds).</td>
+                            <td>单次阻塞的超时时间。设为 0 表示使用默认超时（通常为 600 秒）。</td>
                         </tr>
                         <tr>
-                            <td><code>Return Value (int)</code></td>
+                            <td><code>返回值 (int)</code></td>
                             <td>
-                                <b>Status Codes:</b><br/>
-                                0: All inference tasks completed normally.<br/>
-                                1: Single block timed out, but tasks are still in progress.<br/>
-                                -1: Fatal internal engine error occurred.
+                                <b>状态码：</b><br/>
+                                0: 推理任务已全部正常完成。<br/>
+                                1: 单次阻塞超时，但任务仍在进行中。<br/>
+                                -1: 引擎发生内部致命错误。
                             </td>
                         </tr>
                     </tbody>
@@ -90,22 +90,22 @@
 
         <!-- Section 3: Usage Pattern -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Typical Background Driving Loop (Worker Thread)</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 典型的后台驱动循环 (Worker Thread)</h3>
             <div class="content-card">
-                <pre><code>// Runs in an independent background thread
+                <pre><code>// 在一个独立的后台 Thread 中运行
 void UMyAiSubsystem::InferenceWorker() {
     while (bIsRunning) {
-        // Block and wait for token production
+        // 阻塞并等待 Token 产生
         int Result = LiteRtLm_WaitUntilDone(EngineHandle, 1);
         
         if (Result == 0) {
-            // All tasks done, sleep to save CPU
+            // 所有任务完成，进入休眠以节省 CPU
             FPlatformProcess::Sleep(0.1f);
         } else if (Result < 0) {
             UE_LOG(LogTemp, Error, TEXT("Engine Heartbeat Lost!"));
             break;
         }
-        // Result == 1 means still generating, continue next loop
+        // Result == 1 表示仍在产生中，继续下一次循环
     }
 }</code></pre>
             </div>

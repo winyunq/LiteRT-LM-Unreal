@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,49 +23,49 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-end gap-4 mb-6">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="callback_typedef_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="callback_typedef.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
 
-        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        <a href="../index_zh.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回总览
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLmCallback</h1>
-            <p class="text-gray-500 text-lg">Callback function prototype. Defines how the engine pushes asynchronous generation results to the host application. Implements context retention using the User Pointer pattern.</p>
+            <p class="text-gray-500 text-lg">回调函数原型。定义了引擎如何向宿主应用程序推送异步生成结果。使用 User Pointer 模式实现上下文保持。</p>
         </header>
 
         <!-- Section 1: Passthrough Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Context Passthrough Principle</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 用户指针透传原理 (Context Passthrough)</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
-                        Caller[Caller: RunInference] -->|1. Pass MyObject Pointer| DLL[Wrapper DLL Async Task]
-                        DLL -->|2. Push Result| Callback[User Callback]
-                        DLL -->|3. Return MyObject as is| Callback
-                        Callback -->|4. Cast Type| Object[Operate MyObject Instance]
+                        Caller[调用方: RunInference] -->|1. 传入 MyObject 指针| DLL[Wrapper DLL 异步任务]
+                        DLL -->|2. 推送 Result| Callback[用户回调函数]
+                        DLL -->|3. 原样返回 MyObject| Callback
+                        Callback -->|4. 强转类型| Object[操作 MyObject 实例]
                 </div>
                 <p class="text-xs text-gray-600 mt-6 italic leading-relaxed">
-                    Since the C-API cannot recognize C++ class member functions, a static function or Lambda like <code>LiteRtLmCallback</code>, combined with <code>user_ptr</code>, must be used to retrieve the C++ object context.
+                    由于 C-API 无法识别 C++ 类成员函数，必须通过 <code>LiteRtLmCallback</code> 这种静态函数或 Lambda，配合 <code>user_ptr</code> 来重新找回 C++ 对象的上下文。
                 </p>
             </div>
         </section>
 
         <!-- Section 2: Prototype -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Function Prototype Definition</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 函数原型定义</h3>
             <div class="content-card">
                 <pre><code class="language-c">typedef void (*LiteRtLmCallback)(LiteRtLm_Result result, void* user_ptr);</code></pre>
                 <div class="grid md:grid-cols-2 gap-6 mt-8">
                     <div class="text-xs text-gray-500">
-                        <p class="font-bold text-white mb-2 uppercase tracking-widest">Parameter: result</p>
-                        Contains the incremental text fragments and status info for this turn. See details in <a href="struct_result.html" class="text-blue-500">LiteRtLm_Result</a>.
+                        <p class="font-bold text-white mb-2 uppercase tracking-widest">参数: result</p>
+                        包含本次增量的文本片段及状态信息。详情见 <a href="struct_result.html" class="text-blue-500">LiteRtLm_Result</a>。
                     </div>
                     <div class="text-xs text-gray-500">
-                        <p class="font-bold text-white mb-2 uppercase tracking-widest">Parameter: user_ptr</p>
-                        Original pointer passed by the caller in <code>RunInference</code>. Usually points to a C++ class instance (e.g., <code>this</code>).
+                        <p class="font-bold text-white mb-2 uppercase tracking-widest">参数: user_ptr</p>
+                        由调用方在 <code>RunInference</code> 中传入的原始指针。通常指向 C++ 类实例（如 <code>this</code>）。
                     </div>
                 </div>
             </div>
@@ -73,19 +73,19 @@
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Typical C++ Class Binding Implementation</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 典型的 C++ 类绑定写法</h3>
             <div class="content-card">
-                <pre><code>// Static callback adapter
+                <pre><code>// 静态回调适配器
 static void OnStaticResult(LiteRtLm_Result Result, void* UserPtr) {
-    // Cast to the corresponding C++ class
+    // 强制转换为对应的 C++ 类
     UMyAiSubsystem* Subsystem = static_cast&lt;UMyAiSubsystem*&gt;(UserPtr);
     if (Subsystem) {
         Subsystem->HandleAsyncText(Result);
     }
 }
 
-// Call site
-LiteRtLm_RunInference(Conv, Params, OnStaticResult, this); // Pass this pointer</code></pre>
+// 调用处
+LiteRtLm_RunInference(Conv, Params, OnStaticResult, this); // 传入 this 指针</code></pre>
             </div>
         </section>
 

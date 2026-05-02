@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,18 +25,23 @@
 </head>
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
+        <div class="flex justify-end gap-4 mb-6">
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
+            <a href="append_user_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+        </div>
+
         <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
             <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_AppendUserMessage</h1>
-            <p class="text-gray-500 text-lg">追加用户纯文本消息。将会话状态更新为“等待响应”状态。</p>
+            <p class="text-gray-500 text-lg">Appends plain text user messages. Updates the Session state to "Waiting for Response".</p>
         </header>
 
         <!-- Section 1: Stacking Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 消息入队逻辑</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Message Enqueue Logic</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
@@ -44,26 +49,26 @@
                         History -->|State| Pending[Wait for RunInference]
                 </div>
                 <p class="text-xs text-gray-600 mt-6 italic">
-                    此函数仅负责将文本同步到会话的内部缓冲区。为了获得 AI 响应，必须在追加消息后显式调用 <code>LiteRtLm_RunInference</code>。
+                    This function is only responsible for synchronizing text to the Session's internal buffer. To obtain an AI response, <code>LiteRtLm_RunInference</code> must be explicitly called after appending the message.
                 </p>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数定义</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Parameter Definitions</h3>
             <div class="content-card">
                 <pre><code class="language-c">void LiteRtLm_AppendUserMessage(void* conv_ptr, const char* text);</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
+                    <thead><tr><th class="w-1/4">Parameter</th><th>Responsibility</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>conv_ptr</code></td>
-                            <td>有效的会话句柄。</td>
+                            <td>Valid Session handle.</td>
                         </tr>
                         <tr>
                             <td><code>text</code></td>
-                            <td>用户输入的纯文本内容。</td>
+                            <td>User input plain text content.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -72,12 +77,12 @@
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 简单交互代码</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Simple Interaction Code</h3>
             <div class="content-card">
-                <pre><code>// 1. 追加用户消息
-LiteRtLm_AppendUserMessage(MyConv, "告诉我关于虚幻引擎 5 的事情。");
+                <pre><code>// 1. Append user message
+LiteRtLm_AppendUserMessage(MyConv, "Tell me about Unreal Engine 5.");
 
-// 2. 触发推理 (后续步骤)
+// 2. Trigger Inference (next steps)
 LiteRtLm_RunInference(MyConv, MySamplingParams, MyCallback, NULL);</code></pre>
             </div>
         </section>

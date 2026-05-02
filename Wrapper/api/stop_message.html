@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,42 +25,47 @@
 </head>
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
+        <div class="flex justify-end gap-4 mb-6">
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
+            <a href="stop_message_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+        </div>
+
         <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
             <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_StopMessage</h1>
-            <p class="text-gray-500 text-lg">中断正在进行的推理生成。向引擎发送制动信号，强行终止当前的 Token 生成循环。</p>
+            <p class="text-gray-500 text-lg">Interrupts ongoing inference generation. Sends a brake signal to the engine to forcibly terminate the current token generation loop.</p>
         </header>
 
         <!-- Section 1: Interrupt Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 信号制动流程</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Signal Braking Flow</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph LR
-                        User[用户/UI] -->|Stop| API[LiteRtLm_StopMessage]
+                        User[User/UI] -->|Stop| API[LiteRtLm_StopMessage]
                         API -->|Set Interrupt Flag| Engine[Inference Loop]
                         Engine -->|Exit Loop| FinalCallback[Callback with bIsDone=1]
                 </div>
                 <p class="text-xs text-gray-600 mt-6 italic">
-                    此操作是线程安全的。它会设置一个内部标志位，推理引擎在生成下一个 Token 之前会检查该标志并决定是否优雅退出。
+                    This operation is thread-safe. It sets an internal flag that the inference engine checks before generating the next token to decide whether to exit gracefully.
                 </p>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数定义</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Parameter Definition</h3>
             <div class="content-card">
                 <pre><code class="language-c">void LiteRtLm_StopMessage(void* conv_ptr);</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
+                    <thead><tr><th class="w-1/4">Parameter</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>conv_ptr</code></td>
-                            <td>要中断推理的会话句柄。</td>
+                            <td>The session handle to interrupt.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -69,9 +74,9 @@
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. UI 交互示例</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. UI Interaction Example</h3>
             <div class="content-card">
-                <pre><code>// 当用户点击“停止生成”按钮时
+                <pre><code>// When user clicks the "Stop Generation" button
 void UMyChatWidget::OnStopClicked() {
     if (CurrentConvPtr) {
         LiteRtLm_StopMessage(CurrentConvPtr);

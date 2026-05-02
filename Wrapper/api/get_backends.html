@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,46 +25,51 @@
 </head>
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
+        <div class="flex justify-end gap-4 mb-6">
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
+            <a href="get_backends_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+        </div>
+
         <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
             <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_GetAvailableBackends</h1>
-            <p class="text-gray-500 text-lg">环境探测接口。返回当前硬件平台支持的推理后端列表。建议在配置 Engine 之前调用以决定最佳运行策略。</p>
+            <p class="text-gray-500 text-lg">Environment probing interface. Returns a list of supported inference backends on the current hardware platform. Recommended to call before configuring the Engine to decide the optimal execution strategy.</p>
         </header>
 
         <!-- Section 1: Probe Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 启动探测流程图</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Startup Probing Flowchart</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
                         Start[App Startup] --> Probe[LiteRtLm_GetAvailableBackends]
-                        Probe --> Detect{检测硬件环境}
-                        Detect -->|Found Vulkan/Metal| GPU["返回 'gpu,cpu'"]
-                        Detect -->|Generic Only| CPU["返回 'cpu'"]
-                        GPU --> Decision[根据返回值设置 Config.backend]
+                        Probe --> Detect{Detect Hardware}
+                        Detect -->|Found Vulkan/Metal| GPU["Return 'gpu,cpu'"]
+                        Detect -->|Generic Only| CPU["Return 'cpu'"]
+                        GPU --> Decision[Set Config.backend based on result]
                 </div>
                 <p class="text-xs text-gray-600 mt-6 italic">
-                    此接口是一个纯静态探测函数，无需创建引擎即可调用，用于为后续的 <code>LiteRtLm_Config</code> 提供决策依据。
+                    This interface is a pure static probing function that can be called without creating an engine, providing a basis for subsequent <code>LiteRtLm_Config</code> decisions.
                 </p>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 函数原型与返回值</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Function Prototype & Return Value</h3>
             <div class="content-card">
                 <pre><code class="language-c">const char* LiteRtLm_GetAvailableBackends();</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">返回值类型</th><th>内存契约与语义</th></tr></thead>
+                    <thead><tr><th class="w-1/4">Return Type</th><th>Memory Contract & Semantics</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>const char*</code></td>
                             <td>
-                                <b>静态字符串。</b><br/>
-                                指向 DLL 内部的常量内存，<b>严禁调用 free() 释放</b>。返回以逗号分隔的标识符（如 "cpu,gpu"）。
+                                <b>Static String.</b><br/>
+                                Points to constant memory within the DLL; <b>do not call free()</b>. Returns comma-separated identifiers (e.g., "cpu,gpu").
                             </td>
                         </tr>
                     </tbody>
@@ -74,16 +79,16 @@
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 动态配置示例</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Dynamic Configuration Example</h3>
             <div class="content-card">
                 <pre><code>const char* Backends = LiteRtLm_GetAvailableBackends();
 FString Supported(Backends);
 
 LiteRtLm_Config config = {0};
 if (Supported.Contains("gpu")) {
-    config.backend = "gpu"; // 发现显卡加速支持
+    config.backend = "gpu"; // Found GPU acceleration support
 } else {
-    config.backend = "cpu"; // 回退到 CPU
+    config.backend = "cpu"; // Fallback to CPU
 }</code></pre>
             </div>
         </section>

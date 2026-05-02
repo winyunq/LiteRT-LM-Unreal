@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LiteRtLm_DestroyConversation - LiteRT-LM API Reference</title>
+    <title>LiteRtLm_StopMessage - LiteRT-LM API Reference</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script type="module">
@@ -26,46 +26,46 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-end gap-4 mb-6">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="destroy_conv_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="stop_message.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
 
-        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        <a href="../index_zh.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回总览
         </a>
 
         <header class="mb-16">
-            <h1 class="text-5xl mb-4 font-black">LiteRtLm_DestroyConversation</h1>
-            <p class="text-gray-500 text-lg">Destroys a conversation session. Releases the KV Cache slot occupied by this session in the GPU and cleans up all historical message memory.</p>
+            <h1 class="text-5xl mb-4 font-black">LiteRtLm_StopMessage</h1>
+            <p class="text-gray-500 text-lg">中断正在进行的推理生成。向引擎发送制动信号，强行终止当前的 Token 生成循环。</p>
         </header>
 
-        <!-- Section 1: Eviction Diagram -->
+        <!-- Section 1: Interrupt Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. VRAM Resource Recovery Flow</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 信号制动流程</h3>
             <div class="content-card">
                 <div class="mermaid">
-                    graph TD
-                        Conv[Conversation Handle] -->|Destroy| Pool[VRAM KV Cache Pool]
-                        Pool -->|Free Slot| Empty[Available VRAM Slot]
-                        Conv -->|Clear| History[RAM History Buffer]
+                    graph LR
+                        User[用户/UI] -->|Stop| API[LiteRtLm_StopMessage]
+                        API -->|Set Interrupt Flag| Engine[Inference Loop]
+                        Engine -->|Exit Loop| FinalCallback[Callback with bIsDone=1]
                 </div>
                 <p class="text-xs text-gray-600 mt-6 italic">
-                    Calling this function is critical to maintaining long-term operational stability. For conversations that are no longer active (e.g., closed UI windows or destroyed NPC Actors), it must be explicitly called to prevent VRAM fragmentation or exhaustion.
+                    此操作是线程安全的。它会设置一个内部标志位，推理引擎在生成下一个 Token 之前会检查该标志并决定是否优雅退出。
                 </p>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Parameter Definition</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数定义</h3>
             <div class="content-card">
-                <pre><code class="language-c">void LiteRtLm_DestroyConversation(void* conv_ptr);</code></pre>
+                <pre><code class="language-c">void LiteRtLm_StopMessage(void* conv_ptr);</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">Parameter</th><th>Description</th></tr></thead>
+                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>conv_ptr</code></td>
-                            <td>The session handle to destroy. After invocation, this pointer and the associated KV Cache will be immediately invalidated.</td>
+                            <td>要中断推理的会话句柄。</td>
                         </tr>
                     </tbody>
                 </table>
@@ -74,12 +74,13 @@
 
         <!-- Section 3: Usage Example -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Standard Cleanup Pattern</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. UI 交互示例</h3>
             <div class="content-card">
-                <pre><code>// End conversation and recover VRAM
-if (ActiveConversation) {
-    LiteRtLm_DestroyConversation(ActiveConversation);
-    ActiveConversation = nullptr;
+                <pre><code>// 当用户点击“停止生成”按钮时
+void UMyChatWidget::OnStopClicked() {
+    if (CurrentConvPtr) {
+        LiteRtLm_StopMessage(CurrentConvPtr);
+    }
 }</code></pre>
             </div>
         </section>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Architecture | LiteRT-LM & UE5 Integration</title>
+    <title>系统架构全貌 | LiteRT-LM & UE5 集成</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -85,41 +85,41 @@
         </div>
 
         <div class="flex gap-4 mb-8 px-3">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="api_reference_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="api_reference.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
         
         <nav class="space-y-8 flex-1 overflow-y-auto">
             <div>
-                <p class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-4">Core Concepts</p>
+                <p class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-4">核心概念</p>
                 <div class="space-y-1">
                     <a href="#layers" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
-                        <i data-lucide="layers" class="w-4 h-4"></i> Progressive Architecture
+                        <i data-lucide="layers" class="w-4 h-4"></i> 三层渐进架构
                     </a>
                     <a href="#incremental" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
-                        <i data-lucide="zap" class="w-4 h-4"></i> Incremental Sync Model
+                        <i data-lucide="zap" class="w-4 h-4"></i> 增量同步模型
                     </a>
                     <a href="#threads" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
-                        <i data-lucide="cpu" class="w-4 h-4"></i> Thread Sequence
+                        <i data-lucide="cpu" class="w-4 h-4"></i> 线程协同序列
                     </a>
                 </div>
             </div>
 
             <div>
-                <p class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-4">Implementation</p>
+                <p class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-4">实现细节</p>
                 <div class="space-y-1">
                     <a href="#normalization" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Role Normalization
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> 角色归一化逻辑
                     </a>
                     <a href="#toolcall" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-gray-400">
-                        <i data-lucide="box" class="w-4 h-4"></i> Tool Call Loop
+                        <i data-lucide="box" class="w-4 h-4"></i> Tool Call 闭环
                     </a>
                 </div>
             </div>
         </nav>
 
         <div class="mt-8 pt-8 border-t border-gray-900">
-            <div class="text-[10px] text-gray-500 font-bold uppercase mb-2 italic">STRATEGY BY HUMAN, TACTICS BY AI</div>
+            <div class="text-[10px] text-gray-500 font-bold uppercase mb-2 italic">战略由人，战术由 AI</div>
             <p class="text-[9px] text-gray-700 leading-loose">
                 Winyunq Core Engineering v2.5<br/>
                 Proprietary Architecture Document
@@ -136,10 +136,10 @@
                     System Full View
                 </div>
                 <h1 class="text-7xl font-black text-white mb-10 tracking-tighter leading-none">
-                    System Overview: From <span class="winyunq-title italic">UE5</span> to <span class="text-blue-500">Core</span>
+                    系统全貌：从 <span class="winyunq-title italic">UE5</span> 到 <span class="text-blue-500">Core</span>
                 </h1>
                 <p class="text-2xl text-gray-500 leading-relaxed max-w-4xl font-light">
-                    The value of LiteRT-LM lies not in a single inference, but in this incremental architecture deeply optimized for <strong>Unreal Engine long-conversation scenarios</strong>.
+                    LiteRT-LM 的价值不在于单一的推理，而在于这套针对<strong>虚幻引擎长对话场景</strong>深度优化的增量架构。
                 </p>
             </header>
 
@@ -147,26 +147,26 @@
             <section id="layers" class="mb-40">
                 <div class="flex items-center gap-4 mb-12">
                     <div class="h-10 w-2 bg-blue-600 rounded-full"></div>
-                    <h2 class="text-4xl font-black text-white tracking-tight">Three-Layer Progressive Architecture</h2>
+                    <h2 class="text-4xl font-black text-white tracking-tight">三层渐进式架构 (Progressive Architecture)</h2>
                 </div>
                 
                 <div class="content-card p-12 rounded-[40px] mb-12">
                     <div class="mermaid mb-12">
                         graph TD
-                            subgraph UE5[Unreal Business Layer - UmgMcp Provider]
+                            subgraph UE5[虚幻业务层 - UmgMcp Provider]
                                 Agent[Agent Object]
                                 Tools[Tool Definitions]
                             end
-                            subgraph UnrealApi[Integration Abstraction - LiteRtLmUnrealApi]
+                            subgraph UnrealApi[集成抽象层 - LiteRtLmUnrealApi]
                                 Subsystem[Global Subsystem]
                                 Sync[Incremental Sync Engine]
                                 Norm[Role Normalizer]
                             end
-                            subgraph DLL[Isolated Driver - litert_lm_wrapper.dll]
+                            subgraph DLL[隔离驱动层 - litert_lm_wrapper.dll]
                                 ABI[ABI Firewall]
                                 Worker[Background Inference Thread]
                             end
-                            subgraph Core[Inference Core - LiteRT Core]
+                            subgraph Core[推理核心 - LiteRT Core]
                                 GPU[GPU Inference]
                                 KV[Persistent KV Cache]
                             end
@@ -184,16 +184,16 @@
                     </div>
                     <div class="grid md:grid-cols-3 gap-8">
                         <div>
-                            <h4 class="font-black text-blue-400 mb-3 uppercase text-xs tracking-widest">Business Integration</h4>
-                            <p class="text-xs text-gray-500 leading-relaxed">Handles FabServer message models, mapping in-game NPC logic to AI requests.</p>
+                            <h4 class="font-black text-blue-400 mb-3 uppercase text-xs tracking-widest">业务集成</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">处理 FabServer 消息模型，将游戏内的 NPC 逻辑映射为 AI 请求。</p>
                         </div>
                         <div>
-                            <h4 class="font-black text-purple-400 mb-3 uppercase text-xs tracking-widest">Integration Abstraction</h4>
-                            <p class="text-xs text-gray-500 leading-relaxed">Implements incremental message synchronization. Maintains one-to-one persistent mapping between Session and Agent.</p>
+                            <h4 class="font-black text-purple-400 mb-3 uppercase text-xs tracking-widest">集成抽象</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">实现增量消息同步。维护 Session 与 Agent 的一对一持久映射关系。</p>
                         </div>
                         <div>
-                            <h4 class="font-black text-emerald-400 mb-3 uppercase text-xs tracking-widest">Physical Isolation</h4>
-                            <p class="text-xs text-gray-500 leading-relaxed">Completely resolves symbol conflicts via ABI firewall. Background thread drives WaitUntilDone heartbeat.</p>
+                            <h4 class="font-black text-emerald-400 mb-3 uppercase text-xs tracking-widest">物理隔离</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">通过 ABI 防火墙彻底解决符号冲突。后台线程驱动 WaitUntilDone 心跳。</p>
                         </div>
                     </div>
                 </div>
@@ -203,7 +203,7 @@
             <section id="incremental" class="mb-40">
                 <div class="flex items-center gap-4 mb-12">
                     <div class="h-10 w-2 bg-emerald-500 rounded-full"></div>
-                    <h2 class="text-4xl font-black text-white tracking-tight">Incremental Sync Model</h2>
+                    <h2 class="text-4xl font-black text-white tracking-tight">增量同步模型 (Incremental Sync)</h2>
                 </div>
                 
                 <div class="grid lg:grid-cols-2 gap-12 items-center">
@@ -213,29 +213,29 @@
                                 participant UE as UE5 Subsystem
                                 participant DLL as Wrapper Session
                                 
-                                Note over UE,DLL: Round 1: Initial Conversation
+                                Note over UE,DLL: Round 1: 初次对话
                                 UE->>DLL: Append(Msg 1-3)
                                 UE->>DLL: RunInference()
-                                Note right of DLL: Save to VRAM KV Cache
+                                Note right of DLL: 显存存入 KV Cache
                                 
-                                Note over UE,DLL: Round 2: Follow-up
-                                UE->>UE: Detect Synced = 3
-                                UE->>DLL: Sync New Messages Only (Msg 4)
+                                Note over UE,DLL: Round 2: 追问
+                                UE->>UE: 检测已同步 = 3
+                                UE->>DLL: 仅同步新消息 (Msg 4)
                                 UE->>DLL: RunInference()
-                                Note right of DLL: Cache Hit, $O(\Delta N)$ Computation
+                                Note right of DLL: 命中缓存，$O(\Delta N)$ 计算
                         </div>
                     </div>
                     <div class="space-y-6">
                         <div class="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-3xl">
                             <h3 class="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
-                                <i data-lucide="check-circle" class="w-5 h-5"></i> Physical KV Cache Persistence
+                                <i data-lucide="check-circle" class="w-5 h-5"></i> 物理 KV Cache 持久性
                             </h3>
                             <p class="text-sm text-gray-500 leading-loose">
-                                In <code>LiteRtLmUnrealApi.cpp</code>, the system precisely tracks the synced message index for each Agent via <code>SessionMsgCountMap</code>. Switching Agents is like switching pointers in GPU memory, enabling zero-overhead multi-Agent interaction.
+                                在 <code>LiteRtLmUnrealApi.cpp</code> 中，系统通过 <code>SessionMsgCountMap</code> 精确跟踪每个 Agent 已同步的消息索引。切换 Agent 就像在 GPU 显存中切换指针，实现了零开销的多 Agent 交互。
                             </p>
                         </div>
                         <div class="p-8 bg-blue-500/5 border border-blue-500/20 rounded-3xl text-xs text-gray-400 leading-loose italic">
-                            "This is the core 'black magic' that reduces Time To First Token (TTFT) from seconds to milliseconds."
+                            "这是将首字延迟 (TTFT) 从秒级降低到毫秒级的核心黑科技。"
                         </div>
                     </div>
                 </div>
@@ -245,12 +245,12 @@
             <section id="normalization" class="mb-40">
                 <div class="flex items-center gap-4 mb-12">
                     <div class="h-10 w-2 bg-purple-500 rounded-full"></div>
-                    <h2 class="text-4xl font-black text-white tracking-tight">Role Normalization Logic</h2>
+                    <h2 class="text-4xl font-black text-white tracking-tight">角色归一化逻辑 (Normalization)</h2>
                 </div>
                 
                 <div class="content-card p-12 rounded-[40px]">
                     <p class="text-gray-400 mb-10 leading-relaxed">
-                        Since underlying models (like Gemma-2) do not natively support <code>system</code> or <code>tool</code> roles, the <code>UnrealApi</code> layer performs complex protocol downgrading:
+                        由于底层模型（如 Gemma-2）不原生支持 <code>system</code> 或 <code>tool</code> 角色，<code>UnrealApi</code> 层执行了复杂的协议降级：
                     </p>
                     <div class="grid md:grid-cols-2 gap-10">
                         <div class="space-y-4">
@@ -266,7 +266,7 @@
                             </div>
                         </div>
                         <div class="p-6 bg-black/20 rounded-2xl border border-gray-800">
-                            <h5 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest">Code Snippet (Normalization logic)</h5>
+                            <h5 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest">代码片段 (Normalization logic)</h5>
                             <pre class="text-[10px] text-gray-500"><code>if (Role == "tool") {
   NewMsg->SetStringField("role", "user");
   NewMsg->SetStringField("content", 
@@ -281,7 +281,7 @@
             <section id="threads" class="mb-40">
                 <div class="flex items-center gap-4 mb-12">
                     <div class="h-10 w-2 bg-yellow-500 rounded-full"></div>
-                    <h2 class="text-4xl font-black text-white tracking-tight">Inference Driving Sequence</h2>
+                    <h2 class="text-4xl font-black text-white tracking-tight">线程协同序列 (Inference Driving)</h2>
                 </div>
                 
                 <div class="content-card p-12 rounded-[40px]">

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,51 +27,51 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-end gap-4 mb-6">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="destroy_engine_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="destroy_engine.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
 
-        <a href="../index.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Overview
+        <a href="../index_zh.html" class="text-gray-600 hover:text-blue-500 mb-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回总览
         </a>
 
         <header class="mb-16">
             <h1 class="text-5xl mb-4 font-black">LiteRtLm_DestroyEngine</h1>
-            <p class="text-gray-500 text-lg">Engine destructor. Thoroughly releases GPU buffers, model weight memory, and associated thread pools. Ensures no memory dead zones are left behind.</p>
+            <p class="text-gray-500 text-lg">引擎析构函数。彻底释放 GPU 缓冲区、模型权重内存及相关线程池。确保不留任何内存死区。</p>
         </header>
 
         <!-- Section 1: Teardown Diagram -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. Cascading Destruction Sequence</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">01. 级联销毁时序</h3>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
                         Engine[Engine Handle] -->|Destroy| ConvA[Conversation A]
                         Engine -->|Destroy| ConvB[Conversation B]
-                        subgraph Resource_Free [Resource Recovery]
-                            VRAM[Release Model VRAM Weights]
-                            KV[Destroy Global KV Cache Pool]
-                            Thread[Terminate Inference Threads]
+                        subgraph Resource_Free [资源回收]
+                            VRAM[释放模型 VRAM 权重区]
+                            KV[销毁全局 KV Cache 池]
+                            Thread[终结推理后台线程]
                         end
                         Engine --> Resource_Free
                 </div>
                 <div class="danger-box text-xs leading-relaxed">
-                    <b>Handle Invalidation Warning:</b> Once DestroyEngine is called, all session pointers (conv_ptr) created from this engine will become dangling pointers. All ongoing inference tasks must be stopped before calling this function.
+                    <b>句柄失效警告：</b> 一旦调用 DestroyEngine，所有基于此引擎创建的会话指针 (conv_ptr) 将变为野指针。在调用此函数前，必须停止所有正在进行的推理任务。
                 </div>
             </div>
         </section>
 
         <!-- Section 2: Function Definition -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. Parameter Definition</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">02. 参数定义</h3>
             <div class="content-card">
                 <pre><code class="language-c">void LiteRtLm_DestroyEngine(void* engine_ptr);</code></pre>
                 <table class="api-table mt-8">
-                    <thead><tr><th class="w-1/4">Parameter</th><th>Description</th></tr></thead>
+                    <thead><tr><th class="w-1/4">参数名称</th><th>职责说明</th></tr></thead>
                     <tbody>
                         <tr>
                             <td><code>engine_ptr</code></td>
-                            <td>The engine handle to destroy. After invocation, this pointer is no longer usable.</td>
+                            <td>要销毁的引擎句柄。调用后，该指针不再可用。</td>
                         </tr>
                     </tbody>
                 </table>
@@ -80,12 +80,12 @@
 
         <!-- Section 3: Implementation Detail -->
         <section class="mb-16">
-            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. Resource Recovery Recommendations</h3>
+            <h3 class="text-xs font-black text-blue-500 uppercase tracking-widest mb-6 italic">03. 资源回收建议</h3>
             <div class="content-card">
                 <p class="text-sm text-gray-500 mb-6">
-                    In Unreal Engine, it is recommended to call this interface during the <code>EndPlay</code> or <code>BeginDestroy</code> phase. Since it involves mandatory synchronous recovery of GPU resources, execution on a non-game thread is advised.
+                    在虚幻引擎中，建议在 <code>EndPlay</code> 或 <code>BeginDestroy</code> 阶段调用此接口。由于其涉及 GPU 资源的强制同步回收，建议在非主线程执行。
                 </p>
-                <pre><code>// UE5 Subsystem Cleanup Example
+                <pre><code>// UE5 子系统清理示例
 void UMyAiSubsystem::Deinitialize() {
     if (EngineHandle) {
         LiteRtLm_DestroyEngine(EngineHandle);

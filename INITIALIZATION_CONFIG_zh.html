@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>1. Initialization & Config | LiteRT-LM Unreal</title>
+    <title>1. 初始化与配置 | LiteRT-LM Unreal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <style>
@@ -18,16 +18,16 @@
 <body class="p-8 md:p-16 max-w-5xl mx-auto">
 
     <div class="flex justify-end gap-4 mb-8">
-        <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-        <a href="INITIALIZATION_CONFIG_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+        <a href="INITIALIZATION_CONFIG.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+        <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
     </div>
 
     <header class="mb-12 border-b border-zinc-800 pb-8">
-        <h1 class="text-4xl font-black text-white tracking-tighter mb-2 italic">01 INITIALIZATION & CONFIG</h1>
-        <p class="text-zinc-500 uppercase tracking-[0.3em] text-xs">Stage: Before the Loop</p>
+        <h1 class="text-4xl font-black text-white tracking-tighter mb-2 italic">01 初始化与配置 (INITIALIZATION & CONFIG)</h1>
+        <p class="text-zinc-500 uppercase tracking-[0.3em] text-xs">阶段: 循环开始之前</p>
     </header>
 
-    <!-- Core Architecture Diagram -->
+    <!-- 核心架构图 -->
     <div class="mb-16">
         <svg viewBox="0 0 800 200" class="w-full bg-zinc-900/50 rounded-xl border border-zinc-800 p-4">
             <!-- Engine Block -->
@@ -36,11 +36,11 @@
             
             <!-- VRAM Block -->
             <rect x="300" y="50" width="450" height="100" rx="8" fill="#111" stroke="#333" stroke-dasharray="5,5"/>
-            <text x="525" y="80" text-anchor="middle" fill="#555" font-size="12">GPU VRAM (Exclusive Allocation)</text>
+            <text x="525" y="80" text-anchor="middle" fill="#555" font-size="12">GPU 显存 (独占分配)</text>
             
             <!-- Weights -->
             <rect x="310" y="90" width="150" height="50" rx="4" fill="#333"/>
-            <text x="385" y="120" text-anchor="middle" fill="#888" font-size="10">Model Weights (Static)</text>
+            <text x="385" y="120" text-anchor="middle" fill="#888" font-size="10">模型权重 (静态)</text>
             
             <!-- KV Cache -->
             <rect x="470" y="90" width="270" height="50" rx="4" fill="#3B82F6" fill-opacity="0.3"/>
@@ -54,57 +54,57 @@
                 </marker>
             </defs>
         </svg>
-        <p class="text-center text-[10px] text-zinc-600 mt-2 uppercase tracking-widest">Fig 1.1: Physical Resource Allocation on CreateEngine</p>
+        <p class="text-center text-[10px] text-zinc-600 mt-2 uppercase tracking-widest">图 1.1: CreateEngine 时的物理资源分配</p>
     </div>
 
     <!-- 1. LiteRtLm_CreateEngine -->
     <section class="mb-16">
         <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-3">
             LiteRtLm_CreateEngine
-            <span class="key-badge">CRITICAL ENTRY</span>
+            <span class="key-badge">核心入口</span>
         </h2>
         <pre><code class="language-c">DLL_EXPORT void* LiteRtLm_CreateEngine(LiteRtLm_Config config);</code></pre>
         
         <ul class="mt-6 space-y-4">
-            <li><span class="critical">Physical Lock:</span> This function locks VRAM immediately. If VRAM is insufficient, it returns <code class="text-red-500">NULL</code>.</li>
-            <li><span class="critical">ABI Firewall:</span> Returns a <code class="text-blue-400">void*</code> handle; type casting on the UE5 side is prohibited.</li>
-            <li><span class="critical">Invocation Timing:</span> Recommended during level loading or Subsystem initialization; do not call repeatedly in the main loop.</li>
+            <li><span class="critical">物理锁：</span> 该函数执行时会立即锁定显存。若显存不足，返回 <code class="text-red-500">NULL</code>。</li>
+            <li><span class="critical">ABI 防火墙：</span> 返回 <code class="text-blue-400">void*</code> 句柄，禁止在 UE5 侧进行类型转换。</li>
+            <li><span class="critical">调用时机：</span> 建议在关卡加载或 Subsystem 初始化时执行，禁止在主循环中重复调用。</li>
         </ul>
     </section>
 
     <!-- 2. LiteRtLm_Config -->
     <section class="mb-16">
-        <h2 class="text-2xl font-bold text-white mb-6 italic underline decoration-blue-500">struct LiteRtLm_Config</h2>
+        <h2 class="text-2xl font-bold text-white mb-6 italic underline decoration-blue-500">结构体 LiteRtLm_Config</h2>
         
         <div class="grid md:grid-cols-2 gap-8">
             <div class="vram-stat border-l-4 border-blue-500">
                 <h3 class="text-blue-500 font-bold text-sm mb-2 uppercase">max_num_tokens</h3>
-                <p class="text-sm">Determines the physical pre-allocation size for KV Cache. Once allocated, VRAM usage is fixed.</p>
-                <p class="text-xs text-zinc-500 mt-2">Formula: VRAM ≈ Weights + (Tokens * 128 KB)</p>
+                <p class="text-sm">决定 KV Cache 物理预分配大小。一旦分配，显存占用固定。</p>
+                <p class="text-xs text-zinc-500 mt-2">公式：显存 ≈ 权重 + (Tokens * 128 KB)</p>
             </div>
             <div class="vram-stat border-l-4 border-green-500">
                 <h3 class="text-green-500 font-bold text-sm mb-2 uppercase">bOptimizeShader</h3>
-                <p class="text-sm">Mandatory for UE5. Set to 1 to compile PSOs at load time, eliminating frame drops on the first token.</p>
+                <p class="text-sm">UE5 必备项。设为 1 则加载时编译 PSO，消除推理首字掉帧。</p>
             </div>
         </div>
 
         <div class="mt-8 warning">
-            <strong>ATTENTION:</strong> <code class="text-white">model_path</code> uses <strong>mmap</strong>. Corrupted model files or invalid paths will cause a direct process crash; verify physical existence before calling.
+            <strong>注意:</strong> <code class="text-white">model_path</code> 采用 <strong>mmap</strong> 映射。模型文件损坏或路径非法会导致进程直接崩溃，调用前必须验证文件物理存在。
         </div>
     </section>
 
     <!-- 3. GetAvailableBackends -->
     <section class="mb-16">
         <h2 class="text-2xl font-bold text-white mb-4">LiteRtLm_GetAvailableBackends</h2>
-        <p class="mb-4">Environment probing interface. Returns a string of system acceleration capabilities (e.g., <code class="text-blue-400">"gpu,cpu"</code>).</p>
+        <p class="mb-4">环境探测接口。返回系统加速能力字符串（如 <code class="text-blue-400">"gpu,cpu"</code>）。</p>
         <div class="p-4 bg-zinc-900 rounded-lg text-xs font-mono text-zinc-400">
-            Strategy: If (!str.contains("gpu")) { config.num_threads = 16; }
+            策略: If (!str.contains("gpu")) { config.num_threads = 16; }
         </div>
     </section>
 
     <footer class="mt-20 pt-8 border-t border-zinc-900 text-[10px] text-zinc-700 uppercase tracking-widest flex justify-between">
         <span>LiteRT-LM Unreal Document v1.0</span>
-        <span>Winyunq Core Engineering</span>
+        <span>Winyunq 核心工程</span>
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>

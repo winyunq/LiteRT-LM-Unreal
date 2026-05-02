@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Integration Guide | LiteRT-LM API Reference</title>
+    <title>实战集成导引 | LiteRT-LM API 参考</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script type="module">
@@ -24,42 +24,42 @@
 <body class="p-12 md:p-20">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-between items-center mb-8">
-            <a href="index.html" class="text-gray-600 hover:text-blue-500 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Home
+            <a href="index_zh.html" class="text-gray-600 hover:text-blue-500 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回主页
             </a>
             <div class="flex gap-4">
-                <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-                <a href="guide_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+                <a href="guide.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+                <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
             </div>
         </div>
 
         <header class="mb-16">
-            <h1 class="text-5xl mb-4 font-black italic tracking-tighter">Practical Integration Guide</h1>
+            <h1 class="text-5xl mb-4 font-black italic tracking-tighter">实战集成导引</h1>
             <p class="text-gray-500 text-lg leading-relaxed">
-                This page summarizes the core integration patterns of LiteRT-LM. From the low-level hardware detection process to a complete C++ Demo, it provides a comprehensive engineering reference.
+                本页汇总了 LiteRT-LM 的核心集成模式。从底层的硬件探测流程到完整的 C++ Demo，提供了全维度的工程参考。
             </p>
         </header>
 
         <!-- 1. Discovery Flow -->
         <section class="mb-20">
-            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="search" class="text-blue-500"></i> 1. Hardware Detection & Initialization Flow</h2>
+            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="search" class="text-blue-500"></i> 1. 硬件探测与初始化流</h2>
             <div class="content-card">
                 <div class="mermaid">
                     graph TD
                         Start[App Startup] --> Probe[GetAvailableBackends]
-                        Probe --> Detect{Detect Compute Device}
+                        Probe --> Detect{检测计算设备}
                         Detect -->|Found GPU| ConfigGPU["Config.backend = 'gpu'"]
                         Detect -->|CPU Only| ConfigCPU["Config.backend = 'cpu'"]
                         ConfigGPU --> Create[CreateEngine]
                         ConfigCPU --> Create
                 </div>
-                <p class="text-xs text-gray-600 mt-6 italic">This is the standard logic at system startup to ensure the model runs with optimal performance in the current environment.</p>
+                <p class="text-xs text-gray-600 mt-6 italic">这是系统启动时的标准逻辑，用于确保模型在当前环境下以最优性能运行。</p>
             </div>
         </section>
 
         <!-- 2. Interaction Model -->
         <section class="mb-20">
-            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="refresh-cw" class="text-blue-500"></i> 2. Message Stacking & Inference Timing</h2>
+            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="refresh-cw" class="text-blue-500"></i> 2. 消息堆叠与推理时序</h2>
             <div class="content-card">
                 <div class="mermaid">
                     sequenceDiagram
@@ -72,21 +72,22 @@
                             DLL-->>User: Streaming Callback (Result)
                         end
                 </div>
-                <p class="text-xs text-gray-600 mt-6 italic">Reveals the isolation logic of "task stacking" and "asynchronous driving," which is core to high-performance DLL invocation.</p>
+                <p class="text-xs text-gray-600 mt-6 italic">揭示了“任务堆叠”与“异步驱动”的分离逻辑，这是高性能 DLL 调用的核心。</p>
             </div>
         </section>
 
         <!-- 3. Full Demo Source -->
         <section class="mb-20">
-            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="terminal" class="text-blue-500"></i> 3. Full Demo Source (main.cpp)</h2>
+            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="terminal" class="text-blue-500"></i> 3. 完整演示源码 (main.cpp)</h2>
             <div class="content-card p-4">
                 <div class="tab-tag">WinyunqDebug/main.cpp</div>
-                <pre><code class="language-cpp">// --- Full C++ Demo Implementation ---
+                <pre><code class="language-cpp">// --- 完整 C++ Demo 实现 ---
 #include &lt;iostream&gt;
 #include &lt;windows.h&gt;
 #include &lt;string&gt;
 #include &lt;atomic&gt;
 
+// [此处省略部分 typedef 以节省篇幅，实际应用中请参考 api/ 页面]
 typedef struct { const char* model_path; const char* backend; int max_num_tokens; int num_threads; int bEnableBenchmark; int bOptimizeShader; } LiteRtLm_Config;
 typedef struct { float temperature; float top_p; int top_k; int max_tokens; int constraint_type; const char* constraint_string; } LiteRtLm_SamplingParams;
 typedef struct { const char* text_chunk; const char* full_json_chunk; const char* error_msg; int bIsDone; float tokens_per_sec; } LiteRtLm_Result;
@@ -140,15 +141,15 @@ int main() {
 
         <!-- 4. Deployment -->
         <section class="mb-32">
-            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="box" class="text-blue-500"></i> 4. Deployment & Compilation</h2>
+            <h2 class="text-2xl mb-8 flex items-center gap-3 italic"><i data-lucide="box" class="text-blue-500"></i> 4. 部署与编译</h2>
             <div class="content-card">
                 <div class="grid md:grid-cols-2 gap-8">
                     <div>
-                        <h4 class="text-xs font-black text-white uppercase mb-4 tracking-widest">Compilation Command (MSVC)</h4>
+                        <h4 class="text-xs font-black text-white uppercase mb-4 tracking-widest">编译指令 (MSVC)</h4>
                         <code class="block bg-black p-4 border border-gray-900 rounded text-[10px]">cl.exe /EHsc main.cpp /link User32.lib</code>
                     </div>
                     <div>
-                        <h4 class="text-xs font-black text-white uppercase mb-4 tracking-widest">Runtime Dependencies</h4>
+                        <h4 class="text-xs font-black text-white uppercase mb-4 tracking-widest">运行时依赖</h4>
                         <ul class="text-[10px] text-gray-500 space-y-1">
                             <li>• litert_lm_wrapper.dll</li>
                             <li>• libLiteRt.dll</li>
@@ -161,8 +162,8 @@ int main() {
         </section>
 
         <footer class="pt-12 border-t border-gray-900 text-[10px] text-gray-700 font-bold uppercase tracking-[0.5em] flex justify-between italic">
-            <div>LiteRT-LM Integration Guide</div>
-            <div>© 2026 Winyunq Standard</div>
+            <div>LiteRT-LM 集成导引</div>
+            <div>© 2026 Winyunq 标准</div>
         </footer>
     </div>
     <script>lucide.createIcons();</script>

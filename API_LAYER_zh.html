@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Core Principles | Visual Atlas</title>
+    <title>底层核心原理 | Visual Atlas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #050505; color: #888; font-family: 'Inter', system-ui, sans-serif; }
@@ -18,8 +18,8 @@
 
     <header class="mb-20">
         <div class="flex justify-end gap-4 mb-4">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="API_LAYER_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+            <a href="API_LAYER.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
+            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
         </div>
         <h1 class="text-5xl font-black text-white tracking-tighter italic mb-4">PHYSICAL LOGIC <span class="text-blue-500">ATLAS</span></h1>
         <p class="text-zinc-500 uppercase tracking-[0.5em] text-xs pl-1">Stage: Bottom Layer (C-ABI)</p>
@@ -28,7 +28,7 @@
     <!-- Concept 1: ABI Barrier -->
     <section class="mb-32">
         <div class="label mb-4">Concept 01 / ABI Firewall</div>
-        <h2 class="text-2xl font-bold text-white mb-6">Physical Isolation: ABI Firewall Mechanism</h2>
+        <h2 class="text-2xl font-bold text-white mb-6">物理隔离：ABI 防火墙机制</h2>
         
         <div class="canvas">
             <svg viewBox="0 0 800 240" class="w-full">
@@ -60,10 +60,10 @@
 
         <div class="grid md:grid-cols-2 gap-10">
             <div class="contract-box">
-                <b>Physical Contract:</b> The Unreal side only holds a <code>void*</code>. The lifecycle, symbolic links, and memory layout of all underlying C++ objects are completely obscured by the DLL.
+                <b>物理契约：</b> 虚幻侧仅持有 <code>void*</code>。底层所有 C++ 对象的生命周期、符号链接、内存布局均被 DLL 彻底遮蔽。
             </div>
             <div class="contract-box">
-                <b>Consequence:</b> Even if the underlying Google SDK version is upgraded, the binary files of the Unreal project do not need to be recompiled. This completely solves the "symbol conflict" issue prevalent in large projects.
+                <b>后果：</b> 即使底层 Google SDK 版本升级，虚幻项目的二进制文件也无需重新编译。彻底解决了“符号冲突”这一大项目顽疾。
             </div>
         </div>
     </section>
@@ -71,7 +71,7 @@
     <!-- Concept 2: KV Cache Persistence -->
     <section class="mb-32">
         <div class="label mb-4">Concept 02 / KV Cache persistence</div>
-        <h2 class="text-2xl font-bold text-white mb-6">Persistence: Multi-Session KV Cache Mapping</h2>
+        <h2 class="text-2xl font-bold text-white mb-6">持久化：多会话 KV Cache 映射</h2>
         
         <div class="canvas">
             <svg viewBox="0 0 800 240" class="w-full">
@@ -104,10 +104,10 @@
 
         <div class="grid md:grid-cols-2 gap-10">
             <div class="contract-box">
-                <b>Physical Mapping:</b> Each <code>Conversation</code> handle exclusively occupies a physical segment of size <code>max_num_tokens</code> in VRAM.
+                <b>物理映射：</b> 每一个 <code>Conversation</code> 句柄在显存中独占一个 <code>max_num_tokens</code> 大小的物理分片。
             </div>
             <div class="contract-box">
-                <b>Instant Switching:</b> Switching conversation objects only requires passing a different handle during <code>RunInference</code>. <strong>Switching overhead &lt; 1ms</strong> because the memory is already "static" in VRAM.
+                <b>瞬间切换：</b> 切换对话对象只需在 <code>RunInference</code> 时传入不同的句柄。<strong>切换开销 &lt; 1ms</strong>，因为记忆已经在显存中“静止”等待。
             </div>
         </div>
     </section>
@@ -115,7 +115,7 @@
     <!-- Concept 3: The Pump -->
     <section class="mb-32">
         <div class="label mb-4">Concept 03 / Inference Heartbeat</div>
-        <h2 class="text-2xl font-bold text-white mb-6">Execution Driver: Inference Heartbeat Pump</h2>
+        <h2 class="text-2xl font-bold text-white mb-6">执行驱动：推理心脏泵</h2>
         
         <div class="canvas">
             <svg viewBox="0 0 800 240" class="w-full">
@@ -145,7 +145,7 @@
         </div>
 
         <div class="contract-box">
-            <b>Core Power Contract:</b> <code>RunInference</code> merely submits a calculation order to the GPU. You <strong>must</strong> continuously "pump" the engine via <code>WaitUntilDone</code> in a background thread for the results to be returned to the <code>Game Thread</code> via callbacks.
+            <b>核心动力契约：</b> <code>RunInference</code> 仅仅是向 GPU 提交了计算工单。<strong>必须</strong>在后台线程中通过 <code>WaitUntilDone</code> 不断“泵送”引擎，计算结果才会通过回调吐回给 <code>Game Thread</code>。
         </div>
     </section>
 
