@@ -2,168 +2,107 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shipping | LiteRT-LM Unreal</title>
+    <title>Packaging & Release | System Panorama</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
-        body { background-color: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
-        .sidebar { background-color: #080808; border-right: 1px solid #111; }
-        .nav-item { transition: all 0.2s; border-left: 2px solid transparent; }
-        .nav-item:hover { background-color: #0F0F0F; color: #3B82F6; }
-        .nav-item.active { background-color: #0F0F0F; color: #3B82F6; border-left-color: #3B82F6; }       
-        .content-card { background-color: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; }      
-        .winyunq-gradient { background: linear-gradient(90deg, #3B82F6 0%, #2DD4BF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        code { font-family: 'Fira Code', monospace; font-size: 0.85em; color: #60A5FA; }
-        .pillar-badge { font-size: 0.6rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: #111; border: 1px solid #222; color: #666; margin-right: 8px; }
-        pre { background-color: #080808 !important; border: 1px solid #1A1A1A; border-radius: 0.5rem; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .path-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 2rem; }
+        .concept-tag { font-size: 9px; background: #7F1D1D; color: #F87171; padding: 2px 8px; border-radius: 4px; font-weight: 900; margin-right: 8px; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.2rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.7rem; color: #94A3B8; margin-top: 1rem; }
     </style>
 </head>
-<body class="flex min-h-screen">
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+    <a href="index.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> Back to Portal
+    </a>
 
-    <!-- Sidebar -->
-    <aside class="sidebar w-72 fixed h-full hidden md:flex flex-col p-8 overflow-y-auto">
-        <div class="flex items-center gap-3 mb-12">
-            <i data-lucide="cpu" class="text-blue-500 w-6 h-6"></i>
-            <span class="text-xl font-black tracking-tighter text-white uppercase">LiteRT-LM <span class="text-blue-500">UE</span></span>
+    <header class="mb-24">
+        <div class="label">Phase 07 / Shipping & Release</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">Packaging & <span class="text-blue-600">Release</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">Distribution Strategies, VRAM Tiering, and Deployment Protocols</p>
+    </header>
+
+    <!-- Section 1: Physical Atlas -->
+    <section class="mb-32">
+        <div class="label">Physical Atlas / Delivery Topology</div>
+        <div class="canvas">
+            <svg viewBox="0 0 800 240" class="w-full">
+                <!-- Package Box -->
+                <rect x="50" y="40" width="300" height="160" rx="12" fill="#0A0A0A" stroke="#1E1E22" stroke-width="2"/>
+                <text x="60" y="30" fill="#444" font-size="10" font-weight="900">APP PACKAGE (.PAK)</text>
+                <rect x="70" y="60" width="100" height="40" rx="4" fill="#111" stroke="#333"/>
+                <text x="120" y="85" text-anchor="middle" fill="#333" font-size="9">Game Logic</text>
+
+                <!-- External Storage -->
+                <rect x="450" y="40" width="300" height="160" rx="12" fill="#1E3A8A10" stroke="#3B82F6" stroke-width="2" stroke-dasharray="4,4"/>
+                <text x="460" y="30" fill="#3B82F6" font-size="10" font-weight="900">EXTERNAL STORAGE (Recommended)</text>
+                <rect x="480" y="80" width="240" height="60" rx="8" fill="#1E3A8A20" stroke="#3B82F6"/>
+                <text x="600" y="115" text-anchor="middle" fill="#3B82F6" font-size="12" font-weight="bold italic">Gemma-4-E2B-it.bin</text>
+
+                <!-- Link -->
+                <path d="M 350 120 L 450 120" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow)"/>
+                <text x="400" y="110" text-anchor="middle" fill="#3B82F6" font-size="8">Physical mmap</text>
+
+                <defs>
+                    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3B82F6" />
+                    </marker>
+                </defs>
+            </svg>
         </div>
+    </section>
 
-        <div class="flex gap-4 mb-6 px-3">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>        
-            <a href="SHIPPING_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
-        </div>
-
-        <nav class="space-y-1">
-            <p class="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 px-3">Developer Roadmap</p>
-
-            <a href="index.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">01</span> About & Background
-            </a>
-            <a href="QUICK_START.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">02</span> Quick Start
-            </a>
-            <a href="APP_LAYER.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">03</span> App Interface Layer
-            </a>
-            <a href="SERVICE_LAYER.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">04</span> Plugin Workflow
-            </a>
-            <a href="Wrapper/index.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">05</span> Core Principles
-            </a>
-            <a href="DEMO_CASES.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">06</span> Practical Demos
-            </a>
-            <a href="SHIPPING.html" class="nav-item active flex items-center px-3 py-2 rounded-lg text-xs font-bold transition-all">
-                <span class="pillar-badge">07</span> Packaging & Release
-            </a>
-        </nav>
-
-        <div class="mt-auto pt-10 text-[10px] text-gray-800 font-black uppercase tracking-[3px] italic">  
-            Winyunq Engineering
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="flex-1 md:ml-72 p-12 md:p-16 lg:p-24">
-        <div class="max-w-4xl mx-auto">
-            <header class="mb-20">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/5 border border-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-widest mb-8">
-                    Chapter 07
-                </div>
-                <h1 class="text-6xl font-black text-white mb-8 tracking-tighter leading-none italic uppercase">     
-                    AI Soul to <br/><span class="winyunq-gradient">Your Players</span>
-                </h1>
-                <p class="text-xl text-gray-500 leading-relaxed max-w-2xl font-medium">
-                    Packaging and distributing large local models is a unique challenge. Learn how to manage the "last mile" of local AI deployment.
-                </p>
-            </header>
-
-            <div class="space-y-16">
-                <!-- Distribution Strategies -->
-                <section class="space-y-8">
-                    <h2 class="text-3xl font-black text-white italic tracking-tighter uppercase">Distribution Strategies</h2>
-                    <p class="text-gray-400 leading-relaxed">
-                        LLM weight files (2GB - 8GB+) don't fit well into traditional <code>.pak</code> files due to memory mapping requirements.
-                    </p>
-                    
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div class="content-card p-8 border-l-4 border-l-blue-500">
-                            <h4 class="text-white font-bold mb-4 italic">External Delivery (Recommended)</h4>
-                            <p class="text-xs text-gray-500 leading-relaxed">
-                                Keep <code>.bin</code> and <code>.tflite</code> files in a subfolder like <code>[GameDir]/Models/</code>. Use the <b>Non-UFS</b> packaging mode to ensure the files remain raw on disk for <code>mmap</code> access.
-                            </p>
-                        </div>
-                        <div class="content-card p-8 border-l-4 border-l-gray-700">
-                            <h4 class="text-white font-bold mb-4 italic">On-Demand Download</h4>
-                            <p class="text-xs text-gray-500 leading-relaxed">
-                                Ship the game with a <b>Base Agent</b> and allow users to download higher-quality models (7B, 13B) via an in-game downloader.
-                            </p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- VRAM Budgeting -->
-                <section class="content-card p-10 border-l-4 border-l-orange-500">
-                    <h2 class="text-2xl font-black text-white mb-6 italic tracking-tight flex items-center gap-3">
-                        <i data-lucide="gauge" class="text-orange-500"></i> VRAM Budgeting
-                    </h2>
-                    <p class="text-gray-400 leading-relaxed mb-8 text-sm">
-                        When shipping to a wide range of hardware, you must define <b>Quality Tiers</b>.
-                    </p>
-                    <table class="w-full text-left text-xs text-gray-500">
-                        <thead class="text-gray-400 font-black uppercase">
-                            <tr>
-                                <th class="pb-4">Tier</th>
-                                <th class="pb-4">Recommended Model</th>
-                                <th class="pb-4">VRAM Target</th>
-                            </tr>
-                        </thead>
-                        <tbody class="space-y-2">
-                            <tr class="border-t border-white/5">
-                                <td class="py-4 text-white font-bold">Standard</td>
-                                <td class="py-4">Gemma-2B (4-bit)</td>
-                                <td class="py-4">2GB - 3GB</td>
-                            </tr>
-                            <tr class="border-t border-white/5">
-                                <td class="py-4 text-blue-500 font-bold">Ultra</td>
-                                <td class="py-4">Llama-3-8B (8-bit)</td>
-                                <td class="py-4">6GB - 8GB</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </section>
-
-                <!-- Platform Notes -->
-                <section class="space-y-8">
-                    <h2 class="text-3xl font-black text-white italic tracking-tighter uppercase">Platform Notes</h2>
-                    <ul class="space-y-4 text-sm text-gray-400">
-                        <li class="flex gap-4">
-                            <i data-lucide="info" class="w-5 h-5 text-blue-500 shrink-0"></i>
-                            <span><b>Windows:</b> Ensure the application has read/write permissions for the external model folder.</span>
-                        </li>
-                        <li class="flex gap-4">
-                            <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-500 shrink-0"></i>
-                            <span><b>Console (PS5/Xbox):</b> Contact Winyunq for specialized LiteRT kernels optimized for console memory architectures.</span>
-                        </li>
-                    </ul>
-                </section>
+    <!-- Section 2: Delivery Strategies -->
+    <section class="mb-32">
+        <div class="label">01 / Two Distribution Paths</div>
+        
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="path-card border-l-4 border-zinc-800">
+                <h3 class="text-lg font-black text-white mb-2 italic">Path A: Internal (Not Recommended)</h3>
+                <p class="text-[11px] text-zinc-500 mb-4">Placing models inside <code>Content/</code> for Pak packaging.</p>
+                <ul class="text-[10px] text-zinc-600 space-y-2 list-disc pl-4">
+                    <li>Results in massive patch sizes.</li>
+                    <li>Some virtualized file systems may interfere with <code>mmap</code> efficiency.</li>
+                </ul>
             </div>
-
-            <!-- Navigation -->
-            <footer class="mt-32 pt-12 border-t border-gray-900 flex justify-between items-center">
-                <a href="DEMO_CASES.html" class="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-all">
-                    <i data-lucide="arrow-left" class="inline w-3 h-3 mr-2"></i> Previous: Demo Cases
-                </a>
-                <div class="text-[10px] text-gray-800 font-black uppercase tracking-[0.3em]">
-                    End of Roadmap · Winyunq V1.0
-                </div>
-            </footer>
+            <div class="path-card border-l-4 border-blue-600">
+                <h3 class="text-lg font-black text-white mb-2 italic">Path B: External (Recommended)</h3>
+                <p class="text-[11px] text-zinc-500 mb-4">Storing models in <code>Saved/Models/</code> or custom external paths.</p>
+                <ul class="text-[10px] text-zinc-400 space-y-2 list-disc pl-4">
+                    <li>Supports independent model downloaders; lightweight executable.</li>
+                    <li><b>Physics Edge:</b> 100% compatible with OS native mmap, lowest latency.</li>
+                </ul>
+            </div>
         </div>
-    </main>
+    </section>
 
+    <!-- Section 3: VRAM Budgeting -->
+    <section class="mb-32">
+        <div class="label">02 / VRAM Tiering Budget</div>
+        <div class="path-card">
+            <p class="text-sm text-zinc-400 mb-6">To ensure stability across various hardware, define VRAM watermarks:</p>
+            <table class="w-full text-[10px] text-zinc-500">
+                <thead class="text-zinc-400 uppercase font-black">
+                    <tr class="border-b border-zinc-900"><th class="pb-4">Hardware Tier</th><th class="pb-4">Recommended Model</th><th class="pb-4">Locked VRAM Budget</th></tr>
+                </thead>
+                <tbody class="space-y-4">
+                    <tr><td class="py-4 text-white font-bold">Base (RTX 3060)</td><td>Gemma-2B (4-bit)</td><td class="text-blue-500 font-mono">1.8 GB</td></tr>
+                    <tr class="border-t border-zinc-900"><td class="py-4 text-blue-400 font-bold">Standard (RTX 4060)</td><td>Gemma-4-E2B (4-bit)</td><td class="text-blue-500 font-mono">2.5 GB</td></tr>
+                    <tr class="border-t border-zinc-900"><td class="py-4 text-purple-400 font-bold">Ultra (RTX 4080+)</td><td>Llama-3-8B (8-bit)</td><td class="text-blue-500 font-mono">6.5 GB</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / Phase Manual 07</p>
+    </footer>
     <script>lucide.createIcons();</script>
 </body>
 </html>
