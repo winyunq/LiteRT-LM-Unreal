@@ -43,30 +43,31 @@ struct LiteRtLm_Config {
 
 | Function | Scenario & Strategy |
 | :--- | :--- |
-| **LiteRtLm_GenerateOnce** | **One-Shot Task**. Stateless inference; cache is destroyed immediately. |
-| **LiteRtLm_ChatWithPrompt** | **Agent Startup**. Creates a persistent session for a given void* ctx. |
-| **LiteRtLm_ChatWithContext** | **Conversational Flow**. Triggers Cache-Hit via ctx for incremental prefill. |
+| **FLiteRtLmUnrealApi::SendChatRequest** | **Core API**. Handles both startup and conversational flows via SessionKey. |
 
 ---
 
 ### 3. Usage Examples (UE5 C++ Style)
 
-#### Example: Multi-turn Conversation (Cache-Hit)
+#### Example: Multi-turn Conversation (Automatic Cache-Hit)
 
 ```cpp
 // 1. Setup
 FLiteRtLmConfig Config;
 Config.ModelPath = TEXT("D:/Models/gemma-2b-it.bin");
-ULiteRtLmSubsystem::Get()->LoadModel(Config);
+FLiteRtLmUnrealApi::LoadModel(Config);
 
-// 2. First Turn (Agent A)
-// Passing 'this' as context creates a persistent GPU session for this object.
-FLiteRtLmUnrealApi::ChatWithPrompt(this, "You are a guide.", "Hello!", OnChunk, OnDone);
-
-// 3. Subsequent Turn (Agent A)
-// Using the same 'this' pointer triggers a cache-hit. 
-// Only the new message is processed, resulting in near-instant response.
-FLiteRtLmUnrealApi::ChatWithContext(this, HistoryJson, OnChunk, OnDone);
+// 2. Chat Request
+// Messages is a TArray<TSharedPtr<FJsonObject>> containing history.
+// Using 'this' as SessionKey triggers automatic KV-cache reuse.
+FLiteRtLmUnrealApi::SendChatRequest(
+    this, 
+    Messages, 
+    TEXT(""), // Optional tools JSON
+    OnChunk, 
+    OnDone, 
+    Params
+);
 ```
 
 ---

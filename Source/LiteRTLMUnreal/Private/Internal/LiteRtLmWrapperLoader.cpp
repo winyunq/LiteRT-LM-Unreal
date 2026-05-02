@@ -59,14 +59,13 @@ bool FLiteRtLmWrapperLoader::LoadDll()
         UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] DLL not found at BaseDir: %s. Trying plugin ThirdParty..."), *DllPath);
 
         // Fallback: plugin ThirdParty (for first build before UBT has staged the DLLs)
-        TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("FabUmgMcp"));
-        if (!Plugin.IsValid()) Plugin = IPluginManager::Get().FindPlugin(TEXT("UmgMcp"));
+        TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("LiteRT-LM-Unreal"));
 
         if (Plugin.IsValid())
         {
             DllPath = FPaths::ConvertRelativePathToFull(
                 FPaths::Combine(Plugin->GetBaseDir(),
-                    TEXT("Source/LiteRTLMUnreal/Source/LiteRTLMUnreal/ThirdParty/LiteRtLm/Binaries/Win64"),
+                    TEXT("Source/ThirdParty/LiteRtLm/Binaries/Win64"),
                     TEXT("litert_lm_wrapper.dll")));
         }
 
