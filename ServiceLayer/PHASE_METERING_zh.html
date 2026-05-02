@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>物理度量：显存守卫 | 系统全景百科</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2.5rem; border-radius: 20px; margin-bottom: 3rem; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.5rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.75rem; color: #94A3B8; margin-top: 1.5rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-5xl mx-auto">
+    <a href="../SERVICE_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回调度中心
+    </a>
+
+    <header class="mb-24">
+        <div class="label">Workflow 02 / Metering</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">物理度量：<span class="text-blue-600">显存守卫</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">DXGI 实时遥测算法与动态降级策略</p>
+    </header>
+
+    <!-- Section 1: 异步时序 -->
+    <section class="mb-32">
+        <div class="label">Sequence / 硬件审计探测时序</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant SUB as Subsystem
+                participant RHI as Unreal RHI (D3D12)
+                participant DX as Windows DXGI
+                
+                SUB->>RHI: 1. GetNativeDevice()
+                RHI-->>SUB: 2. ID3D12Device Handle
+                SUB->>DX: 3. QueryVideoMemoryInfo()
+                DX-->>SUB: 4. 返回真实硬件 Budget & Usage
+                SUB->>SUB: 5. 计算物理剩余 (AvailableMB)
+                Note right of SUB: 产生物理防御决策
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: 核心原理 -->
+    <section class="mb-32">
+        <div class="label">01 / 概念深度：为什么需要 DXGI 穿透？</div>
+        <div class="card">
+            <p class="text-sm text-zinc-400 mb-8">
+                虚幻引擎自带的显存统计通常存在帧延迟。在进行 GB 级别的 AI 预占时，我们需要<b>微秒级</b>的真实硬件反馈。
+            </p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="p-6 bg-black/40 rounded-xl border border-white/5">
+                    <b class="text-blue-500 text-xs mb-2 block">物理审计 (Physical Audit)</b>
+                    <p class="text-[11px] text-zinc-500 leading-relaxed">
+                        插件直接绕过 UE5 统计层，通过 DXGI 接口询问显卡驱动：<i>“现在我如果强占 2GB，D3D 会崩溃吗？”</i>
+                    </p>
+                </div>
+                <div class="p-6 bg-black/40 rounded-xl border border-white/5">
+                    <b class="text-blue-500 text-xs mb-2 block">动态降级 (Fallback)</b>
+                    <p class="text-[11px] text-zinc-500 leading-relaxed">
+                        如果探测结果低于安全阈值（2048MB），插件会自动将 <code>Backend</code> 从 <code>gpu</code> 强制修改为 <code>cpu</code>，确保游戏不闪退。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: 实战操作 -->
+    <section class="mb-32">
+        <div class="label">02 / 源码实战 Demo (C++)</div>
+        <div class="card">
+            <p class="text-sm text-zinc-400 mb-6">业务层如何利用子系统的审计能力：</p>
+            <pre><code>// 1. 在初始化前进行物理审计
+int32 AvailableVRAM = <span class="text-blue-500">ULiteRtLmSubsystem::QueryAvailableVramMB()</span>;
+
+// 2. 注入防御逻辑
+FLiteRtLmConfig Config = FLiteRtLmUnrealApi::GetAutoConfig();
+if (AvailableVRAM &lt; 2048) {
+    Config.Backend = TEXT("cpu"); // 自动物理降级
+}
+
+// 3. 执行安全的显存预占
+Subsystem->LoadModel(Config);</code></pre>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

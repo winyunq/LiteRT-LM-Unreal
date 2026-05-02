@@ -1,67 +1,101 @@
-**EN** | [中文](API_LAYER_zh.md)
+# LiteRT-LM Unreal: 5. 底层核心原理 (API Layer)
 
-# LiteRT-LM Unreal: 5. Core Principles (API Layer)
+**版本:** 1.0.4  
+**密级:** Winyunq 核心工程标准  
+**状态:** 已发布
 
-This chapter is for C++ hardcore developers. We will delve into the plugin's lowest-level raw interface `FLiteRtLmUnrealApi` and the core operational logic behind it.
+## 1. 架构愿景 (Architectural Vision)
+LiteRT-LM API 层是连接虚幻引擎与 Google LiteRT-LM 推理内核的“硬桥接”。它采用了 **ABI 防火墙 (Firewall)** 设计，将复杂的外部依赖（Abseil, Protobuf）隔离在 `litert_lm_wrapper.dll` 之后，通过极简的 C-Style 接口保证了插件的“零链接”稳定性。
 
-> **Tip**: If you wish to use it directly in Blueprints, please skip this page and read **[3. App Interface Layer](APP_LAYER.md)**.
+### 1.1 推理物理流 (Inference Physical Flow)
+```mermaid
+sequenceDiagram
+    participant GT as Game Thread (Actor/UI)
+    participant API as FLiteRtLmUnrealApi (Static)
+    participant K as Inference Kernel (Background Thread)
+    participant GPU as VRAM / WebGPU Compute
+
+    GT->>API: SendChatRequest(SessionKey, History)
+    API->>API: NormalizeMessages (Gemma Role Merge)
+    API->>K: AsyncTask (AnyBackgroundThread)
+    activate K
+    K->>K: DLL::RunInference (Submit to Queue)
+    K->>K: DLL::WaitUntilDone (Message Pump)
+    K->>GPU: KV Cache Lookup & Decoding
+    GPU-->>K: Logits / Token IDs
+    K-->>GT: Internal_LiteRtLmCallback (Chunk)
+    deactivate K
+    K->>GT: FLiteRtLmDoneCallback (Result Object)
+```
 
 ---
 
-## 1. Core Static Interface: FLiteRtLmUnrealApi
+## 2. 符号分解 (Symbol Decomposition)
 
-This is the "pure" C++ bridge between the plugin and the Google LiteRT-LM engine. All methods are static functions and do not hold any Unreal UObject state, ensuring the highest calling efficiency.
+### 2.1 核心数据契约 (Core Structs)
 
-### 1.1 Lifecycle Management
-- **`LoadModel(Config)`**: Loads the model at the specified path into VRAM. Internally, it initializes the backend (Vulkan/VEC/CPU) based on the configuration.
-- **`UnloadModel()`**: Forcibly releases all inference-related resources, ensuring VRAM is returned to the system.
+#### `FLiteRtLmConfig` (引擎物理参数)
+- **ModelPath**: `.litertlm` 或 `.bin` 权重的绝对路径。
+- **Backend**: `gpu` (默认, Windows 下为 Vulkan) 或 `cpu`。
+- **MaxNumTokens**: **物理内存界限**。KV Cache 的预分配大小。增加此值会直接导致 `LoadModel` 时显存占用上升。
+- **bOptimizeShader**: Windows 平台推荐开启，通过预编译 Shader 减少推理初始延迟。
 
-### 1.2 Raw Inference Interface
+#### `FLiteRtLmResult` (推理产出物)
+- **FullText**: 净化后的纯文本回复（已移除 `<start_of_turn>` 等特殊 Token）。
+- **ToolCalls**: 结构化工具调用数组。系统会自动从 `full_json` 中解析并生成符合 OpenAI 规范的 `call_id`。
+- **TokensPerSec**: 物理性能指标，用于评估当前硬件负载。
+
+### 2.2 静态接口详述 (Static Interfaces)
+
+#### `SendChatRequest` (核心推理入口)
 ```cpp
-static void GenerateOnce(
-    const FString& Prompt, 
-    FLiteRtLmChunkCallback OnChunk, 
+static void SendChatRequest(
+    void* SessionKey,
+    const TArray<TSharedPtr<FJsonObject>>& Messages,
+    const FString& ToolsJson,
+    FLiteRtLmChunkCallback OnChunk,
     FLiteRtLmDoneCallback OnDone,
     const FLiteRtLmSamplingParams& Params
 );
 ```
-This is stateless single-pass inference. It does not retain any context and is suitable for temporary tasks that do not require memory.
+- **物理行为**:
+  1. **消息规范化**: 针对 Gemma 模型，自动将 `system` 角色合并至首个 `user` 消息；将 `tool` 结果转换为带上下文标识的 `user` 消息。
+  2. **增量同步**: 系统内部维护 `LastSentCount`。若对话历史增加，仅向 DLL 发送 Delta 部分；若历史缩短，自动触发 Session 重置。
+  3. **异步泵**: 在后台线程调用 `WaitUntilDone`，手动驱动 WebGPU 事件循环以触发流式回调。
 
 ---
 
-## 2. Core Principle: Instant KV Cache Mapping
+## 3. 物理映射 (Physical Mapping)
 
-The most core technical advantage of LiteRT-LM Unreal lies in its management of **Sessions**.
+### 3.1 瞬间会话映射 (Instant KV Cache Mapping)
+- **SessionKey (`void*`)**: 插件将任意内存地址（通常是 Agent Actor 的指针）作为 Hash Key。
+- **逻辑**: 切换不同 Agent 时，由于底层 KV Cache 已按指针锁定在显存中，**切换延迟 < 1ms**。这意味着在同一个关卡中，你可以让数百个 Agent 同时拥有独立“记忆”而无性能抖动。
 
-### 2.1 Session Context Handle (`void* Ctx`)
-In `ChatWithPrompt` or `ChatWithContext`, you will find a `void* Ctx` parameter.
-- **Principle**: We use this pointer as a unique Hash Key to look up the corresponding inference context in the internal session pool.
-- **Advantage**: When you switch from "NPC_A" to "NPC_B", the plugin only needs to switch the internal Ctx pointer. Since the KV Cache is already preserved in memory/VRAM, **the switching process has almost zero latency (< 1ms)**.
-
-### 2.2 Async Inference Queue
-The underlying inference logic runs in an independent thread pool.
-1.  **Submit Task**: When you call the API, the task is pushed into a work queue.
-2.  **Chunk Callback**: As the engine produces each token, the `OnChunk` delegate is triggered.
-3.  **Auto Sync**: All callbacks are dispatched back to the Unreal Game Thread, so you can safely modify the UI or Actors within the callback.
+### 3.2 显存分配策略 (VRAM Strategy)
+- **动态探测**: `GetAutoConfig` 通过 **DXGI** 接口实时查询系统可用显存。
+- **保守预算**: 默认封顶 4GB，若可用显存低于 2GB，系统会自动切换至 `cpu` 后端并将 `MaxNumTokens` 降至 1024，以防止 D3D 驱动崩溃。
 
 ---
 
-## 3. Constrained Decoding
+## 4. 参数契约与副作用 (Contract & Side Effects)
 
-The low-level API supports powerful constrained decoding modes:
-- **Regex**: Ensures the model output matches a specific regular expression (e.g., numbers only).
-- **JSON**: Forces the model to output a valid JSON structure.
-- **Lark**: Supports advanced logic constraint syntax.
+### 4.1 内存与生命周期
+- **`SessionKey` 有效性**: 虽然 `void*` 不需要 UObject 引用，但如果 SessionKey 指向的对象被销毁，必须手动调用 `ReleaseSession`，否则会导致显存泄露。
+- **回调安全**: `OnChunk` 和 `OnDone` 保证在 **Game Thread** 执行。在回调内部修改 UI 或 Actor 是物理安全的。
 
-These constraints are enforced during the **Token Generation Stage**, rather than checking after generation, greatly improving the accuracy of the model when performing "Tool Calls."
-
----
-
-## 🧭 Roadmap
-
-After understanding the low-level principles, you can:
-- **[4. Plugin Workflow (SERVICE_LAYER.md)](SERVICE_LAYER.md)** - Learn how the Subsystem encapsulates these low-level calls.
-- **[3. App Interface Layer (APP_LAYER.md)](APP_LAYER.md)** - See the out-of-the-box components we provide for the application layer.
+### 4.2 线程副作用
+- **非阻塞保证**: 推理循环 `WaitUntilDone` 运行在 `AnyBackgroundThreadNormalTask`。
+- **CPU 抢占**: 在 `cpu` 后端模式下，大模型推理会占满 `NumThreads` 指定的核心，可能导致 UE 物理模拟频率略微下降。
 
 ---
-*Powered by Winyunq - Ultimate Productivity Toolset.*
+
+## 5. 约束解码 (Constrained Decoding)
+支持在 **Token 生成阶段** 进行硬约束（而非事后检查）：
+- **Regex**: 强制输出符合正则（如：`^[0-9]+$`）。
+- **JSON**: 强制输出有效 JSON 对象，自动补全缺失的括号。
+- **Lark**: Winyunq 专有的代理指令集约束，确保 Agent 不会输出超出预设指令集的非法操作。
+
+---
+**Winyunq Industrial Documentation Standard**  
+*硬件基准: 13900HX / RTX 4060 64G*  
+*物理引擎: LiteRT v2.16.x*

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Input: Session Pushing | System Panorama</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .path-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 2rem; }
+        .concept-tag { font-size: 9px; background: #1E3A8A; color: #60A5FA; padding: 2px 8px; border-radius: 4px; font-weight: 900; margin-right: 8px; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.2rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.7rem; color: #94A3B8; margin-top: 1rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+    <a href="../APP_LAYER.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> Back to Portal
+    </a>
+
+    <header class="mb-24">
+        <div class="label">Phase 02 / Data Injection</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">Input: <span class="text-blue-600">Session Push</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">Message Normalization, Incremental Sync, and Multi-path Input</p>
+    </header>
+
+    <!-- Section 1: Async Sequence -->
+    <section class="mb-32">
+        <div class="label">01 / Sync Sequence Map</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant GT as Game Thread
+                participant PL as Plugin Layer
+                participant K as Kernel (VRAM)
+                
+                GT->>PL: Send Message Array (Messages)
+                PL->>PL: Role Normalization (Gemma Support)
+                PL->>PL: Delta Check (Incremental)
+                PL->>K: Push Physical Token Delta
+                Note right of K: Background Inference Starts
+                PL-->>GT: Immediate Return (Non-blocking)
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: Implementation Paths -->
+    <section class="mb-32">
+        <div class="label">02 / Implementation Paths</div>
+        
+        <!-- Path A: Static API -->
+        <div class="path-card border-l-4 border-blue-500">
+            <h3 class="text-lg font-black text-white mb-2 italic">Path A: Full Static API (Low Level)</h3>
+            <p class="text-xs text-zinc-500 mb-4">For scenarios requiring custom history management and sampling.</p>
+            <pre><code>// Physical Pointer Binding + Delta Push
+<span class="text-blue-400">FLiteRtLmUnrealApi::SendChatRequest(AgentPtr, Messages, ...);</span></code></pre>
+        </div>
+
+        <!-- Path B: Component -->
+        <div class="path-card border-l-4 border-purple-500">
+            <h3 class="text-lg font-black text-white mb-2 italic">Path B: Component Driven (Common)</h3>
+            <p class="text-xs text-zinc-500 mb-4">Encapsulated via <code>ULiteRtLmComponent</code>. Handles AgentPtr hashing automatically.</p>
+            <pre><code>// Simple BP or C++ call
+MyBrainComponent-><span class="text-purple-400">SendChatMessage(UserMessageText);</span></code></pre>
+        </div>
+    </section>
+
+    <!-- Section 3: Supporting Concepts -->
+    <section class="mb-32">
+        <div class="label">03 / Related Concepts</div>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">PROTOCOL</span><b class="text-sm">Incremental Sync</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    We only push new tokens. This significantly reduces Prefill latency in long conversations by leveraging persistent KV Cache.
+                </p>
+            </div>
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">NORMALIZATION</span><b class="text-sm">Gemma Role Alignment</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    The plugin automatically merges <code>system</code> prompts into the first <code>user</code> message to maintain compatibility with lightweight models.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7</p>
+    </footer>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

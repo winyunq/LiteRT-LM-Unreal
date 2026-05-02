@@ -1,32 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Updating | LiteRT-LM Unreal</title>
+    <title>系统操作规程门户 | LiteRT-LM Unreal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800&display=swap');
-        body { background-color: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        
+        .phase-node { 
+            background: #0F0F11; 
+            border: 1px solid #1E1E22; 
+            padding: 2.5rem; 
+            border-radius: 24px; 
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .phase-node:hover { 
+            border-color: #3B82F6; 
+            background: #111115;
+            transform: scale(1.01) translateX(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .phase-number { font-size: 3rem; font-weight: 900; color: rgba(59, 130, 246, 0.1); min-width: 80px; }
+        .phase-info h3 { font-size: 1.5rem; font-weight: 900; color: #FFF; margin-bottom: 0.5rem; }
+        .phase-info p { font-size: 13px; color: #64748B; max-width: 500px; }
+        
+        .node-link-icon { margin-left: auto; color: #333; transition: color 0.3s; }
+        .phase-node:hover .node-link-icon { color: #3B82F6; }
+
+        .tag { font-size: 9px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; margin-right: 8px; }
+        .tag-logic { background: #1E3A8A; color: #60A5FA; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-8 text-center">
-    <div class="max-w-2xl">
-        <div class="mb-8 flex justify-center">
-            <div class="p-4 rounded-full bg-blue-500/10 border border-blue-500/20">
-                <i data-lucide="refresh-cw" class="w-12 h-12 text-blue-500 animate-spin-slow"></i>
-            </div>
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+
+    <header class="mb-32">
+        <div class="flex justify-end gap-6 mb-8">
+            <a href="APP_LAYER.html" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all">English</a>
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 border-b-2 border-blue-500 pb-1">实战操作节点</span>
         </div>
-        <h1 class="text-4xl font-black text-white mb-6 tracking-tighter italic uppercase">Document Under Construction</h1>
-        <p class="text-xl text-gray-500 leading-relaxed font-medium">
-            We are currently updating these documents. <br/>
-            You can experience the effects during the 30-day free purchase period.
-        </p>
-        <a href="index_zh.html" class="mt-12 inline-flex items-center gap-2 text-sm font-bold text-blue-500 uppercase tracking-widest hover:text-blue-400 transition-all">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回主页
+        <h1 class="text-7xl font-black text-white tracking-tighter italic mb-4 leading-none uppercase">
+            SYSTEM <span class="text-blue-600">HANDBOOK</span>
+        </h1>
+        <p class="text-zinc-500 uppercase tracking-[0.6em] text-[10px] font-bold pl-1">点击大节点进入具体环节：操作引导、时序图与 Demo</p>
+    </header>
+
+    <div class="space-y-6">
+
+        <!-- Node 1: Startup -->
+        <a href="AppLayer/PHASE_STARTUP_zh.html" class="phase-node">
+            <div class="phase-number">01</div>
+            <div class="phase-info">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="tag tag-logic">Lifecycle</span>
+                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">物理预占</span>
+                </div>
+                <h3>启动：环境建立 (Startup)</h3>
+                <p>如何执行显存锁定与模型物理映射。包含异步加载操作规程。</p>
+            </div>
+            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
         </a>
+
+        <!-- Node 2: Input -->
+        <a href="AppLayer/PHASE_INPUT_zh.html" class="phase-node">
+            <div class="phase-number">02</div>
+            <div class="phase-info">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="tag tag-logic">Data Flow</span>
+                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">指令注入</span>
+                </div>
+                <h3>输入：会话推送 (Input)</h3>
+                <p>如何绑定 Actor 指针、构建增量消息。包含会话映射与同步操作。</p>
+            </div>
+            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        </a>
+
+        <!-- Node 3: Process -->
+        <a href="AppLayer/PHASE_PROCESS_zh.html" class="phase-node">
+            <div class="phase-number">03</div>
+            <div class="phase-info">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="tag tag-logic">Physics</span>
+                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">异步计算</span>
+                </div>
+                <h3>处理：持续推理 (Processing)</h3>
+                <p>解析异步泵送机制与硬件实时遥测。包含后台线程流转时序。</p>
+            </div>
+            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        </a>
+
+        <!-- Node 4: Output -->
+        <a href="AppLayer/PHASE_OUTPUT_zh.html" class="phase-node">
+            <div class="phase-number">04</div>
+            <div class="phase-info">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="tag tag-logic">Data Flow</span>
+                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">结果渲染</span>
+                </div>
+                <h3>输出：数据消费 (Output)</h3>
+                <p>如何拿走 Token 流与物理结算单。包含流式 UI 渲染操作与 Demo。</p>
+            </div>
+            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        </a>
+
+        <!-- Node 5: Shutdown -->
+        <a href="AppLayer/PHASE_SHUTDOWN_zh.html" class="phase-node">
+            <div class="phase-number">05</div>
+            <div class="phase-info">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="tag tag-logic">Lifecycle</span>
+                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">资源归还</span>
+                </div>
+                <h3>结束：资源撤场 (Shutdown)</h3>
+                <p>物理卸载与内存释放规程。防止显存泄露与闪退的强制动作。</p>
+            </div>
+            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        </a>
+
     </div>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / Operational Hub v2.7</p>
+    </footer>
+
     <script>lucide.createIcons();</script>
 </body>
 </html>

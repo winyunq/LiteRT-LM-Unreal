@@ -1,32 +1,115 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Updating | LiteRT-LM Unreal</title>
+    <title>快速开始 | LiteRT-LM Unreal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800&display=swap');
-        body { background-color: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2rem; margin: 2rem 0; }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .step-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 16px; margin-bottom: 3rem; }
+        .step-img { border-radius: 12px; border: 1px solid #1A1A1A; margin-top: 1.5rem; width: 100%; height: auto; transition: all 0.3s ease; }
+        .step-img:hover { border-color: #3B82F6; transform: scale(1.01); }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.9em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        .step-number { font-size: 3rem; font-weight: 900; color: #111; position: absolute; top: -1rem; right: 1rem; z-index: -1; }
+        .relative-card { position: relative; z-index: 1; overflow: hidden; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-8 text-center">
-    <div class="max-w-2xl">
-        <div class="mb-8 flex justify-center">
-            <div class="p-4 rounded-full bg-blue-500/10 border border-blue-500/20">
-                <i data-lucide="refresh-cw" class="w-12 h-12 text-blue-500 animate-spin-slow"></i>
+<body class="p-8 md:p-20 max-w-5xl mx-auto">
+    <header class="mb-24">
+        <div class="flex justify-end gap-6 mb-8">
+            <a href="QUICK_START.html" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all">English</a>
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 border-b-2 border-blue-500 pb-1">中文说明</span>
+        </div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 leading-none">快速体验 <span class="text-blue-600">AI 之魂</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-xs font-bold">Chapter 02 / 快速开始引导</p>
+    </header>
+
+    <!-- Step 0 -->
+    <section class="mb-20">
+        <div class="label">Step 0 / 准备项目</div>
+        <div class="step-card relative-card">
+            <div class="step-number">00</div>
+            <p class="text-lg text-white font-bold mb-4 italic">建立您的虚幻工程</p>
+            <p class="text-sm text-zinc-400">首先，确保您已经安装了支持的虚幻引擎版本，并将 LiteRT-LM 插件放入您的工程目录中。</p>
+            <img src="Step0PrepareAProject.png" alt="Prepare Project" class="step-img">
+        </div>
+    </section>
+
+    <!-- Step 1 -->
+    <section class="mb-20">
+        <div class="label">Step 1 / 获取插件</div>
+        <div class="step-card relative-card">
+            <div class="step-number">01</div>
+            <p class="text-lg text-white font-bold mb-4 italic">从 FAB 或 Marketplace 部署</p>
+            <p class="text-sm text-zinc-400">在 Fab 页面获取插件后，您可以直接在编辑器中启用它。这是开启本地大模型推理的第一步。</p>
+            <img src="Step1GetOnFab.png" alt="Get on Fab" class="step-img">
+        </div>
+    </section>
+
+    <!-- Step 2: Download Model -->
+    <section class="mb-20">
+        <div class="label">Step 2 / 下载并放置模型</div>
+        <div class="step-card relative-card">
+            <div class="step-number">02</div>
+            <p class="text-lg text-white font-bold mb-4 italic">获取 AI 的核心大脑</p>
+            <p class="text-sm text-zinc-400 mb-6">访问 Hugging Face 下载指定的轻量化模型文件：</p>
+            
+            <a href="https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all mb-8">
+                <i data-lucide="download"></i> 获取 gemma-4-E2B-it-litert-lm
+            </a>
+
+            <div class="bg-black/50 p-6 rounded-xl border border-white/5">
+                <p class="text-[10px] uppercase font-black text-blue-500 mb-4 tracking-[0.2em]">物理放置路径规范 (项目路径)</p>
+                <p class="text-xs text-zinc-400 mb-2">下载后，请确保文件名为 <code>gemma-4-E2B-it-litert-lm</code> 并放置在<b>项目根目录</b>的 Content 文件夹下：</p>
+                <code>[您的项目目录]/Content/Models/gemma-4-E2B-it-litert-lm</code>
+                <p class="text-[10px] text-zinc-600 mt-4 leading-relaxed">
+                    <b>重要：</b>请放置在<b>项目路径</b>而非插件路径下，以便于打包分发。同时确保项目路径中<b>不包含中文字符</b>，否则物理映射 (mmap) 将会失效。
+                </p>
             </div>
         </div>
-        <h1 class="text-4xl font-black text-white mb-6 tracking-tighter italic uppercase">Document Under Construction</h1>
-        <p class="text-xl text-gray-500 leading-relaxed font-medium">
-            We are currently updating these documents. <br/>
-            You can experience the effects during the 30-day free purchase period.
-        </p>
-        <a href="index_zh.html" class="mt-12 inline-flex items-center gap-2 text-sm font-bold text-blue-500 uppercase tracking-widest hover:text-blue-400 transition-all">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回主页
-        </a>
-    </div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="mb-20">
+        <div class="label">Step 3 / 运行演示场景</div>
+        <div class="step-card relative-card">
+            <div class="step-number">03</div>
+            <p class="text-lg text-white font-bold mb-4 italic">打开演示关卡</p>
+            <p class="text-sm text-zinc-400">插件附带了一个完整的演示关卡。点击运行，您将看到一个集成了 AI 对话能力的交互界面。</p>
+            <img src="Step2RunningTheDemo.png" alt="Running Demo" class="step-img">
+        </div>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="mb-20">
+        <div class="label">Step 4 / 发送您的第一条指令</div>
+        <div class="step-card relative-card">
+            <div class="step-number">04</div>
+            <p class="text-lg text-white font-bold mb-4 italic">实时文本交互</p>
+            <p class="text-sm text-zinc-400">在对话框中输入文字并按下回车。此时插件会根据您的 SessionKey 自动映射到显存中的 KV Cache。</p>
+            <img src="Step3SendText.png" alt="Send Text" class="step-img">
+        </div>
+    </section>
+
+    <!-- Step 5 -->
+    <section class="mb-20">
+        <div class="label">Step 5 / 见证 AI 的灵魂</div>
+        <div class="step-card relative-card">
+            <div class="step-number">05</div>
+            <p class="text-lg text-white font-bold mb-4 italic">流式回复与记忆</p>
+            <p class="text-sm text-zinc-400">AI 会开始逐字返回结果。借助于我们的多会话管理，NPC 会记住您的对话上下文，实现真正的智能交互。</p>
+            <img src="Step4waitAIanswerAndKeep.png" alt="AI Answer" class="step-img">
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / v2.0</p>
+    </footer>
     <script>lucide.createIcons();</script>
 </body>
 </html>

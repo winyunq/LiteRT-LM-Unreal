@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>会话编排：槽位分配 | 系统全景百科</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 3rem; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.5rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.75rem; color: #94A3B8; margin-top: 1.5rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-5xl mx-auto">
+    <a href="../SERVICE_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回调度中心
+    </a>
+
+    <header class="mb-24">
+        <div class="label">Workflow 03 / Orchestration</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">会话编排：<span class="text-blue-600">槽位分配</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">显存 LRU 淘汰、会话寻址与增量同步计数</p>
+    </header>
+
+    <!-- Section 1: 异步时序 -->
+    <section class="mb-32">
+        <div class="label">Sequence / 会话调度内幕时序</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant NPC as Actor (Level 3)
+                participant SUB as Subsystem (Level 2)
+                participant K as Kernel (Level 1)
+                
+                NPC->>SUB: 1. GetOrCreateSession(ptr)
+                SUB->>SUB: 2. 查表 (SessionMap)
+                alt 未命中有槽位
+                    SUB->>K: 3. 申请新显存 Slot
+                else 未命中槽位满
+                    SUB->>SUB: 4. 执行 LRU 淘汰最久未用
+                    SUB->>K: 5. 释放旧 Slot 并覆盖
+                end
+                K-->>SUB: 6. 返回物理句柄
+                SUB->>SUB: 7. 初始化 LastSentCount=0
+                SUB-->>NPC: 8. 交付 SessionKey (void*)
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: 核心原理 -->
+    <section class="mb-32">
+        <div class="label">01 / 概念深度：复杂的资源仲裁</div>
+        <div class="card">
+            <p class="text-sm text-zinc-400 mb-8">
+                子系统是全插件的“记忆管家”。它必须在有限的 KV Cache 总量下，协调数百个 NPC 的对话请求。
+            </p>
+            <div class="space-y-6">
+                <div class="p-4 bg-black/40 rounded-lg border border-white/5">
+                    <b class="text-blue-500 text-xs mb-1 block">LRU 淘汰算法 (Least Recently Used)</b>
+                    <p class="text-[10px] text-zinc-500">当显存 Slot 耗尽时，子系统会自动牺牲那个“最久没和玩家说过话”的 NPC 记忆，将其槽位腾挪给当前活跃的 Agent。</p>
+                </div>
+                <div class="p-4 bg-black/40 rounded-lg border border-white/5">
+                    <b class="text-blue-500 text-xs mb-1 block">增量计数守卫 (Incremental Tracking)</b>
+                    <p class="text-[10px] text-zinc-500">子系统为每个指针维护一个 <code>SessionMsgCountMap</code>。这确保了业务层重复调用时，插件物理上只处理文本 Delta，不产生冗余计算。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: 实战操作 -->
+    <section class="mb-32">
+        <div class="label">02 / 源码实战 Demo (C++)</div>
+        <div class="card">
+            <p class="text-sm text-zinc-400 mb-6">解析子系统如何管理多会话编排：</p>
+            <pre><code>// 1. 利用 UObject 地址作为物理哈希键
+void* Key = (void*)this;
+
+// 2. 子系统内部编排 (LiteRtLmSubsystem.cpp)
+void* Session = <span class="text-blue-500">SessionMap.FindRef(Key);</span>
+if (!Session) {
+    // 自动仲裁显存槽位并建立物理联系
+    Session = <span class="text-blue-500">Internal_AllocateSlot(Key);</span>
+}</code></pre>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -2,54 +2,133 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Core Principles | Visual Atlas</title>
+    <title>Core Architecture | Visual Atlas</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background-color: #050505; color: #888; font-family: 'Inter', system-ui, sans-serif; }
-        .canvas { background: #0A0A0A; border: 1px solid #1A1A1A; border-radius: 20px; padding: 2rem; margin: 2rem 0; }
-        .label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #444; }
-        .tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: #3B82F6; color: white; }
-        .contract-box { background: #0F0F0F; border-left: 2px solid #3B82F6; padding: 1.5rem; margin: 1rem 0; }
-        b { color: #DDD; }
-        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.9em; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --bg-deep: #050506;
+            --bg-card: #0F0F11;
+            --accent-blue: #3B82F6;
+            --accent-purple: #8B5CF6;
+            --text-main: #E2E8F0;
+            --text-dim: #64748B;
+            --border: #1E1E22;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        .canvas {
+            background: #000;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 3rem;
+            margin: 2rem 0;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+        }
+
+        .label {
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+        }
+
+        .contract-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .contract-box:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        b { color: #FFF; font-weight: 700; }
+        code {
+            color: var(--accent-blue);
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .api-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .api-header {
+            background: rgba(255,255,255,0.03);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .api-body { padding: 1.5rem; }
+
+        .tag-static { background: #334155; color: #F1F5F9; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 800; }
+
+        .winyunq-gradient {
+            background: linear-gradient(135deg, #FFF 0%, #64748B 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
     </style>
 </head>
 <body class="p-8 md:p-20 max-w-6xl mx-auto">
 
-    <header class="mb-20">
-        <div class="flex justify-end gap-4 mb-4">
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">EN</span>
-            <a href="API_LAYER_zh.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">中文</a>
+    <header class="mb-32">
+        <div class="flex justify-end gap-6 mb-8">
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 border-b-2 border-blue-500 pb-1">English</span>
+            <a href="API_LAYER_zh.html" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all">中文说明</a>
         </div>
-        <h1 class="text-5xl font-black text-white tracking-tighter italic mb-4">PHYSICAL LOGIC <span class="text-blue-500">ATLAS</span></h1>
-        <p class="text-zinc-500 uppercase tracking-[0.5em] text-xs pl-1">Stage: Bottom Layer (C-ABI)</p>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-6 leading-none">
+            PHYSICAL <span class="text-blue-600">ATLAS</span>
+        </h1>
+        <p class="text-zinc-500 uppercase tracking-[0.6em] text-[10px] pl-1 font-bold">Winyunq Industrial Core / API Layer Documentation</p>
     </header>
 
     <!-- Concept 1: ABI Barrier -->
-    <section class="mb-32">
-        <div class="label mb-4">Concept 01 / ABI Firewall</div>
-        <h2 class="text-2xl font-bold text-white mb-6">Physical Isolation: ABI Firewall Mechanism</h2>
-        
+    <section class="mb-40">
+        <div class="label">Concept 01 / ABI Firewall</div>
+        <h2 class="text-3xl font-black text-white mb-8 tracking-tight">Physical Isolation: ABI Firewall</h2>
+
         <div class="canvas">
             <svg viewBox="0 0 800 240" class="w-full">
-                <!-- UE5 Side -->
                 <rect x="50" y="40" width="250" height="160" rx="10" fill="#0E1729" stroke="#1E40AF" stroke-width="2"/>
                 <text x="175" y="30" text-anchor="middle" fill="#3B82F6" font-size="12" font-weight="bold">Unreal Engine 5 (User Space)</text>
                 <text x="175" y="110" text-anchor="middle" fill="#4B5563" font-size="10">UObject, Blueprints, Game Thread</text>
-                
-                <!-- The Firewall -->
+
                 <rect x="360" y="20" width="80" height="200" rx="4" fill="#3B82F6" fill-opacity="0.2" stroke="#3B82F6" stroke-dasharray="4,4"/>
                 <text x="400" y="125" text-anchor="middle" fill="#3B82F6" font-weight="bold" font-size="14" transform="rotate(-90 400,125)">LITERT_LM_WRAPPER.DLL</text>
-                
-                <!-- Google Side -->
+
                 <rect x="500" y="40" width="250" height="160" rx="10" fill="#18181B" stroke="#3F3F46" stroke-width="2"/>
                 <text x="625" y="30" text-anchor="middle" fill="#71717A" font-size="12" font-weight="bold">Google SDK (Engine Core)</text>
                 <text x="625" y="110" text-anchor="middle" fill="#3F3F46" font-size="10">Abseil, Protobuf, Minja, WebGPU</text>
 
-                <!-- Pointer Interaction -->
                 <path d="M 300 120 L 360 120" stroke="#3B82F6" stroke-width="2" marker-end="url(#arrow-blue)"/>
                 <text x="330" y="110" text-anchor="middle" fill="#3B82F6" font-size="9">void* handle</text>
-                
+
                 <defs>
                     <marker id="arrow-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
                         <path d="M 0 0 L 10 5 L 0 10 z" fill="#3B82F6" />
@@ -58,32 +137,29 @@
             </svg>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-10">
+        <div class="grid md:grid-cols-2 gap-8">
             <div class="contract-box">
-                <b>Physical Contract:</b> The Unreal side only holds a <code>void*</code>. The lifecycle, symbolic links, and memory layout of all underlying C++ objects are completely obscured by the DLL.
+                <b>Physical Contract:</b> The Unreal side only holds <code>void*</code> handles. The lifetime, symbols, and memory layout of all underlying C++ objects are completely hidden by the DLL.
             </div>
             <div class="contract-box">
-                <b>Consequence:</b> Even if the underlying Google SDK version is upgraded, the binary files of the Unreal project do not need to be recompiled. This completely solves the "symbol conflict" issue prevalent in large projects.
+                <b>Engineering Advantage:</b> Unreal projects do not need recompilation even if the Google SDK is updated. This solves the "symbol collision" nightmare in large projects.
             </div>
         </div>
     </section>
 
     <!-- Concept 2: KV Cache Persistence -->
-    <section class="mb-32">
-        <div class="label mb-4">Concept 02 / KV Cache persistence</div>
-        <h2 class="text-2xl font-bold text-white mb-6">Persistence: Multi-Session KV Cache Mapping</h2>
-        
+    <section class="mb-40">
+        <div class="label">Concept 02 / KV Cache persistence</div>
+        <h2 class="text-3xl font-black text-white mb-8 tracking-tight">Persistence: Multi-Session KV Cache Mapping</h2>
+
         <div class="canvas">
             <svg viewBox="0 0 800 240" class="w-full">
-                <!-- GPU VRAM -->
                 <rect x="50" y="50" width="700" height="140" rx="12" fill="#000" stroke="#222" stroke-width="1"/>
                 <text x="70" y="40" fill="#444" font-size="10">GPU VRAM ADDRESS SPACE</text>
 
-                <!-- Static Weights -->
                 <rect x="60" y="60" width="200" height="120" rx="8" fill="#111" stroke="#333"/>
                 <text x="160" y="125" text-anchor="middle" fill="#333" font-size="11">Model Weights (Frozen)</text>
 
-                <!-- Conversation Slots -->
                 <g>
                     <rect x="280" y="60" width="140" height="120" rx="8" fill="#1E3A8A40" stroke="#3B82F6" stroke-width="2"/>
                     <text x="350" y="115" text-anchor="middle" fill="#3B82F6" font-weight="bold" font-size="10">Conv_A (NPC 1)</text>
@@ -91,69 +167,124 @@
                 </g>
 
                 <g>
-                    <rect x="440" y="60" width="140" height="120" rx="8" fill="#111" stroke="#222"/>
+                    <rect x="440" y="60" width="140" height="120" rx="8" fill="#111" stroke="#222"/>      
                     <text x="510" y="125" text-anchor="middle" fill="#222" font-size="10">Conv_B (NPC 2)</text>
                 </g>
 
                 <g>
-                    <rect x="600" y="60" width="140" height="120" rx="8" fill="#111" stroke="#222"/>
+                    <rect x="600" y="60" width="140" height="120" rx="8" fill="#111" stroke="#222"/>      
                     <text x="670" y="125" text-anchor="middle" fill="#222" font-size="10">Conv_C (NPC 3)</text>
                 </g>
             </svg>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-10">
+        <div class="grid md:grid-cols-2 gap-8">
             <div class="contract-box">
-                <b>Physical Mapping:</b> Each <code>Conversation</code> handle exclusively occupies a physical segment of size <code>max_num_tokens</code> in VRAM.
+                <b>Physical Mapping:</b> Each <code>Conversation</code> handle owns a dedicated physical slice in VRAM of <code>max_num_tokens</code> size.
             </div>
             <div class="contract-box">
-                <b>Instant Switching:</b> Switching conversation objects only requires passing a different handle during <code>RunInference</code>. <strong>Switching overhead &lt; 1ms</strong> because the memory is already "static" in VRAM.
+                <b>Instant Response:</b> Switching NPCs only requires passing a different handle to <code>SendChatRequest</code>. <strong>TTFT &lt; 100ms</strong>.
             </div>
         </div>
     </section>
 
-    <!-- Concept 3: The Pump -->
-    <section class="mb-32">
-        <div class="label mb-4">Concept 03 / Inference Heartbeat</div>
-        <h2 class="text-2xl font-bold text-white mb-6">Execution Driver: Inference Heartbeat Pump</h2>
-        
-        <div class="canvas">
-            <svg viewBox="0 0 800 240" class="w-full">
-                <!-- UE5 Thread -->
-                <circle cx="100" cy="120" r="40" fill="#0E1729" stroke="#3B82F6" stroke-width="2"/>
-                <text x="100" y="125" text-anchor="middle" fill="#3B82F6" font-size="10" font-weight="bold">Game Thread</text>
+    <!-- Concept 3: Functional API Reference -->
+    <section class="mb-40">
+        <div class="label">Concept 03 / Functional API Reference</div>
+        <h2 class="text-3xl font-black text-white mb-12 tracking-tight">Functional API Reference (LiteRtLmUnrealApi)</h2>
 
-                <!-- Async Pipe -->
-                <path d="M 140 120 L 250 120" stroke="#333" stroke-width="20" stroke-linecap="round"/>
-                <text x="195" y="110" text-anchor="middle" fill="#555" font-size="9">LiteRtLm_RunInference</text>
-
-                <!-- Bottom Pump -->
-                <rect x="300" y="60" width="200" height="120" rx="100" fill="#111" stroke="#EF4444" stroke-width="2" stroke-dasharray="8,4"/>
-                <text x="400" y="125" text-anchor="middle" fill="#EF4444" font-weight="bold" font-size="12">INFERENCE PUMP</text>
-                <text x="400" y="145" text-anchor="middle" fill="#444" font-size="9">LiteRtLm_WaitUntilDone</text>
-
-                <!-- Callback loop -->
-                <path d="M 400 60 Q 400 20 100 80" fill="none" stroke="#10B981" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrow-green)"/>
-                <text x="250" y="30" text-anchor="middle" fill="#10B981" font-size="10">OnChunk (Callback)</text>
-
-                <defs>
-                    <marker id="arrow-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10B981" />
-                    </marker>
-                </defs>
-            </svg>
+        <div class="api-card">
+            <div class="api-header">
+                <code class="text-white">LoadModel(const FLiteRtLmConfig&amp; Config)</code>
+                <span class="tag-static">STATIC</span>
+            </div>
+            <div class="api-body">
+                <p class="text-sm text-zinc-400 mb-4">Loads the .tflite model from the specified path and initializes the underlying runtime. Pre-requisite for all inference ops.</p>
+                <div class="flex gap-4">
+                    <span class="text-[10px] text-zinc-600 font-bold uppercase">Side Effect: GPU VRAM Allocation</span>
+                    <span class="text-[10px] text-zinc-600 font-bold uppercase">Return: bool</span>       
+                </div>
+            </div>
         </div>
 
-        <div class="contract-box">
-            <b>Core Power Contract:</b> <code>RunInference</code> merely submits a calculation order to the GPU. You <strong>must</strong> continuously "pump" the engine via <code>WaitUntilDone</code> in a background thread for the results to be returned to the <code>Game Thread</code> via callbacks.
+        <div class="api-card">
+            <div class="api-header">
+                <code class="text-white">SendChatRequest(void* SessionKey, const TArray&lt;...&gt;&amp; Messages, ...)</code>
+                <span class="tag-static">STATIC</span>
+            </div>
+            <div class="api-body">
+                <p class="text-sm text-zinc-400 mb-4">Sends a chat request. The system compares the history for the <code>SessionKey</code> and only syncs new message chunks (Incremental Sync), significantly boosting speed.</p>
+                <ul class="text-xs text-zinc-500 space-y-2 list-disc pl-4">
+                    <li>Supports automatic Tool Call injection and parsing.</li>
+                    <li>Callback <code>OnChunk</code> triggers on Game Thread for UI safety.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="api-card">
+            <div class="api-header">
+                <code class="text-white">ReleaseSession(void* SessionKey)</code>
+                <span class="tag-static">STATIC</span>
+            </div>
+            <div class="api-body">
+                <p class="text-sm text-zinc-400 mb-4">Manually releases the KV Cache slot for a specific session. Call when an NPC is destroyed.</p>
+            </div>
+        </div>
+
+        <div class="api-card">
+            <div class="api-header">
+                <code class="text-white">GetAutoConfig()</code>
+                <span class="tag-static">STATIC</span>
+            </div>
+            <div class="api-body">
+                <p class="text-sm text-zinc-400 mb-4">Probes VRAM via DXGI and generates optimal thread count and KV slot configurations.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Concept 4: Physical Mapping & Side Effects -->
+    <section class="mb-40">
+        <div class="label">Concept 04 / Hardware Mapping</div>
+        <h2 class="text-3xl font-black text-white mb-12 tracking-tight">Physical Mapping & Side Effects</h2>
+
+        <div class="grid md:grid-cols-2 gap-10">
+            <div>
+                <h4 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <i data-lucide="hard-drive" class="w-5 h-5 text-blue-500"></i> Physical Mapping       
+                </h4>
+                <div class="space-y-6">
+                    <div class="border-l-2 border-zinc-800 pl-4">
+                        <div class="text-[10px] font-black text-zinc-600 mb-1 uppercase tracking-widest">Weights -> Memory</div>
+                        <p class="text-xs text-zinc-500">Model weights are mounted via <code>mmap</code>, avoiding redundant memory copies during cold starts.</p>
+                    </div>
+                    <div class="border-l-2 border-zinc-800 pl-4">
+                        <div class="text-[10px] font-black text-zinc-600 mb-1 uppercase tracking-widest">Handle -> VRAM</div>
+                        <p class="text-xs text-zinc-500">Each <code>void* SessionKey</code> maps to a <code>LlamaIndex</code>, corresponding to a fixed stride offset in VRAM.</p>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <i data-lucide="zap" class="w-5 h-5 text-purple-500"></i> System Side Effects
+                </h4>
+                <div class="space-y-6">
+                    <div class="border-l-2 border-zinc-800 pl-4">
+                        <div class="text-[10px] font-black text-zinc-600 mb-1 uppercase tracking-widest">Thread Blocking</div>
+                        <p class="text-xs text-zinc-500">The underlying <code>WaitUntilDone</code> is blocking. It is isolated via Unreal's <code>AsyncTask</code> to prevent main thread stalls.</p>
+                    </div>
+                    <div class="border-l-2 border-zinc-800 pl-4">
+                        <div class="text-[10px] font-black text-zinc-600 mb-1 uppercase tracking-widest">VRAM Pressure</div>
+                        <p class="text-xs text-zinc-500">Once loaded, the model occupies several GBs of VRAM. <code>UnloadModel</code> must be called during level transitions.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
     <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
-        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / v1.0</p>
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / v2.0</p>
     </footer>
 
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script>lucide.createIcons();</script>
 </body>
 </html>

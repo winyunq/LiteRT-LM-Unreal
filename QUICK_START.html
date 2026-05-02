@@ -2,31 +2,114 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Updating | LiteRT-LM Unreal</title>
+    <title>Quick Experience | LiteRT-LM Unreal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800&display=swap');
-        body { background-color: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2rem; margin: 2rem 0; }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .step-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 16px; margin-bottom: 3rem; }
+        .step-img { border-radius: 12px; border: 1px solid #1A1A1A; margin-top: 1.5rem; width: 100%; height: auto; transition: all 0.3s ease; }
+        .step-img:hover { border-color: #3B82F6; transform: scale(1.01); }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.9em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        .step-number { font-size: 3rem; font-weight: 900; color: #111; position: absolute; top: -1rem; right: 1rem; z-index: -1; }
+        .relative-card { position: relative; z-index: 1; overflow: hidden; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-8 text-center">
-    <div class="max-w-2xl">
-        <div class="mb-8 flex justify-center">
-            <div class="p-4 rounded-full bg-blue-500/10 border border-blue-500/20">
-                <i data-lucide="refresh-cw" class="w-12 h-12 text-blue-500 animate-spin-slow"></i>
+<body class="p-8 md:p-20 max-w-5xl mx-auto">
+    <header class="mb-24">
+        <div class="flex justify-end gap-6 mb-8">
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 border-b-2 border-blue-500 pb-1">English</span>
+            <a href="QUICK_START_zh.html" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all">中文说明</a>
+        </div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 leading-none">Experience the <span class="text-blue-600">Soul of AI</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-xs font-bold">Chapter 02 / Quick Start Guide</p>
+    </header>
+
+    <!-- Step 0 -->
+    <section class="mb-20">
+        <div class="label">Step 0 / Prepare Project</div>
+        <div class="step-card relative-card">
+            <div class="step-number">00</div>
+            <p class="text-lg text-white font-bold mb-4 italic">Setup Your Unreal Project</p>
+            <p class="text-sm text-zinc-400">First, ensure you have a supported Unreal Engine version installed and place the LiteRT-LM plugin into your project directory.</p>
+            <img src="Step0PrepareAProject.png" alt="Prepare Project" class="step-img">
+        </div>
+    </section>
+
+    <!-- Step 1 -->
+    <section class="mb-20">
+        <div class="label">Step 1 / Obtain Plugin</div>
+        <div class="step-card relative-card">
+            <div class="step-number">01</div>
+            <p class="text-lg text-white font-bold mb-4 italic">Deploy from FAB or Marketplace</p>
+            <p class="text-sm text-zinc-400">After acquiring the plugin from the Fab page, you can enable it directly in the editor. This is the first step to unlocking local LLM inference.</p>
+            <img src="Step1GetOnFab.png" alt="Get on Fab" class="step-img">
+        </div>
+    </section>
+
+    <!-- Step 2: Download Model -->
+    <section class="mb-20">
+        <div class="label">Step 2 / Download & Place Model</div>
+        <div class="step-card relative-card">
+            <div class="step-number">02</div>
+            <p class="text-lg text-white font-bold mb-4 italic">Acquire the Core Brain of AI</p>
+            <p class="text-sm text-zinc-400 mb-6">Visit Hugging Face to download the specified lightweight model file:</p>
+            
+            <a href="https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all mb-8">
+                <i data-lucide="download"></i> Get gemma-4-E2B-it-litert-lm
+            </a>
+
+            <div class="bg-black/50 p-6 rounded-xl border border-white/5">
+                <p class="text-[10px] uppercase font-black text-blue-500 mb-4 tracking-[0.2em]">Placement Specification (Project Path)</p>
+                <p class="text-xs text-zinc-400 mb-2">After downloading, ensure the file is named <code>gemma-4-E2B-it-litert-lm</code> and place it in the Content folder of your <b>Project Root</b>:</p>
+                <code>[Your Project Dir]/Content/Models/gemma-4-E2B-it-litert-lm</code>
+                <p class="text-[10px] text-zinc-600 mt-4 leading-relaxed">
+                    <b>IMPORTANT:</b> Place the model in the <b>Project Path</b>, not the plugin path, for easier packaging. Ensure the project path <b>contains no non-ASCII characters</b> to avoid mmap failures.
+                </p>
             </div>
         </div>
-        <h1 class="text-4xl font-black text-white mb-6 tracking-tighter italic uppercase">Document Under Construction</h1>
-        <p class="text-xl text-gray-500 leading-relaxed font-medium">
-            We are currently updating these documents. <br/>
-            You can experience the effects during the 30-day free purchase period.
-        </p>
-        <a href="index.html" class="mt-12 inline-flex items-center gap-2 text-sm font-bold text-blue-500 uppercase tracking-widest hover:text-blue-400 transition-all">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Home
-        </a>
-    </div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="mb-20">
+        <div class="label">Step 3 / Run Demo Level</div>
+        <div class="step-card relative-card">
+            <div class="step-number">03</div>
+            <p class="text-lg text-white font-bold mb-4 italic">Open the Demo Map</p>
+            <p class="text-sm text-zinc-400">The plugin comes with a complete demo level. Click Run, and you will see an interactive interface integrated with AI conversation capabilities.</p>
+            <img src="Step2RunningTheDemo.png" alt="Running Demo" class="step-img">
+        </div>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="mb-20">
+        <div class="label">Step 4 / Send Your First Message</div>
+        <div class="step-card relative-card">
+            <div class="step-number">04</div>
+            <p class="text-lg text-white font-bold mb-4 italic">Real-time Text Interaction</p>
+            <p class="text-sm text-zinc-400">Type a message in the dialogue box and press Enter. The plugin will automatically map your SessionKey to the KV Cache in VRAM.</p>
+            <img src="Step3SendText.png" alt="Send Text" class="step-img">
+        </div>
+    </section>
+
+    <!-- Step 5 -->
+    <section class="mb-20">
+        <div class="label">Step 5 / Witness the Soul of AI</div>
+        <div class="step-card relative-card">
+            <div class="step-number">05</div>
+            <p class="text-lg text-white font-bold mb-4 italic">Streaming Responses & Memory</p>
+            <p class="text-sm text-zinc-400">The AI will begin returning results word by word. Thanks to our multi-session management, NPCs will remember your conversation context, achieving true intelligent interaction.</p>
+            <img src="Step4waitAIanswerAndKeep.png" alt="AI Answer" class="step-img">
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / v2.0</p>
+    </footer>
     <script>lucide.createIcons();</script>
 </body>
 </html>

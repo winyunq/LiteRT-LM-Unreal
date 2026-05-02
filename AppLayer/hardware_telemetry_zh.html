@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>硬件遥测与防御 | Winyunq Engineering</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 3rem; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.5rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.75rem; color: #94A3B8; margin-top: 1.5rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-4xl mx-auto">
+    <a href="../APP_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回协议说明
+    </a>
+
+    <header class="mb-32">
+        <div class="label">Operation 05 / Hardware Defense</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 leading-none uppercase">硬件遥测<span class="text-blue-600">防御</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold">DXGI 实时轮询与系统熔断规程</p>
+    </header>
+
+    <!-- Sequence Diagram -->
+    <section class="mb-32">
+        <div class="label">Sequence / 硬件遥测轮询时序</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant HUD as UI/HUD (Level 3)
+                participant SUB as Subsystem (Level 2)
+                participant DX as DXGI Driver (Kernel)
+                
+                loop 每隔 1.0 秒
+                    HUD->>SUB: 1. QueryAvailableVramMB()
+                    SUB->>DX: 2. 穿透查询物理 Budget
+                    DX-->>SUB: 3. 返回真实物理剩余
+                    SUB-->>HUD: 4. 返回 int32 (MB)
+                    alt 显存安全
+                        HUD->>HUD: 显示绿色指示灯
+                    else 显存告急
+                        HUD->>HUD: 触发业务降级/弹窗警告
+                    end
+                end
+            </pre>
+        </div>
+    </section>
+
+    <!-- Operational Steps -->
+    <section class="mb-32">
+        <div class="label">01 / 具体操作动作</div>
+        <div class="card">
+            <div class="space-y-6">
+                <div>
+                    <b class="text-xs uppercase text-blue-500">动作 A: 实时采样</b>
+                    <p class="text-[10px] text-zinc-500 mt-1">
+                        在 HUD 的 <code>NativeTick</code> 中调用。插件内部通过 **DXGI** 确保该调用延迟极低（&lt; 0.1ms），不会阻塞渲染管线。
+                    </p>
+                </div>
+                <div class="border-t border-zinc-900 pt-4">
+                    <b class="text-xs uppercase text-red-500">动作 B: 物理熔断</b>
+                    <p class="text-[10px] text-zinc-500 mt-1">
+                        当显存水位低于 1GB 时，业务层应立即停止向插件发送 <code>LoadModel</code> 指令，转而使用 <code>cpu</code> 后端。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code Demo -->
+    <section class="mb-32">
+        <div class="label">02 / 源码实战 Demo</div>
+        <div class="card">
+            <pre><code>// 业务层标准遥测写法 (DemoTavernHUD.cpp)
+void ADemoTavernHUD::UpdateStats() {
+    // 静态获取物理指标
+    int32 Vram = <span class="text-blue-500">ULiteRtLmSubsystem::QueryAvailableVramMB();</span>
+    
+    // 同步更新显示逻辑
+    StatusText = FString::Printf(TEXT("VRAM: %d MB"), Vram);
+}</code></pre>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.6</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

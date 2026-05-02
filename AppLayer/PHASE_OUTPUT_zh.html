@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>输出：数据消费 | 系统全景百科</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .path-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 2rem; }
+        .concept-tag { font-size: 9px; background: #1E3A8A; color: #60A5FA; padding: 2px 8px; border-radius: 4px; font-weight: 900; margin-right: 8px; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.2rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.7rem; color: #94A3B8; margin-top: 1rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+    <a href="../APP_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回实战操作门户
+    </a>
+
+    <header class="mb-24">
+        <div class="label">Phase 04 / Data Consumption</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">输出：<span class="text-blue-600">数据消费</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">流式渲染、物理指标结算与结构化指令消费</p>
+    </header>
+
+    <!-- Section 1: 异步时序 -->
+    <section class="mb-32">
+        <div class="label">01 / 数据封送时序</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant K as Plugin Kernel
+                participant GT as Game Thread (UI)
+                
+                Note over K: Token 碎片产出
+                K->>GT: OnChunk(FString) [Auto Marshalling]
+                GT->>GT: 更新 UMG 打字机
+                
+                Note over K: 推理完整结束
+                K->>GT: OnDone(Result Object)
+                GT->>GT: 解析 ToolCalls 驱动业务
+                GT->>GT: 格式化 Latency/TPS 统计
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: 实现路径 -->
+    <section class="mb-32">
+        <div class="label">02 / 三种消费路径 (Consumption Paths)</div>
+        
+        <!-- Path A: UI Streaming -->
+        <div class="path-card border-l-4 border-blue-500">
+            <h3 class="text-lg font-black text-white mb-2 italic">路径 A：流式 UI 渲染 (OnChunk)</h3>
+            <p class="text-xs text-zinc-500 mb-4">监听字符碎片，实现 0 等待的视觉反馈。</p>
+            <pre><code>// 在 WinyunqDialogueWidget 中消费
+void OnChunk(const FString& Chunk) {
+    <span class="text-blue-400">CurrentText += Chunk;</span>
+    Text_Block->SetText(FText::FromString(CurrentText));
+}</code></pre>
+        </div>
+
+        <!-- Path B: Structured Actions -->
+        <div class="path-card border-l-4 border-green-500">
+            <h3 class="text-lg font-black text-white mb-2 italic">路径 B：结构化指令消费 (ToolCalls)</h3>
+            <p class="text-xs text-zinc-500 mb-4">从结算单中提取 AI 的“思考产物”并驱动游戏逻辑。</p>
+            <pre><code>// 在 OnDone 中解析动作
+for (auto Call : <span class="text-green-400">Result.ToolCalls</span>) {
+    if (Call->Name == "OpenDoor") { ExecuteOpenDoor(Call->Params); }
+}</code></pre>
+        </div>
+
+        <!-- Path C: Stats Monitoring -->
+        <div class="path-card border-l-4 border-purple-500">
+            <h3 class="text-lg font-black text-white mb-2 italic">路径 C：物理指标展示 (Stats)</h3>
+            <p class="text-xs text-zinc-500 mb-4">向用户展示推理速度与延迟。</p>
+            <pre><code>// 提取物理结算数据
+float TPS = <span class="text-purple-400">Result.TokensPerSec;</span>
+float Latency = <span class="text-purple-400">Result.TimeMs;</span></code></pre>
+        </div>
+    </section>
+
+    <!-- Section 3: 支撑概念 -->
+    <section class="mb-32">
+        <div class="label">03 / 本阶段关联概念 (Concepts)</div>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">VISUAL</span><b class="text-sm">流式渲染范式</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    AI 是一粒一粒丢出 Token 的。插件自动将这些碎片从后台线程 Marshalling 到 GameThread，确保 UI 操作的安全性。
+                </p>
+            </div>
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">LOGIC</span><b class="text-sm">约束解码与指令集</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    如何让 AI 只输出 JSON？通过 Logits 概率强约束，我们将 AI 的“废话”过滤掉，只保留合法的工具调用指令。
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7 / Output Encyclopedia</p>
+    </footer>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

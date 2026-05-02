@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>输入：会话推送 | 系统全景百科</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .path-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 2rem; }
+        .concept-tag { font-size: 9px; background: #1E3A8A; color: #60A5FA; padding: 2px 8px; border-radius: 4px; font-weight: 900; margin-right: 8px; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.2rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.7rem; color: #94A3B8; margin-top: 1rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+    <a href="../APP_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回实战操作门户
+    </a>
+
+    <header class="mb-24">
+        <div class="label">Phase 02 / Data Injection</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">输入：<span class="text-blue-600">会话推送</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">消息规范化、增量协议与多维输入路径</p>
+    </header>
+
+    <!-- Section 1: 异步时序 -->
+    <section class="mb-32">
+        <div class="label">01 / 环节异步总图</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant GT as Game Thread
+                participant PL as Plugin Layer
+                participant K as Kernel (VRAM)
+                
+                GT->>PL: 发送消息数组 (Messages)
+                PL->>PL: 执行 Gemma 角色合并 (Normalizing)
+                PL->>PL: 检查增量 (Delta Check)
+                PL->>K: 物理推送 Token 差量
+                Note right of K: 开始后台异步推理循环
+                PL-->>GT: 立即返回 (Non-blocking)
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: 实现路径 -->
+    <section class="mb-32">
+        <div class="label">02 / 实现路径 (Implementation Paths)</div>
+        
+        <!-- Path A: SendChatRequest -->
+        <div class="path-card border-l-4 border-blue-500">
+            <h3 class="text-lg font-black text-white mb-2 italic">路径 A：全量静态 API (底层驱动)</h3>
+            <p class="text-xs text-zinc-500 mb-4">适用于需要完全自定义历史记录和采样参数的场景。</p>
+            <pre><code>// 物理地址绑定 + 增量推送
+<span class="text-blue-400">FLiteRtLmUnrealApi::SendChatRequest(AgentPtr, Messages, ...);</span></code></pre>
+        </div>
+
+        <!-- Path B: Component Send -->
+        <div class="path-card border-l-4 border-purple-500">
+            <h3 class="text-lg font-black text-white mb-2 italic">路径 B：组件驱动 (常用)</h3>
+            <p class="text-xs text-zinc-500 mb-4">通过 <code>ULiteRtLmComponent</code> 封装。它会自动管理 AgentPtr 的哈希映射。</p>
+            <pre><code>// 蓝图或 C++ 均可调用，极简发送
+MyBrainComponent-><span class="text-purple-400">SendChatMessage(UserMessageText);</span></code></pre>
+        </div>
+    </section>
+
+    <!-- Section 3: 支撑概念 -->
+    <section class="mb-32">
+        <div class="label">03 / 本阶段关联概念 (Concepts)</div>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">PROTOCOL</span><b class="text-sm">增量同步协议</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    本地插件不发废话。每次只物理同步新说的那几个词，极大降低长对话下的 Prefill 延迟。
+                </p>
+            </div>
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">NORMALIZATION</span><b class="text-sm">Gemma 角色对齐</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    插件会自动将 <code>system</code> 提示词物理合并入首条用户消息，以兼容 Gemma 等不原生支持 System 模式的模型。
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7 / Input Encyclopedia</p>
+    </footer>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

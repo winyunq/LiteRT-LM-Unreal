@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>结束：资源撤场 | 系统全景百科</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .path-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 2rem; }
+        .concept-tag { font-size: 9px; background: #7F1D1D; color: #F87171; padding: 2px 8px; border-radius: 4px; font-weight: 900; margin-right: 8px; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.2rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.7rem; color: #94A3B8; margin-top: 1rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+    <a href="../APP_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回实战操作门户
+    </a>
+
+    <header class="mb-24">
+        <div class="label" style="color: #F87171;">Phase 05 / Resource Cleanup</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">结束：<span class="text-red-600">资源撤场</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">显存释放、会话销毁与物理卸载全百科</p>
+    </header>
+
+    <!-- Section 1: 异步时序 -->
+    <section class="mb-32">
+        <div class="label">01 / 资源销毁时序</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant GT as Game Thread
+                participant PL as Plugin Layer
+                participant K as Kernel (DLL)
+                
+                GT->>PL: 1. 发起 UnloadModel()
+                PL->>K: 2. 命令物理释放
+                K->>K: 3. 销毁 WebGPU 缓冲区
+                K->>K: 4. 关闭 mmap 映射
+                Note over K: 显存已完全归还 OS
+                K-->>PL: 5. 释放后台线程
+                PL-->>GT: 6. 广播 Unload 成功信号
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: 实现路径 -->
+    <section class="mb-32">
+        <div class="label">02 / 两种清理路径 (Cleanup Paths)</div>
+        
+        <!-- Path A: Manual Release -->
+        <div class="path-card border-l-4 border-yellow-600">
+            <h3 class="text-lg font-black text-white mb-2 italic">路径 A：会话精准释放 (ReleaseSession)</h3>
+            <p class="text-xs text-zinc-500 mb-4">适用于单个 NPC 销毁（如被击杀），回收特定显存槽位。</p>
+            <pre><code>// 在 Actor 的 EndPlay 中调用
+<span class="text-blue-400">FLiteRtLmUnrealApi::ReleaseSession(this);</span></code></pre>
+        </div>
+
+        <!-- Path B: Full Unload -->
+        <div class="path-card border-l-4 border-red-600">
+            <h3 class="text-lg font-black text-white mb-2 italic">路径 B：全量卸载 (UnloadModel)</h3>
+            <p class="text-xs text-zinc-500 mb-4">适用于关卡切换，释放 GB 级别的显存预算。</p>
+            <pre><code>// 强制撤离所有 AI 资源
+<span class="text-red-500">FLiteRtLmUnrealApi::UnloadModel();</span></code></pre>
+        </div>
+    </section>
+
+    <!-- Section 3: 支撑概念 -->
+    <section class="mb-32">
+        <div class="label">03 / 本阶段关联概念 (Concepts)</div>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">CONTRACT</span><b class="text-sm">显存归还契约</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    AI 占用的显存不属于虚幻的渲染池。如果不手动 Unload，GPU 将持续处于高压状态，导致后续游戏环节帧率大幅下降。
+                </p>
+            </div>
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">PHYSICS</span><b class="text-sm">mmap 句柄关闭</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    卸载不仅是清空显存，还会物理关闭映射的文件句柄。这是保证程序能够正常退出（不挂死进程）的关键。
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7 / Shutdown Encyclopedia</p>
+    </footer>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>打包与发布 | LiteRT-LM Unreal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2rem; margin: 2rem 0; }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .step-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.9em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-4xl mx-auto">
+    <header class="mb-20">
+        <div class="flex justify-end gap-6 mb-8">
+            <a href="SHIPPING.html" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all">English</a>
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 border-b-2 border-blue-500 pb-1">中文说明</span>
+        </div>
+        <h1 class="text-5xl font-black text-white tracking-tighter italic mb-4">将你的 AI 之魂 <span class="text-blue-600">推向玩家</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-xs font-bold">Chapter 07 / 打包与发布</p>
+    </header>
+
+    <section class="mb-16">
+        <div class="label">Strategy 01 / 模型分发方案</div>
+        <div class="step-card">
+            <p class="text-sm text-zinc-400 mb-6">由于模型文件较大（通常 1GB - 5GB），我们需要权衡分发策略：</p>
+            
+            <div class="space-y-4">
+                <div class="border-l-2 border-zinc-800 pl-4">
+                    <div class="text-[10px] font-black text-zinc-600 uppercase">内置于 Pak (Not Recommended)</div>
+                    <p class="text-xs text-zinc-500 mt-1">虽然方便，但会导致更新 Patch 极大。且 `mmap` 技术在某些虚拟化文件系统下可能效率降低。</p>
+                </div>
+                <div class="border-l-2 border-blue-500 pl-4">
+                    <div class="text-[10px] font-black text-zinc-600 uppercase">外部文件挂载 (Recommended)</div>
+                    <p class="text-xs text-zinc-500 mt-1">将模型放在 <code>Saved/Models/</code> 文件夹中。这样可以通过独立下载器更新模型，而不触碰主程序 Pak。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-16">
+        <div class="label">Strategy 02 / 显存预算配置</div>
+        <div class="step-card">
+            <p class="text-sm text-zinc-400 mb-4">在发布版本中，请在 <code>DefaultEngine.ini</code> 中配置显存上限，防止插件抢占过多渲染资源：</p>
+            <div class="bg-black/50 p-4 rounded-lg font-mono text-[10px] text-zinc-500">
+                [/Script/LiteRTLMUnreal.LiteRtLmSubsystem]<br/>
+                MaxVramBudgetMB=4096<br/>
+                DefaultBackend=gpu
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-16">
+        <div class="label">Strategy 03 / 发布注意事项</div>
+        <div class="step-card">
+            <ul class="text-xs text-zinc-500 space-y-2 list-disc pl-5">
+                <li><b>RHI 选择</b>：推荐使用 DirectX 12 或 Vulkan。DirectX 11 可能无法充分发挥 WebGPU 的并行能力。</li>
+                <li><b>Shader 预热</b>：确保在游戏启动或加载界面调用 <code>LoadModel</code>，避免在激烈战斗中首次推理导致明显的掉帧。</li>
+                <li><b>DLL 分发</b>：打包时请确保 <code>litert_lm_wrapper.dll</code> 已正确拷贝到 <code>Binaries/Win64/</code>。</li>
+            </ul>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

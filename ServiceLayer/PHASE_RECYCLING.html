@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recycling: Physical Shutdown | System Panorama</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .path-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 2rem; }
+        .concept-tag { font-size: 9px; background: #7F1D1D; color: #F87171; padding: 2px 8px; border-radius: 4px; font-weight: 900; margin-right: 8px; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.2rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.7rem; color: #94A3B8; margin-top: 1rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+    <a href="../SERVICE_LAYER.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> Back to Coordinator
+    </a>
+
+    <header class="mb-24">
+        <div class="label" style="color: #F87171;">Workflow 05 / Recycling</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">Recycling: <span class="text-red-600">Shutdown</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">VRAM Force-Reclaim, mmap Handle Closure, and Shutdown Protocols</p>
+    </header>
+
+    <!-- Section 1: Async Sequence -->
+    <section class="mb-32">
+        <div class="label">Sequence / System Shutdown Sequence</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant E as Unreal Engine
+                participant SUB as Subsystem
+                participant K as Kernel (DLL)
+                
+                E->>SUB: 1. Deinitialize() / EndPlay()
+                SUB->>K: 2. Physically Terminate Task Pumping
+                SUB->>K: 3. UnloadModel()
+                K->>K: 4. Destroy WebGPU Buffers
+                K->>K: 5. Force Disconnect mmap handles
+                Note over SUB, K: VRAM fully returned to OS
+                K-->>SUB: 6. Confirm Resources Null
+                SUB->>SUB: 7. Destroy Singleton Instance
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: Implementation Paths -->
+    <section class="mb-32">
+        <div class="label">02 / Two Cleanup Paths</div>
+        
+        <!-- Path A: Manual Release -->
+        <div class="path-card border-l-4 border-yellow-600">
+            <h3 class="text-lg font-black text-white mb-2 italic">Path A: Precision Session Release</h3>
+            <p class="text-xs text-zinc-500 mb-4">Reclaim specific VRAM slots when an individual agent is destroyed.</p>
+            <pre><code>// Call in Agent's EndPlay
+Subsystem-><span class="text-blue-400">ReleaseSession(this);</span></code></pre>
+        </div>
+
+        <!-- Path B: Global Unload -->
+        <div class="path-card border-l-4 border-red-600">
+            <h3 class="text-lg font-black text-white mb-2 italic">Path B: Global Unload (Stop Engine)</h3>
+            <p class="text-xs text-zinc-500 mb-4">Mandatory for level transitions to release GBs of locked VRAM.</p>
+            <pre><code>// Force evacuate all kernel resources
+FLiteRtLmUnrealApi::<span class="text-red-400">UnloadModel();</span></code></pre>
+        </div>
+    </section>
+
+    <!-- Section 3: Supporting Concepts -->
+    <section class="mb-32">
+        <div class="label">03 / Related Concepts</div>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">LEAKING</span><b class="text-sm">Resource residual risks</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    AI VRAM is not managed by UE5. Failure to unload will result in physical locking of GBs of memory even after exiting PIE, starving subsequent rendering tasks.
+                </p>
+            </div>
+            <div class="p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <span class="concept-tag">PHYSICS</span><b class="text-sm">mmap Handle Locking</b>
+                <p class="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                    Without UnloadModel, Windows OS will continue to lock the .bin file, preventing you from replacing or deleting the model weights on disk.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7</p>
+    </footer>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>资源循环：物理停机 | 系统全景百科</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .path-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 2rem; }
+        .concept-tag { font-size: 9px; background: #7F1D1D; color: #F87171; padding: 2px 8px; border-radius: 4px; font-weight: 900; margin-right: 8px; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.2rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.75rem; color: #94A3B8; margin-top: 1rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-6xl mx-auto">
+    <a href="../SERVICE_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回调度中心
+    </a>
+
+    <header class="mb-24">
+        <div class="label" style="color: #F87171;">Workflow 05 / Recycling</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">资源循环：<span class="text-red-600">物理停机</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">显存强制回收、mmap 句柄关闭与停机规程</p>
+    </header>
+
+    <!-- Section 1: 异步时序 -->
+    <section class="mb-32">
+        <div class="label">Sequence / 系统停机回收时序</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant E as Unreal Engine
+                participant SUB as Subsystem
+                participant K as Kernel (DLL)
+                
+                E->>SUB: 1. Deinitialize() / EndPlay()
+                SUB->>K: 2. 物理截断所有推流管道
+                SUB->>K: 3. UnloadModel()
+                K->>K: 4. 销毁 WebGPU 缓冲区
+                K->>K: 5. 物理断开 mmap 映射句柄
+                Note over SUB, K: 显存资源完全归还 OS
+                K-->>SUB: 6. 确认资源空
+                SUB->>SUB: 7. 销毁全局单例实例
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: 核心原理 -->
+    <section class="mb-32">
+        <div class="label">01 / 概念深度：显存的“非法占有”与归还</div>
+        <div class="card">
+            <p class="text-sm text-zinc-400 mb-8">
+                由于 LiteRT-LM 是外部 DLL 管理显存，虚幻引擎的 RHI 层无法感知其存在。
+            </p>
+            <div class="space-y-6">
+                <div class="p-4 bg-black/40 rounded-lg border border-white/5">
+                    <b class="text-red-500 text-xs mb-1 block">资源残留危害 (Leaking)</b>
+                    <p class="text-[10px] text-zinc-500">如果不调用 <code>UnloadModel</code>，即便退出了 PIE，数 GB 的显存依然会被物理锁定。这会导致下次运行游戏时显存不足（OOM）或者外部渲染软件崩溃。</p>
+                </div>
+                <div class="p-4 bg-black/40 rounded-lg border border-white/5">
+                    <b class="text-red-500 text-xs mb-1 block">mmap 强制断开</b>
+                    <p class="text-[10px] text-zinc-500">物理映射的模型文件如果不解绑，Windows OS 会锁定该文件，导致您无法在资源管理器中移动、删除或替换模型文件。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: 实战操作 -->
+    <section class="mb-32">
+        <div class="label">02 / 源码实战 Demo (C++)</div>
+        <div class="card">
+            <p class="text-sm text-zinc-400 mb-6">解析如何在关卡结束时优雅回收：</p>
+            <pre><code>// 在 Provider 或 Subsystem 代理中执行
+void MyDeinit() {
+    // 1. 物理清空所有 Session
+    Subsystem-><span class="text-red-400">ReleaseAllSessions();</span>
+
+    // 2. 物理卸载内核并释放显存
+    FLiteRtLmUnrealApi::<span class="text-red-400">UnloadModel();</span>
+}</code></pre>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

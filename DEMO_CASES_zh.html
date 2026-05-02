@@ -1,32 +1,102 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Updating | LiteRT-LM Unreal</title>
+    <title>实战 Demo | LiteRT-LM Unreal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800&display=swap');
-        body { background-color: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2rem; margin: 2rem 0; }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .step-card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 16px; margin-bottom: 3rem; }
+        .step-img { border-radius: 12px; border: 1px solid #1A1A1A; margin-top: 1.5rem; width: 100%; height: auto; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.9em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        .repo-banner { background: linear-gradient(90deg, #1E1B4B 0%, #0F0F11 100%); border: 1px solid #312E81; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap-6; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-8 text-center">
-    <div class="max-w-2xl">
-        <div class="mb-8 flex justify-center">
-            <div class="p-4 rounded-full bg-blue-500/10 border border-blue-500/20">
-                <i data-lucide="refresh-cw" class="w-12 h-12 text-blue-500 animate-spin-slow"></i>
+<body class="p-8 md:p-20 max-w-5xl mx-auto">
+    <header class="mb-20">
+        <div class="flex justify-end gap-6 mb-8">
+            <a href="DEMO_CASES.html" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all">English</a>
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 border-b-2 border-blue-500 pb-1">中文说明</span>
+        </div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 leading-none">实战案例：<span class="text-blue-600">LiteRTDemo</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-xs font-bold">Chapter 06 / 工程参考与演示</p>
+    </header>
+
+    <!-- Project Reference -->
+    <div class="repo-banner">
+        <i data-lucide="github" class="w-10 h-10 text-blue-400"></i>
+        <div>
+            <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Official Reference Implementation</p>
+            <h3 class="text-lg font-bold text-white italic">winyunq/LiteRTDemo</h3>
+            <p class="text-xs text-zinc-500 mt-1">您当前正在查看的项目即是 LiteRT-LM 的标准 Demo 实现。</p>
+        </div>
+    </div>
+
+    <!-- Quick Experience Section (Repeated for context) -->
+    <section class="mb-32">
+        <div class="label">Quick Experience / 本项目快速体验流程</div>
+        <div class="step-card">
+            <p class="text-sm text-zinc-400 mb-6">为了在本项目中迅速看到效果，请遵循以下流程（这也是 Quick Start 的物理实现）：</p>
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="w-8 h-8 rounded-full bg-blue-900/30 flex items-center justify-center text-xs font-black text-blue-500 border border-blue-500/20">1</div>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-white">下载模型至正确目录</p>
+                        <p class="text-[10px] text-zinc-500 mt-1">
+                            下载 <code class="text-[9px]">gemma-4-E2B-it-litert-lm</code> 并放置于：<br/>
+                            <code class="text-blue-400 font-bold">LiteRTDemo/Content/Models/gemma-4-E2B-it-litert-lm</code>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="w-8 h-8 rounded-full bg-blue-900/30 flex items-center justify-center text-xs font-black text-blue-500 border border-blue-500/20">2</div>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-white">打开 Demo 关卡</p>
+                        <p class="text-[10px] text-zinc-500 mt-1">在 Content 浏览器中找到并打开 <code>Demo.umap</code>。</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="w-8 h-8 rounded-full bg-blue-900/30 flex items-center justify-center text-xs font-black text-blue-500 border border-blue-500/20">3</div>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-white">点击运行 (PIE)</p>
+                        <p class="text-[10px] text-zinc-500 mt-1">按下 'Alt + P'。您将看到酒馆界面，NPC 已准备好进行基于本地算力的对话。</p>
+                    </div>
+                </div>
             </div>
         </div>
-        <h1 class="text-4xl font-black text-white mb-6 tracking-tighter italic uppercase">Document Under Construction</h1>
-        <p class="text-xl text-gray-500 leading-relaxed font-medium">
-            We are currently updating these documents. <br/>
-            You can experience the effects during the 30-day free purchase period.
-        </p>
-        <a href="index_zh.html" class="mt-12 inline-flex items-center gap-2 text-sm font-bold text-blue-500 uppercase tracking-widest hover:text-blue-400 transition-all">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回主页
-        </a>
-    </div>
+    </section>
+
+    <!-- Implementation Deep Dive -->
+    <section class="mb-32">
+        <div class="label">Case 01 / 酒馆对话系统实现</div>
+        <div class="step-card">
+            <p class="text-sm text-zinc-400 mb-6">本项目通过以下核心资产展示了 AI 的集成：</p>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="p-4 bg-black/40 border border-white/5 rounded-lg">
+                    <h4 class="text-xs font-black text-blue-500 uppercase mb-2">WinyunqDialogueWidget</h4>
+                    <p class="text-[10px] text-zinc-500 leading-relaxed">
+                        位于 <code>Source/LiteRTDemo/</code>。它展示了如何监听 <code>OnTextChunkReceived</code> 事件，实现丝滑的流式打字机效果。
+                    </p>
+                </div>
+                <div class="p-4 bg-black/40 border border-white/5 rounded-lg">
+                    <h4 class="text-xs font-black text-blue-500 uppercase mb-2">BP_AIBrain_Component</h4>
+                    <p class="text-[10px] text-zinc-500 leading-relaxed">
+                        作为 <code>ULiteRtLmComponent</code> 的子类，它预设了 NPC 的性格 Prompt 并在 <code>EndPlay</code> 时自动释放 Session 以节省显存。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / v2.0</p>
+    </footer>
     <script>lucide.createIcons();</script>
 </body>
 </html>

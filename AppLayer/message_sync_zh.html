@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>消息规范化与同步 | Winyunq Engineering</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 3rem; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.5rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.75rem; color: #94A3B8; margin-top: 1.5rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-4xl mx-auto">
+    <a href="../APP_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回协议说明
+    </a>
+
+    <header class="mb-32">
+        <div class="label">Operation 02 / Data Input Protocol</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 leading-none uppercase">消息同步<span class="text-blue-600">规程</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold">增量检查与角色扁平化操作指南</p>
+    </header>
+
+    <!-- Sequence Diagram -->
+    <section class="mb-32">
+        <div class="label">Sequence / 增量同步操作时序</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant NPC as Actor (Level 3)
+                participant PL as Plugin (Level 2)
+                participant K as Kernel (Level 1)
+                
+                NPC->>PL: 1. SendChatRequest(Messages)
+                PL->>PL: 2. 检查 LastSentCount
+                alt 新增消息
+                    PL->>PL: 3. 截取 Delta (增量) 消息
+                    PL->>K: 4. 物理推送 Delta Tokens
+                else 历史重置
+                    PL->>K: 5. 触发 ResetSession()
+                    PL->>K: 6. 物理推送全量历史
+                end
+                K-->>PL: 7. 推理循环开始
+            </pre>
+        </div>
+    </section>
+
+    <!-- Operational Steps -->
+    <section class="mb-32">
+        <div class="label">01 / 具体操作动作</div>
+        <div class="card">
+            <div class="space-y-6">
+                <div>
+                    <b class="text-xs uppercase text-blue-500">动作 A: 消息封装</b>
+                    <p class="text-[10px] text-zinc-500 mt-1">
+                        将玩家输入与 NPC 历史打包为 OpenAI 格式。插件会自动执行 <b>Gemma Merge</b>（将 system 合并入 user）。
+                    </p>
+                </div>
+                <div class="border-t border-zinc-900 pt-4">
+                    <b class="text-xs uppercase text-blue-500">动作 B: 指令推送</b>
+                    <p class="text-[10px] text-zinc-500 mt-1">
+                        调用 <code>SendChatRequest</code>。系统会自动维护会话偏移量，无需业务层手动计算。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code Demo -->
+    <section class="mb-32">
+        <div class="label">02 / 源码实战 Demo</div>
+        <div class="card">
+            <pre><code>// 业务层标准同步写法
+TArray&lt;TSharedPtr&lt;FJsonObject&gt;&gt; FullMessages = ...; // 包含所有历史
+
+// 插件内部通过 LastSentCount 自动处理差量
+<span class="text-blue-500">FLiteRtLmUnrealApi::SendChatRequest(AgentPtr, FullMessages, ...);</span>
+
+// 若需强行清除记忆，业务层只需缩减数组并重新调用
+FullMessages.Empty();
+<span class="text-blue-500">FLiteRtLmUnrealApi::SendChatRequest(AgentPtr, FullMessages, ...);</span></code></pre>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.6</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

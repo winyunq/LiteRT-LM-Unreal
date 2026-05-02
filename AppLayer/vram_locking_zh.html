@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>物理资源锁定 | Winyunq Engineering</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 3rem; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.5rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.75rem; color: #94A3B8; margin-top: 1.5rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-5xl mx-auto">
+    <a href="../APP_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回协议说明
+    </a>
+
+    <header class="mb-32">
+        <div class="label">Operation 01 / Startup & Loading</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 leading-none uppercase">物理资源<span class="text-blue-600">装载</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold">异步加载时序与显存锁定规程</p>
+    </header>
+
+    <!-- Async Sequence Diagram -->
+    <section class="mb-32">
+        <div class="label">Sequence / 异步装载时序图</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant GT as Game Thread
+                participant BP as AsyncTask
+                participant K as Plugin Kernel
+                
+                GT->>BP: 1. 触发加载 (携带 Config)
+                activate BP
+                BP->>K: 2. 调用 LoadModel()
+                K->>K: 3. 物理 mmap 模型权重
+                K->>K: 4. 分配 KV Cache 静态缓冲区
+                K-->>BP: 5. 返回 bool 状态
+                deactivate BP
+                BP-->>GT: 6. Marshalling 至主线程回调
+                GT->>GT: 7. 更新 UI (显示 "Ready")
+            </pre>
+        </div>
+    </section>
+
+    <!-- Operational Steps -->
+    <section class="mb-32">
+        <div class="label">01 / 具体操作步骤</div>
+        <div class="card">
+            <div class="space-y-8">
+                <div class="border-l-2 border-blue-500 pl-6">
+                    <b class="text-white text-sm uppercase italic">Step 1: 物理环境探测</b>
+                    <p class="text-xs text-zinc-500 mt-2">调用 <code>GetAutoConfig()</code> 获取当前机器的显存预算建议。严禁硬编码显存量，防止在低端显卡上触发 OOM。</p>
+                </div>
+                <div class="border-l-2 border-blue-500 pl-6">
+                    <b class="text-white text-sm uppercase italic">Step 2: 异步封送</b>
+                    <p class="text-xs text-zinc-500 mt-2">由于 <code>LoadModel</code> 会导致数秒的磁盘 IO 与显存寻址，必须通过 <code>AsyncTask</code> 将其从 GameThread 剥离。</p>
+                </div>
+                <div class="border-l-2 border-blue-500 pl-6">
+                    <b class="text-white text-sm uppercase italic">Step 3: 状态监听</b>
+                    <p class="text-xs text-zinc-500 mt-2">在加载成功前，业务层应挂起所有推理请求。建议在 UI 上展示 Loading 进度。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code Demo -->
+    <section class="mb-32">
+        <div class="label">02 / 源码实战 Demo</div>
+        <div class="card">
+            <pre><code>// 参考 FUmgMcpLiteRtLmAiProvider.cpp
+void EnsureModelLoadedAsync(TFunction&lt;void(bool)&gt; OnComplete) {
+    // 1. 配置
+    FLiteRtLmConfig Config = FLiteRtLmUnrealApi::GetAutoConfig();
+    Config.ModelPath = AbsPath;
+
+    // 2. 异步执行
+    AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [Config, OnComplete]() {
+        <span class="text-blue-500">bool bSuccess = FLiteRtLmUnrealApi::LoadModel(Config);</span>
+        
+        // 3. 回调分发
+        AsyncTask(ENamedThreads::GameThread, [bSuccess, OnComplete]() {
+            if (OnComplete) OnComplete(bSuccess);
+        });
+    });
+}</code></pre>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.6</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

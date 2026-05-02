@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>执行管道：任务分发 | 系统全景百科</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        .canvas { background: #000; border: 1px solid #1E1E22; border-radius: 24px; padding: 2.5rem; margin: 2rem 0; box-shadow: inset 0 0 40px rgba(0,0,0,0.5); }
+        .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #3B82F6; margin-bottom: 1rem; }
+        .card { background: #0F0F11; border: 1px solid #1E1E22; padding: 2rem; border-radius: 20px; margin-bottom: 3rem; }
+        b { color: #FFF; }
+        code { color: #3B82F6; font-family: 'Fira Code', monospace; font-size: 0.85em; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; }
+        pre { background: #000; padding: 1.5rem; border-radius: 12px; border: 1px solid #1A1A1A; overflow-x: auto; font-size: 0.75rem; color: #94A3B8; margin-top: 1.5rem; }
+    </style>
+</head>
+<body class="p-8 md:p-20 max-w-5xl mx-auto">
+    <a href="../SERVICE_LAYER_zh.html" class="inline-flex items-center gap-2 text-zinc-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest mb-12">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> 返回调度中心
+    </a>
+
+    <header class="mb-24">
+        <div class="label">Workflow 04 / Pipeline</div>
+        <h1 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">执行管道：<span class="text-blue-600">任务分发</span></h1>
+        <p class="text-zinc-500 uppercase tracking-[0.5em] text-[11px] font-bold italic">双线程异步泵送、结果封送与线程安全规程</p>
+    </header>
+
+    <!-- Section 1: 异步时序 -->
+    <section class="mb-32">
+        <div class="label">Sequence / 异步任务分发时序</div>
+        <div class="canvas">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant GT as Game Thread (Actor/UI)
+                participant PL as Plugin Layer (Wrapper)
+                participant K as Worker Thread (Async Pump)
+                
+                GT->>PL: 1. SendChatRequest()
+                PL->>K: 2. 封送 Lambda 闭包 (Marshalling)
+                activate K
+                K->>K: 3. 执行推理循环 (WaitUntilDone)
+                loop Token 产出
+                    K->>PL: 4. Internal_OnChunk
+                    PL-->>GT: 5. AsyncTask(GameThread) -> UI 更新
+                end
+                deactivate K
+                K-->>PL: 6. Internal_OnDone
+                PL-->>GT: 7. AsyncTask(GameThread) -> 业务结算
+            </pre>
+        </div>
+    </section>
+
+    <!-- Section 2: 核心原理 -->
+    <section class="mb-32">
+        <div class="label">01 / 概念深度：异步泵送 (Async Pumping)</div>
+        <div class="card">
+            <p class="text-sm text-zinc-400 mb-8">
+                插件通过隔离<b>计算线程</b>与<b>游戏线程</b>，确保了大模型推理这种“重型物理动作”不会干扰游戏的帧率表现。
+            </p>
+            <div class="space-y-6">
+                <div class="p-4 bg-black/40 rounded-lg border border-white/5">
+                    <b class="text-blue-500 text-xs mb-1 block">自动封送 (Auto-Marshalling)</b>
+                    <p class="text-[10px] text-zinc-500">所有来自后台线程的回调，在进入插件封装层（Layer 2）时，都会被自动包裹在 <code>ENamedThreads::GameThread</code> 的 AsyncTask 中。业务层（Layer 3）接收到信号时，物理上已经回到了主线程。</p>
+                </div>
+                <div class="p-4 bg-black/40 rounded-lg border border-white/5">
+                    <b class="text-blue-500 text-xs mb-1 block">非阻塞提交 (Non-blocking Commit)</b>
+                    <p class="text-[10px] text-zinc-500"><code>SendChatRequest</code> 本身是毫秒级的非阻塞调用。它只是将任务“投递”进管道队列。这种设计允许游戏在等待 AI 回复时，依然保持 60+ FPS 的物理模拟。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: 实战操作 -->
+    <section class="mb-32">
+        <div class="label">02 / 源码实战 Demo (C++)</div>
+        <div class="card">
+            <p class="text-sm text-zinc-400 mb-6">解析管道如何驱动业务渲染：</p>
+            <pre><code>// 1. 业务层只需定义逻辑 (不用考虑线程)
+FLiteRtLmChunkCallback MyOnChunk = ...Lambda([this](const FString& Chunk) {
+    <span class="text-blue-500">// 物理安全性：此处已由插件保证处于 GameThread</span>
+    UpdateUMG(Chunk); 
+});
+
+// 2. 投递管道
+Subsystem->SendChatRequest(..., MyOnChunk, ...);</code></pre>
+        </div>
+    </section>
+
+    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
+        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM / Winyunq Core Engineering / v2.7</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
