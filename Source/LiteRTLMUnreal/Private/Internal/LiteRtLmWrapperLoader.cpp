@@ -3,6 +3,7 @@
 #include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 #include "HAL/PlatformProcess.h"
+#include "HAL/FileManager.h"
 
 void* FLiteRtLmWrapperLoader::DllHandle = nullptr;
 
@@ -21,9 +22,6 @@ FLiteRtLmWrapperLoader::PN_GetAvailableBackends FLiteRtLmWrapperLoader::GetAvail
 
 /**
  * Pre-load dependency DLLs from the same directory as the main wrapper DLL.
- * litert_lm_wrapper.dll links against libLiteRt, dxcompiler, etc.
- * Windows LoadLibrary only searches BaseDir & system PATH, not the DLL's own directory.
- * We must pre-load them so the implicit linking resolves.
  */
 static void PreloadDependencyDlls(const FString& DllDir)
 {
@@ -47,46 +45,63 @@ static void PreloadDependencyDlls(const FString& DllDir)
     }
 }
 
+/**
+ * Recursively search for a file within a directory.
+ */
+static FString FindFileRecursive(const FString& StartDir, const FString& TargetFileName)
+{
+    TArray<FString> FoundFiles;
+    IFileManager::Get().FindFilesRecursive(FoundFiles, *StartDir, *TargetFileName, true, false, false);
+    
+    for (const FString& FilePath : FoundFiles)
+    {
+        // Ignore files in Intermediate or metadata directories
+        if (!FilePath.Contains(TEXT("Intermediate")) && !FilePath.Contains(TEXT(".git")))
+        {
+            return FilePath;
+        }
+    }
+    return TEXT("");
+}
+
 bool FLiteRtLmWrapperLoader::LoadDll()
 {
     if (DllHandle) return true;
 
-    // Primary path: $(BinaryOutputDir) – UBT copies DLLs here via RuntimeDependencies
-    FString DllPath = FPaths::Combine(FPlatformProcess::BaseDir(), TEXT("litert_lm_wrapper.dll"));
+    const FString TargetDllName = TEXT("litert_lm_wrapper.dll");
+
+    // 1. Primary path: BaseDir (Standard for Packaged builds or after UBT staging)
+    FString DllPath = FPaths::Combine(FPlatformProcess::BaseDir(), TargetDllName);
 
     if (!FPaths::FileExists(DllPath))
     {
-        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] DLL not found at BaseDir: %s. Trying plugin ThirdParty..."), *DllPath);
+        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] DLL not found at BaseDir: %s. Searching plugin directory..."), *DllPath);
 
-        // Fallback: plugin ThirdParty (for first build before UBT has staged the DLLs)
+        // 2. Adaptive Fallback: Search the entire plugin directory
         TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("LiteRT-LM-Unreal"));
-
         if (Plugin.IsValid())
         {
-            DllPath = FPaths::ConvertRelativePathToFull(
-                FPaths::Combine(Plugin->GetBaseDir(),
-                    TEXT("Source/ThirdParty/LiteRtLm/Binaries/Win64"),
-                    TEXT("litert_lm_wrapper.dll")));
+            FString SearchRoot = Plugin->GetBaseDir();
+            DllPath = FindFileRecursive(SearchRoot, TargetDllName);
         }
 
-        if (!FPaths::FileExists(DllPath))
+        if (DllPath.IsEmpty() || !FPaths::FileExists(DllPath))
         {
-            UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] DLL not found at fallback either: %s"), *DllPath);
-            UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] Please rebuild the project so UBT stages the DLLs to BinaryOutputDir."));
+            UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] DLL not found anywhere in the plugin directory."));
             return false;
         }
     }
 
     UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Loading DLL from: %s"), *DllPath);
 
-    // Pre-load dependency DLLs from the same directory
+    // Pre-load dependency DLLs from the same directory to resolve implicit linking
     PreloadDependencyDlls(FPaths::GetPath(DllPath));
 
     DllHandle = FPlatformProcess::GetDllHandle(*DllPath);
 
     if (!DllHandle)
     {
-        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] GetDllHandle failed for: %s (a dependency DLL may be missing or incompatible)"), *DllPath);
+        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] GetDllHandle failed for: %s (Check if dependencies are missing)"), *DllPath);
         return false;
     }
 
@@ -106,8 +121,7 @@ bool FLiteRtLmWrapperLoader::LoadDll()
 
     if (!CreateEngine || !RunInference)
     {
-        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] Failed to resolve key symbols. CreateEngine=%p, RunInference=%p"),
-            (void*)CreateEngine, (void*)RunInference);
+        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] Failed to resolve key symbols."));
         UnloadDll();
         return false;
     }
