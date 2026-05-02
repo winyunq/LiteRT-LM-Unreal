@@ -1,21 +1,23 @@
 # Technical Details
 
 ## Features
-1. **High-performance local LLM inference**: Using LiteRT (TensorFlow Lite) backend.
-2. **UE5 Optimized**: PreDefault loading phase for seamless AI integration.
-3. **High-performance C++ wrapper**: Optimized for LLM tasks on Win64.
-4. **Minimal footprint**: Direct access to local models without cloud dependency.
-5. **Production-ready**: Designed for AI features in games and interactive applications.
+1. **High-performance local LLM inference**: Powered by Google's LiteRT (TensorFlow Lite) optimized for UE5.
+2. **Instant Session Switching**: Pointer-based KV-cache mapping allows switching between multiple agents with <1ms latency.
+3. **Constrained Decoding**: Force model outputs to follow specific Regex patterns or valid JSON structures during generation.
+4. **Real-time VRAM Guard**: Intelligent memory management using DXGI to query available VRAM and prevent D3D device loss.
+5. **Incremental Message Sync**: Optimized synchronization protocol that only sends new messages to the inference engine.
+6. **Zero-Dependency Bridge**: C-style ABI firewall encapsulates heavy dependencies (Abseil/Protobuf) for maximum stability.
+7. **Blueprint & C++ Friendly**: Includes both a high-level Actor Component and a low-level static C++ API.
 
 ## Code Modules
 - `LiteRTLMUnreal` (Runtime)
 
 ## Technical Specifications
 - **Number of Blueprints**: 0
-- **Number of C++ Classes**: 4
+- **Number of C++ Classes**: 4 (Core)
 - **Network Replicated**: No
-- **Supported Development Platforms**: Windows (Yes), Mac (No)
-- **Supported Target Build Platforms**: Win64
+- **Supported Development Platforms**: Windows
+- **Supported Target Build Platforms**: Win64 (DX12/Vulkan)
 
 ## Documentation & Support
 - **Documentation Link**: [https://winyunq.github.io/LiteRT-LM-Unreal/index.html]
