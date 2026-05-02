@@ -1,6 +1,7 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
 using UnrealBuildTool;
 using System.IO;
+using System.Collections.Generic;
 
 public class LiteRTLMUnreal : ModuleRules
 {
@@ -11,19 +12,74 @@ public class LiteRTLMUnreal : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Projects", "Json" });
 
-		// ThirdParty Path
-		string ThirdPartyPath = Path.GetFullPath(Path.Combine(PluginDirectory, "Source/ThirdParty/LiteRtLm"));
-		PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "Include"));
+		// 1. Automatically find the third-party library directory (no longer hardcoded)
+		string TargetLibName = "LiteRtLm";
+		string ThirdPartyPath = FindLibraryDirectory(PluginDirectory, TargetLibName);
 
-		if (Target.Platform == UnrealTargetPlatform.Win64)
+		if (!string.IsNullOrEmpty(ThirdPartyPath))
 		{
-			string BinariesPath = Path.Combine(ThirdPartyPath, "Binaries/Win64");
-			
-			// Runtime Dependencies for DLLs
-			foreach (string Dll in Directory.EnumerateFiles(BinariesPath, "*.dll"))
+			// Automatically configure include path
+			string IncludePath = Path.Combine(ThirdPartyPath, "Include");
+			if (Directory.Exists(IncludePath))
 			{
-				RuntimeDependencies.Add("$(BinaryOutputDir)/" + Path.GetFileName(Dll), Dll);
+				PublicIncludePaths.Add(IncludePath);
+			}
+
+			// 2. Automatically search and add library dependencies (DLL/LIB)
+			// Files in subdirectories named after the current platform (e.g., Win64) will be added automatically.
+			if (Directory.Exists(ThirdPartyPath))
+			{
+				try
+				{
+					var AllFiles = Directory.EnumerateFiles(ThirdPartyPath, "*.*", SearchOption.AllDirectories);
+					foreach (string FilePath in AllFiles)
+					{
+						string FileName = Path.GetFileName(FilePath);
+						string Extension = Path.GetExtension(FilePath).ToLower();
+
+						// Match current platform (e.g., Win64)
+						if (FilePath.Contains(Target.Platform.ToString()))
+						{
+							if (Extension == ".dll")
+							{
+								RuntimeDependencies.Add("$(BinaryOutputDir)/" + FileName, FilePath);
+							}
+							else if (Extension == ".lib")
+							{
+								PublicAdditionalLibraries.Add(FilePath);
+							}
+						}
+					}
+				}
+				catch (System.Exception)
+				{
+					// Fail silently to prevent UBT crash, let the compiler handle missing dependencies
+				}
 			}
 		}
+	}
+
+	/// <summary>
+	/// Recursively finds a directory by name starting from a root path.
+	/// </summary>
+	private string FindLibraryDirectory(string StartDir, string TargetName)
+	{
+		if (string.IsNullOrEmpty(StartDir) || !Directory.Exists(StartDir)) return null;
+		if (Path.GetFileName(StartDir).Equals(TargetName, System.StringComparison.OrdinalIgnoreCase)) return StartDir;
+
+		try
+		{
+			foreach (var Dir in Directory.EnumerateDirectories(StartDir))
+			{
+				// Skip UBT intermediate and metadata directories to improve speed
+				string DirName = Path.GetFileName(Dir);
+				if (DirName == "Intermediate" || DirName == ".git" || DirName == "Saved" || DirName == "Binaries") continue;
+
+				string Found = FindLibraryDirectory(Dir, TargetName);
+				if (Found != null) return Found;
+			}
+		}
+		catch { }
+		return null;
 	}
 }
