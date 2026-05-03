@@ -30,7 +30,7 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 
     if (!FLiteRtLmWrapperLoader::CreateEngine)
     {
-        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] CreateEngine function pointer is null. DLL not loaded?"));
+        UE_LOG(LogLiteRtLm, Error, TEXT("[LiteRtLm] CreateEngine function pointer is null. DLL not loaded?"));
         return false;
     }
 
@@ -48,7 +48,7 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
     CConfig.bEnableBenchmark = CurrentConfig.bEnableBenchmark ? 1 : 0;
     CConfig.bOptimizeShader  = CurrentConfig.bOptimizeShader ? 1 : 0;
 
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Loading model: Path=%s, Backend=%s, MaxTokens=%d, Threads=%d"),
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] Loading model: Path=%s, Backend=%s, MaxTokens=%d, Threads=%d"),
         *CurrentConfig.ModelPath, *CurrentConfig.Backend,
         CurrentConfig.MaxNumTokens, CurrentConfig.NumThreads);
 
@@ -56,11 +56,11 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 
     if (!EngineHandle)
     {
-        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] CreateEngine returned nullptr. Model path may be invalid or GPU backend unavailable."));
+        UE_LOG(LogLiteRtLm, Error, TEXT("[LiteRtLm] CreateEngine returned nullptr. Model path may be invalid or GPU backend unavailable."));
         return false;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Model loaded successfully. EngineHandle=%p"), EngineHandle);
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] Model loaded successfully. EngineHandle=%p"), EngineHandle);
     return true;
 }
 
@@ -135,7 +135,7 @@ void* ULiteRtLmSubsystem::GetOrCreateSession(void* Ctx, const FString& ToolsJson
         return NewSession;
     }
 
-    UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] Failed to create conversation session."));
+    UE_LOG(LogLiteRtLm, Error, TEXT("[LiteRtLm] Failed to create conversation session."));
     return nullptr;
 }
 
@@ -171,7 +171,7 @@ int32 ULiteRtLmSubsystem::QueryAvailableVramMB(int32 DefaultMB)
     HRESULT Hr = CreateDXGIFactory1(__uuidof(IDXGIFactory4), (void**)&DxgiFactory);
     if (FAILED(Hr) || !DxgiFactory)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] DXGI query failed, using default %d MB"), DefaultMB);
+        UE_LOG(LogLiteRtLm, Warning, TEXT("[LiteRtLm] DXGI query failed, using default %d MB"), DefaultMB);
         return DefaultMB;
     }
 
@@ -206,7 +206,7 @@ int32 ULiteRtLmSubsystem::QueryAvailableVramMB(int32 DefaultMB)
     const int64 AvailableBytes = static_cast<int64>(MemInfo.Budget) - static_cast<int64>(MemInfo.CurrentUsage);
     const int32 AvailableMB = static_cast<int32>(FMath::Max(AvailableBytes, (int64)0) / (1024 * 1024));
 
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] DXGI VRAM: Budget=%llu MB, Used=%llu MB, Available=%d MB"),
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] DXGI VRAM: Budget=%llu MB, Used=%llu MB, Available=%d MB"),
         MemInfo.Budget / (1024 * 1024), MemInfo.CurrentUsage / (1024 * 1024), AvailableMB);
 
     return AvailableMB;

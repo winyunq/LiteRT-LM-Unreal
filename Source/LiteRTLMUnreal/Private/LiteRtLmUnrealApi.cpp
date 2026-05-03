@@ -1,5 +1,7 @@
 // Copyright (c) 2025-2026 Winyunq. All rights reserved.
 #include "LiteRtLmUnrealApi.h"
+
+DEFINE_LOG_CATEGORY(LogLiteRtLm);
 #include "LiteRtLmSubsystem.h"
 #include "Engine/Engine.h"
 #include "Internal/LiteRtLmWrapperLoader.h"

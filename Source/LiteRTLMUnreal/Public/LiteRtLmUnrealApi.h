@@ -6,6 +6,8 @@
 #include "Dom/JsonObject.h"
 #include "LiteRtLmUnrealApi.generated.h"
 
+LITERTLMUNREAL_API DECLARE_LOG_CATEGORY_EXTERN(LogLiteRtLm, Log, All);
+
 /**
  * High-level configuration for LiteRT-LM engine.
  */
