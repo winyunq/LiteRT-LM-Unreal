@@ -37,7 +37,7 @@ FLiteRtLmConfig FLiteRtLmUnrealApi::GetAutoConfig()
         Config.Backend = TEXT("gpu");
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] AutoConfig: AvailableVRAM=%d MB, Target=%d MB, Backend=%s"),
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] AutoConfig: AvailableVRAM=%d MB, Target=%d MB, Backend=%s"),
         AvailableMB, TargetVramMB, *Config.Backend);
 
     return Config;
@@ -169,11 +169,11 @@ static TArray<TSharedPtr<FJsonObject>> ParseToolCallsFromJson(const FString& Ful
 
 static void Internal_LiteRtLmCallback(LiteRtLm_Result Result, void* UserPtr)
 {
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Internal_LiteRtLmCallback invoked. bIsDone=%d"), Result.bIsDone);
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] Internal_LiteRtLmCallback invoked. bIsDone=%d"), Result.bIsDone);
     FLiteRtLmCallbackContext* Ctx = static_cast<FLiteRtLmCallbackContext*>(UserPtr);
     if (!Ctx) return;
 
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Callback: text=%s, json=%s, done=%d, err=%s"),
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] Callback: text=%s, json=%s, done=%d, err=%s"),
         Result.text_chunk ? UTF8_TO_TCHAR(Result.text_chunk) : TEXT("(null)"),
         Result.full_json_chunk ? TEXT("(has json)") : TEXT("(null)"),
         Result.bIsDone,
@@ -432,7 +432,7 @@ void FLiteRtLmUnrealApi::SendChatRequest(
     }
     else
     {
-        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] AppendUserMessage: %s"), *LastContent.Left(100));
+        UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] AppendUserMessage: %s"), *LastContent.Left(100));
         FLiteRtLmWrapperLoader::AppendUserMessage(Session, TCHAR_TO_UTF8(*LastContent));
     }
 
@@ -443,7 +443,7 @@ void FLiteRtLmUnrealApi::SendChatRequest(
     FLiteRtLmDoneCallback WrappedOnDone = FLiteRtLmDoneCallback::CreateLambda(
         [OnDone, Subsystem, SessionKey, NewSentCount](const FLiteRtLmResult& Result)
         {
-            UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] OnDone: text_len=%d, tool_calls=%d, err=%s"),
+            UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] OnDone: text_len=%d, tool_calls=%d, err=%s"),
                 Result.FullText.Len(), Result.ToolCalls.Num(), *Result.ErrorMsg);
             if (Subsystem)
             {
@@ -456,7 +456,7 @@ void FLiteRtLmUnrealApi::SendChatRequest(
     // SendMessageAsync only submits work to the WebGPU queue.
     // WaitUntilDone drives the engine event loop and triggers callbacks.
     void* EngineHandle = Subsystem->GetEngineHandle();
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] RunInference: Session=%p, Engine=%p, MaxTokens=%d, Temp=%.2f"),
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] RunInference: Session=%p, Engine=%p, MaxTokens=%d, Temp=%.2f"),
         Session, EngineHandle, Params.MaxTokens, Params.Temperature);
 
     FLiteRtLmCallbackContext* CallbackCtx = new FLiteRtLmCallbackContext(OnChunk, WrappedOnDone, Params.ConstraintString);
@@ -465,33 +465,33 @@ void FLiteRtLmUnrealApi::SendChatRequest(
     AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [Session, EngineHandle, CParams, CallbackCtx]()
     {
         const double StartTime = FPlatformTime::Seconds();
-        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] AsyncTask started on thread %d"), FPlatformTLS::GetCurrentThreadId());
+        UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] AsyncTask started on thread %d"), FPlatformTLS::GetCurrentThreadId());
 
         if (!FLiteRtLmWrapperLoader::RunInference)
         {
-            UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] RunInference function pointer is NULL!"));
+            UE_LOG(LogLiteRtLm, Error, TEXT("[LiteRtLm] RunInference function pointer is NULL!"));
             return;
         }
 
-        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Calling DLL RunInference... (Tokens=%d, Temp=%.2f)"), 
+        UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] Calling DLL RunInference... (Tokens=%d, Temp=%.2f)"), 
             CParams.max_tokens, CParams.temperature);
             
         FLiteRtLmWrapperLoader::RunInference(Session, CParams, Internal_LiteRtLmCallback, CallbackCtx);
         
         const double AfterRunTime = FPlatformTime::Seconds();
-        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] DLL RunInference returned in %.2f ms."), (AfterRunTime - StartTime) * 1000.0);
+        UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] DLL RunInference returned in %.2f ms."), (AfterRunTime - StartTime) * 1000.0);
 
         if (FLiteRtLmWrapperLoader::WaitUntilDone && EngineHandle)
         {
-            UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Entering WaitUntilDone loop..."));
+            UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] Entering WaitUntilDone loop..."));
             int Result = FLiteRtLmWrapperLoader::WaitUntilDone(EngineHandle, 600); // 10 min timeout
             const double EndTime = FPlatformTime::Seconds();
-            UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] WaitUntilDone finished in %.2f ms with result: %d"), 
+            UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLm] WaitUntilDone finished in %.2f ms with result: %d"), 
                 (EndTime - AfterRunTime) * 1000.0, Result);
         }
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] WaitUntilDone not available. EngineHandle=%p"), EngineHandle);
+            UE_LOG(LogLiteRtLm, Warning, TEXT("[LiteRtLm] WaitUntilDone not available. EngineHandle=%p"), EngineHandle);
         }
     });
 }
