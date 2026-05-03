@@ -2,136 +2,452 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>App Integration Portal | LiteRT-LM Unreal</title>
+    <title>Anatomical System Operation | LiteRT-LM Unreal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
-        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; } 
+
+        /* Sidebar - Lifecycle Navigation */
+        .sidebar { background: #0A0A0C; border-right: 1px solid #1E1E22; height: 100vh; position: fixed; width: 260px; padding: 2rem; overflow-y: auto; z-index: 50; }
+        .sidebar-item { display: block; padding: 1rem; border-radius: 12px; border: 1px solid transparent; margin-bottom: 0.5rem; transition: all 0.3s ease; text-decoration: none; }
+        .sidebar-item:hover { background: #111115; border-color: #3B82F6; transform: translateX(5px); }
+        .sidebar-item h4 { font-size: 0.8rem; font-weight: 700; color: #FFF; margin: 0; }
+        .sidebar-item p { font-size: 10px; color: #64748B; margin: 0; }
+        .sidebar-number { font-size: 1.2rem; font-weight: 900; color: rgba(59, 130, 246, 0.2); margin-bottom: 0.2rem; display: block; }
+
+        .main-content { margin-left: 260px; padding: 4rem; max-width: 1400px; }
+
+        /* Fig 1: Topology Driver */
+        .diagram-container { background: #0F0F11; border: 1px solid #1E1E22; border-radius: 24px; padding: 3rem; margin: 2rem 0; overflow-x: auto; position: relative; }
+        .swimlane { display: flex; align-items: center; min-height: 160px; border-bottom: 1px dashed #1E1E22; position: relative; }
+        .swimlane:last-child { border-bottom: none; }
+        .swimlane-label { position: absolute; left: -1.5rem; top: 1rem; transform: rotate(-90deg); transform-origin: left top; font-size: 9px; font-weight: 900; color: #333; text-transform: uppercase; letter-spacing: 0.2em; white-space: nowrap; }
+        .node { background: #111115; border: 1px solid #1E1E22; border-radius: 12px; padding: 1rem; min-width: 180px; text-align: center; position: relative; z-index: 10; cursor: pointer; transition: all 0.3s; }
+        .node:hover { border-color: #3B82F6; transform: translateY(-5px); box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1); }
+        .node h5 { font-size: 11px; font-weight: 900; color: #FFF; margin-bottom: 0.2rem; }
+        .node p { font-size: 9px; color: #64748B; line-height: 1.4; }
+
+        /* Connectors */
+        .connector-v { position: absolute; width: 2px; border-left: 2px dashed #1E1E22; z-index: 1; }
+        .connector-h { position: absolute; height: 2px; border-top: 2px dashed #1E1E22; z-index: 1; }
+
+        /* Sequence Diagram Styling */
+        .seq-diagram { background: #08080A; border: 1px solid #1E1E22; border-radius: 20px; padding: 2rem; margin: 2rem 0; overflow-x: auto; position: relative; }
+        .seq-lifeline-container { display: flex; justify-content: space-around; min-height: 350px; position: relative; }
+        .seq-lifeline { display: flex; flex-direction: column; align-items: center; width: 120px; position: relative; }
+        .seq-lifeline::after { content: ''; position: absolute; top: 40px; bottom: 0; width: 2px; background: repeating-linear-gradient(to bottom, #1E1E22 0, #1E1E22 5px, transparent 5px, transparent 10px); z-index: 1; }
+        .seq-actor { background: #111115; border: 1px solid #333; border-radius: 8px; padding: 0.5rem 1rem; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #FFF; z-index: 5; text-align: center; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .seq-actor.plugin { border-color: #F97316; color: #F97316; }
+        .seq-arrow { position: absolute; height: 2px; background: #3B82F6; z-index: 10; display: flex; align-items: center; }
+        .seq-arrow::after { content: ''; position: absolute; right: -2px; border: 4px solid transparent; border-left-color: #3B82F6; }
+        .seq-arrow.reverse { background: #64748B; border-top: 2px dashed #64748B; background: none; height: 0; }
+        .seq-arrow.reverse::after { border-left-color: transparent; border-right-color: #64748B; right: auto; left: -2px; }
+        .seq-arrow-label { position: absolute; top: -18px; width: 100%; text-align: center; font-size: 9px; font-weight: 700; color: #64748B; white-space: nowrap; }
+        .seq-arrow-label.active { color: #3B82F6; }
+        .seq-activation { position: absolute; width: 8px; background: #1E1E22; border: 1px solid #333; z-index: 2; border-radius: 2px; }
         
-        .phase-node { 
-            background: #0F0F11; 
-            border: 1px solid #1E1E22; 
-            padding: 2.5rem; 
-            border-radius: 24px; 
-            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            position: relative;
-            cursor: pointer;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
+        /* Loop Block */
+        .seq-loop { position: absolute; border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.03); border-radius: 8px; z-index: 0; pointer-events: none; }
+        .seq-loop-label { position: absolute; top: 4px; left: 8px; font-size: 8px; font-weight: 900; color: #3B82F6; text-transform: uppercase; letter-spacing: 0.1em; }
 
-        .phase-node:hover { 
-            border-color: #3B82F6; 
-            background: #111115;
-            transform: scale(1.01) translateX(10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(59, 130, 246, 0.1);
-        }
+        /* Analysis Components */
+        .analysis-card { background: #0F0F11; border: 1px solid #1E1E22; border-radius: 24px; overflow: hidden; margin-top: 5rem; }
+        .analysis-content { padding: 3rem; }
+        .code-container { margin: 2rem 0; background: #0A0A0C; border: 1px solid #1E1E22; border-radius: 16px; overflow: hidden; }
+        .code-header { background: #111115; padding: 0.8rem 1.5rem; border-bottom: 1px solid #1E1E22; display: flex; justify-content: space-between; align-items: center; }
+        pre { padding: 2rem; overflow-x: auto; margin: 0; }
+        pre code { background: transparent; color: #cbd5e1; font-size: 0.85rem; line-height: 1.7; } 
 
-        .phase-number { font-size: 3rem; font-weight: 900; color: rgba(59, 130, 246, 0.1); min-width: 80px; }
-        .phase-info h3 { font-size: 1.5rem; font-weight: 900; color: #FFF; margin-bottom: 0.5rem; }
-        .phase-info p { font-size: 13px; color: #64748B; max-width: 500px; }
-        
-        .node-link-icon { margin-left: auto; color: #333; transition: color 0.3s; }
-        .phase-node:hover .node-link-icon { color: #3B82F6; }
-
-        .tag { font-size: 9px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; margin-right: 8px; }
-        .tag-logic { background: #1E3A8A; color: #60A5FA; }
+        .section-header { margin-top: 8rem; border-left: 4px solid #3B82F6; padding-left: 1.5rem; }
+        .highlight-box { background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; padding: 2rem; margin-top: 1.5rem; }
     </style>
 </head>
-<body class="p-8 md:p-20 max-w-6xl mx-auto">
+<body>
 
-    <header class="mb-32">
-        <div class="flex justify-end gap-6 mb-8">
-            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 border-b-2 border-blue-500 pb-1">English Portal</span>
-            <a href="APP_LAYER_zh.html" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all">中文门户</a>
+    <!-- Sidebar - Lifecycle Navigation -->
+    <nav class="sidebar">
+        <div class="mb-10">
+            <h2 class="text-xl font-black text-white tracking-tighter italic">LRT-LM <span class="text-blue-600">API</span></h2>
+            <p class="text-[10px] text-zinc-600 uppercase tracking-widest mt-1">Deep Run Details</p>
         </div>
-        <h1 class="text-7xl font-black text-white tracking-tighter italic mb-4 leading-none uppercase">
-            SYSTEM <span class="text-blue-600">HANDBOOK</span>
-        </h1>
-        <p class="text-zinc-500 uppercase tracking-[0.6em] text-[10px] font-bold pl-1">Operational Nodes: Manuals, Async Diagrams, and Demos</p>
-    </header>
 
-    <div class="space-y-6">
-
-        <!-- Node 1: Startup -->
-        <a href="AppLayer/PHASE_STARTUP.html" class="phase-node">
-            <div class="phase-number">01</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Lifecycle</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Physical Pre-allocation</span>
-                </div>
-                <h3>Startup: Environment Setup</h3>
-                <p>How to perform VRAM locking and model mapping. Includes async loading procedures.</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_STARTUP.html" class="sidebar-item">
+            <span class="sidebar-number">01</span>
+            <h4>Initialization</h4>
+            <p>VRAM & Physical Mapping</p>
         </a>
 
-        <!-- Node 2: Input -->
-        <a href="AppLayer/PHASE_INPUT.html" class="phase-node">
-            <div class="phase-number">02</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Data Flow</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Command Injection</span>
-                </div>
-                <h3>Input: Session Pushing</h3>
-                <p>Binding Actor pointers and building incremental messages. Covers session mapping and sync.</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_INPUT.html" class="sidebar-item">
+            <span class="sidebar-number">02</span>
+            <h4>Input</h4>
+            <p>Session & Context Pushing</p>
         </a>
 
-        <!-- Node 3: Process -->
-        <a href="AppLayer/PHASE_PROCESS.html" class="phase-node">
-            <div class="phase-number">03</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Physics</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Async Compute</span>
-                </div>
-                <h3>Process: Persistent Inference</h3>
-                <p>Analyzing async pumping and hardware telemetry. Includes worker thread sequence diagrams.</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_PROCESS.html" class="sidebar-item">
+            <span class="sidebar-number">03</span>
+            <h4>Process</h4>
+            <p>Async Pump & Telemetry</p>
         </a>
 
-        <!-- Node 4: Output -->
-        <a href="AppLayer/PHASE_OUTPUT.html" class="phase-node">
-            <div class="phase-number">04</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Data Flow</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Result Rendering</span>
-                </div>
-                <h3>Output: Data Consumption</h3>
-                <p>How to handle Token streams and Result objects. Includes streaming UI rendering and demos.</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_OUTPUT.html" class="sidebar-item">
+            <span class="sidebar-number">04</span>
+            <h4>Output</h4>
+            <p>Streaming & UMG Rendering</p>
         </a>
 
-        <!-- Node 5: Shutdown -->
-        <a href="AppLayer/PHASE_SHUTDOWN.html" class="phase-node">
-            <div class="phase-number">05</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Lifecycle</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Resource Release</span>
-                </div>
-                <h3>Shutdown: Cleanup Contract</h3>
-                <p>Physical unloading and memory release rules. Mandatory actions to prevent leaks and crashes.</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_SHUTDOWN.html" class="sidebar-item">
+            <span class="sidebar-number">05</span>
+            <h4>Shutdown</h4>
+            <p>Resource Cleanup & Recycling</p>
         </a>
+    </nav>
+
+    <div class="main-content">
+
+        <header>
+            <div class="flex justify-between items-center mb-8">
+                <p class="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500">Atomic Integrated Analysis with LiteRTDemo</p>
+                <div class="flex gap-6">
+                    <span class="text-[10px] font-black text-blue-500 border-b-2 border-blue-500 pb-1 uppercase tracking-widest">English</span>
+                    <a href="APP_LAYER_zh.html" class="text-[10px] font-black text-zinc-600 hover:text-white transition-all uppercase tracking-widest">中文</a>
+                </div>
+            </div>
+            <h1 class="text-7xl font-black text-white tracking-tighter italic uppercase mb-8">Analyze By <span class="text-blue-600">Demo</span></h1>
+            <p class="text-zinc-400 text-xl max-w-3xl mb-12">This chapter will dissect every real plugin interaction contact point in the <b>LiteRTDemo</b> project through "diagram-text-code" integrated atomic driving.</p>
+        </header>
+
+        <!-- Fig 1: Topology Driver -->
+        <section id="topology" class="section-header">
+            <h3 class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Topology Step 1</h3>    
+            <h2 class="text-3xl font-black text-white italic">Fig 1: LiteRTDemo Plugin Interaction Topology (Atomic Contact Mapping)</h2>
+        </section>
+        <div class="diagram-container">
+            <div class="connector-v top-[160px] left-[150px] h-[320px]"></div>
+            <div class="connector-h top-[160px] left-[250px] w-[900px]"></div>
+            <div class="swimlane">
+                <span class="swimlane-label">Interact</span>
+                <div class="ml-8"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/LiteRTDemo/WinyunqDialogueWidget.cpp#L15" target="_blank" class="node no-underline block border-blue-500/30">
+                    <i data-lucide="mouse-pointer-click" class="w-5 h-5 text-blue-500 mx-auto mb-2"></i>
+                    <h5>Intent Capture (Input)</h5>
+                    <p>UMG Event Listening</p>
+                </a>
+                <div class="ml-6"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/LiteRTDemo/WinyunqDialogueWidget.cpp#L47" target="_blank" class="node no-underline block border-indigo-500/30">
+                    <i data-lucide="send-horizontal" class="w-5 h-5 text-indigo-400 mx-auto mb-2"></i>
+                    <h5>Dispatch</h5>
+                    <p>Trigger Component Request</p>
+                </a>
+                <div class="ml-6"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/LiteRTDemo/WinyunqDialogueWidget.cpp#L53" target="_blank" class="node no-underline block border-blue-400/30">
+                    <i data-lucide="type" class="w-5 h-5 text-blue-400 mx-auto mb-2"></i>
+                    <h5>Streaming (Output)</h5>
+                    <p>Physical Token Re-injection</p>
+                </a>
+            </div>
+            <div class="swimlane">
+                <span class="swimlane-label">Bridge</span>
+                <div class="ml-40"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/UmgMcp/Private/FabServer/AIProviders/Local/UmgMcpLiteRtLmAiProvider.cpp#L208" target="_blank" class="node no-underline block border-orange-500/30">
+                    <i data-lucide="send" class="w-5 h-5 text-orange-500 mx-auto mb-2"></i>
+                    <h5>Injection (Push)</h5>
+                    <p>Push Packet to Plugin Engine</p>
+                </a>
+                <div class="ml-24"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/UmgMcp/Private/FabServer/AIProviders/Local/UmgMcpLiteRtLmAiProvider.cpp#L106" target="_blank" class="node no-underline block border-white/30">
+                    <i data-lucide="download-cloud" class="w-5 h-5 text-white mx-auto mb-2"></i>
+                    <h5>Startup (Load)</h5>
+                    <p>Physical Model Loading</p>
+                </a>
+            </div>
+            <div class="swimlane">
+                <span class="swimlane-label">Logic</span>
+                <div class="ml-12"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/UmgMcp/Private/FabServer/Agent/UmgMcpAgent.cpp#L62" target="_blank" class="node no-underline block border-yellow-500/30">
+                    <i data-lucide="brain" class="w-5 h-5 text-yellow-500 mx-auto mb-2"></i>
+                    <h5>Prompting</h5>
+                    <p>Define AI Guidelines</p>
+                </a>
+                <div class="ml-8"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/UmgMcp/Private/FabServer/Agent/UmgMcpAgent.cpp#L95" target="_blank" class="node no-underline block border-purple-500/30">
+                    <i data-lucide="database" class="w-5 h-5 text-purple-500 mx-auto mb-2"></i>
+                    <h5>Memory</h5>
+                    <p>Dialogue History Archiving</p> 
+                </a>
+            </div>
+        </div>
+
+        <!-- Fig 2: Triple Flow Diagrams -->
+        <section id="workflow" class="section-header">
+            <h3 class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Architecture Step 2</h3>        
+            <h2 class="text-3xl font-black text-white italic">Fig 2: Atomic System Operation Flow (Startup | Usage | Shutdown)</h2>
+        </section>
+
+        <div class="grid grid-cols-1 gap-12 mt-12">
+            <!-- Box 1: Startup Logic -->
+            <div class="highlight-box border-blue-500/20">
+                <h4 class="text-lg font-black text-white mb-6 uppercase flex items-center gap-2"><i data-lucide="play-circle" class="text-blue-500"></i> 1. Physical Link Initialization</h4>
+                <div class="flex items-center justify-between px-4">
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-900 border border-purple-500/50 rounded-xl"><i data-lucide="power" class="text-purple-500"></i></div><span class="text-[10px] font-bold">Bootstrapper</span></div>
+                    <i data-lucide="arrow-right" class="text-zinc-700"></i>
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-900 border border-orange-500/50 rounded-xl"><i data-lucide="download-cloud" class="text-white"></i></div><span class="text-[10px] font-bold">Asset Load</span></div>
+                    <i data-lucide="arrow-right" class="text-zinc-700"></i>
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-900 border border-yellow-500/50 rounded-xl"><i data-lucide="brain" class="text-yellow-500"></i></div><span class="text-[10px] font-bold">Prompting</span></div>
+                </div>
+            </div>
+
+            <!-- Box 2: Timing Sequence -->
+            <div class="highlight-box border-indigo-500/20">
+                <h4 class="text-lg font-black text-white mb-6 uppercase flex items-center gap-2"><i data-lucide="clock" class="text-indigo-500"></i> 2. Usage Timing & Sequence</h4>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 bg-zinc-900/50 p-3 rounded-lg border border-white/5">
+                        <span class="text-xs font-black text-blue-500 w-12 text-right">T1</span>
+                        <div class="flex-1 flex items-center gap-3"><i data-lucide="mouse-pointer-click" class="w-4 h-4 text-blue-500"></i><span class="text-xs font-bold text-white">Input Capture</span><span class="text-[10px] text-zinc-500">→ User presses Enter</span></div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-zinc-900/50 p-3 rounded-lg border border-white/5">
+                        <span class="text-xs font-black text-indigo-400 w-12 text-right">T2</span>
+                        <div class="flex-1 flex items-center gap-3"><i data-lucide="send-horizontal" class="w-4 h-4 text-indigo-400"></i><span class="text-xs font-bold text-white">Dispatch</span><span class="text-[10px] text-zinc-500">→ UI triggers component call</span></div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-zinc-900/50 p-3 rounded-lg border border-white/5">
+                        <span class="text-xs font-black text-orange-500 w-12 text-right">T3</span>
+                        <div class="flex-1 flex items-center gap-3"><i data-lucide="send" class="w-4 h-4 text-orange-500"></i><span class="text-xs font-bold text-white">Push</span><span class="text-[10px] text-zinc-500">→ API injects worker thread</span></div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-zinc-900/50 p-3 rounded-lg border border-white/5">
+                        <span class="text-xs font-black text-blue-400 w-12 text-right">T4</span>
+                        <div class="flex-1 flex items-center gap-3"><i data-lucide="type" class="w-4 h-4 text-blue-400"></i><span class="text-xs font-bold text-white">Output Stream</span><span class="text-[10px] text-zinc-500">→ Physical pixel re-injection</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box 3: Cleanup -->
+            <div class="highlight-box border-red-500/20">
+                <h4 class="text-lg font-black text-white mb-6 uppercase flex items-center gap-2"><i data-lucide="trash-2" class="text-red-500"></i> 3. Physical Shutdown & Recycling</h4>
+                <div class="flex items-center justify-around">
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-950 border border-red-500/30 rounded-xl"><i data-lucide="git-merge" class="text-zinc-600"></i></div><span class="text-[10px] font-bold text-zinc-600">Unbind Delegates</span></div>
+                    <i data-lucide="chevrons-right" class="text-red-900"></i>
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-900 border border-red-500 rounded-xl"><i data-lucide="database" class="text-red-500"></i></div><span class="text-[10px] font-bold">Session Cleanup</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Developer Guide -->
+        <section id="practical" class="section-header">
+            <h3 class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Practical Step 3</h3>   
+            <h2 class="text-3xl font-black text-white italic">Developer Integration Guide: Learning from the Demo</h2>   
+            <p class="text-zinc-500 text-sm mt-4">This section breaks down all custom code in the Demo project by lifecycle. <b>Rule: All application logic must be present.</b></p>
+        </section>
+
+        <!-- 01 Initialization -->
+        <div class="analysis-card">
+            <div class="analysis-content">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="bg-blue-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase">Phase 01</span>
+                    <h4 class="text-2xl font-black text-white uppercase italic">Asset Initialization & Physical Loading</h4>
+                </div>
+                <p class="text-blue-400 text-xs font-bold mb-8 italic">Note: You need to learn how to initialize an AI and perform a unique, one-time initialization at the appropriate location in your project.</p>
+                
+                <!-- Sequence Diagram 01 -->
+                <div class="seq-diagram">
+                    <div class="seq-lifeline-container">
+                        <div class="seq-lifeline"><div class="seq-actor">Build.cs</div><div class="seq-activation" style="top:80px; height:20px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Provider</div><div class="seq-activation" style="top:120px; height:100px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor plugin">Plugin API</div><div class="seq-activation" style="top:160px; height:40px;"></div></div>
+                        <div class="seq-arrow" style="top:80px; left:20%; width:10%; border-top:2px dashed #333; background:none;"><div class="seq-arrow-label">Static Module Mount</div></div>
+                        <div class="seq-arrow" style="top:130px; left:48%; width:27%;"><div class="seq-arrow-label active">EnsureModelLoadedAsync</div></div>
+                        <div class="seq-arrow" style="top:165px; left:48%; width:27%;"><div class="seq-arrow-label active">LoadModel(Config)</div></div>
+                        <div class="seq-arrow reverse" style="top:205px; left:48%; width:27%;"><div class="seq-arrow-label">OnComplete(bSuccess)</div></div>
+                    </div>
+                </div>
+
+                <div class="space-y-8">
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-500 italic">1.1 Dependencies | LiteRTDemo.Build.cs</span></div>
+                        <pre><code>PublicDependencyModuleNames.AddRange(new string[] {
+    "Core", "CoreUObject", "Engine", 
+    "LiteRTLMUnreal" // Core plugin binary package
+});</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-500 italic">1.2 Loading Drive | UmgMcpLiteRtLmAiProvider.cpp</span></div>
+                        <pre><code>void FUmgMcpLiteRtLmAiProvider::EnsureModelLoadedAsync(const FString& AbsPath, TFunction&lt;void(bool)&gt; OnComplete) {
+    FLiteRtLmConfig Config = FLiteRtLmUnrealApi::GetAutoConfig();
+    Config.ModelPath = AbsPath;
+    Config.Backend = TEXT("gpu");
+
+    AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [Config, OnComplete]() {
+        bool bSuccess = FLiteRtLmUnrealApi::LoadModel(Config);
+        AsyncTask(ENamedThreads::GameThread, [bSuccess, OnComplete]() {
+            if (OnComplete) OnComplete(bSuccess);
+        });
+    });
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 02 Input -->
+        <div class="analysis-card">
+            <div class="analysis-content">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="bg-indigo-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase">Phase 02</span>
+                    <h4 class="text-2xl font-black text-white uppercase italic">Command Dispatch: Finger to Plugin</h4>
+                </div>
+                <p class="text-indigo-400 text-xs font-bold mb-8 italic">Note: You need to learn how to initiate a conversation request to the AI. Specifically, this will require you to update method for async/sync, which is the core input for users.</p>
+
+                <!-- Sequence Diagram 02 -->
+                <div class="seq-diagram">
+                    <div class="seq-lifeline-container">
+                        <div class="seq-lifeline"><div class="seq-actor">Widget</div><div class="seq-activation" style="top:80px; height:40px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Subsystem</div><div class="seq-activation" style="top:110px; height:120px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Provider</div><div class="seq-activation" style="top:180px; height:60px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor plugin">Plugin API</div><div class="seq-activation" style="top:210px; height:30px;"></div></div>
+                        <div class="seq-arrow" style="top:90px; left:16%; width:16%;"><div class="seq-arrow-label active">ExecuteSendMessage()</div></div>
+                        <div class="seq-arrow" style="top:130px; left:33%; width:100px; border:none;"><div class="seq-arrow-label">RequestQuestion()</div></div>
+                        <div class="seq-arrow" style="top:190px; left:41%; width:14%;"><div class="seq-arrow-label active">Send(Messages)</div></div>
+                        <div class="seq-arrow" style="top:220px; left:58%; width:16%;"><div class="seq-arrow-label active">SendChatRequest(...)</div></div>
+                    </div>
+                </div>
+
+                <div class="space-y-12">
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">Level 1: UI Capture | UmgMcpActiveMessageSubsystem.cpp</span></div>
+                        <pre><code>void UUmgMcpActiveMessageSubsystem::ExecuteSendMessage() {
+    auto ChatInput = RegisteredChatInput.Pin();
+    if (!ChatInput.IsValid()) return;
+    FText InputText = ChatInput->GetText();
+    if (!InputText.IsEmpty()) {
+        RequestQuestion(InputText.ToString());
+        ChatInput->ClearText();
+    }
+}</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">Level 2: Protocol Wrap | UmgMcpActiveMessageSubsystem.cpp</span></div>
+                        <pre><code>void UUmgMcpActiveMessageSubsystem::RequestQuestion(const FString& QuestionText) {
+    bIsGenerating = true;
+    TSharedPtr&lt;FUmgMcpAgent&gt; ActiveAgent = SessionSubsystem->GetMainAgent();
+    if (ActiveAgent.IsValid()) {
+        UpdateActiveMessageMeta(ActiveAgent->Name, LOCTEXT("Thinking", "Thinking..."), true);
+        TSharedPtr&lt;FJsonObject&gt; RequestObj = MakeShared&lt;FJsonObject&gt;();
+        RequestObj->SetStringField(TEXT("role"), TEXT("user"));
+        RequestObj->SetStringField(TEXT("content"), QuestionText);
+        ActiveAgent->Answer(RequestObj);
+    }
+}</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">Level 3: API Injection | FUmgMcpLiteRtLmAiProvider.cpp</span></div>
+                        <pre><code>void FUmgMcpLiteRtLmAiProvider::Send(const TArray&lt;FUmgMcpChatMessage&gt;& Messages, ...) {
+    FLiteRtLmUnrealApi::SendChatRequest(
+        AgentPtr, Messages, ToolsJson, OnChunk, OnDone, Params
+    );
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 03 Output -->
+        <div class="analysis-card">
+            <div class="analysis-content">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="bg-blue-400 text-white text-xs font-black px-3 py-1 rounded-full uppercase">Phase 03</span>
+                    <h4 class="text-2xl font-black text-white uppercase italic">Streaming Feedback: Chunk to Pixel</h4>
+                </div>
+                <p class="text-blue-400 text-xs font-bold mb-8 italic">Note: You need to learn how to obtain results from AI and preferably render them in real-time. Here you need to distinguish between two concepts: Streaming Output and Answer Completion. Streaming output is incremental output for enhancing experience; Answer Completion is the final stock output for implementing business logic.</p>
+
+                <!-- Sequence Diagram 03 with Loop -->
+                <div class="seq-diagram">
+                    <div class="seq-lifeline-container">
+                        <div class="seq-lifeline"><div class="seq-actor plugin">Plugin</div><div class="seq-activation" style="top:80px; height:200px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Provider</div><div class="seq-activation" style="top:100px; height:160px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Subsystem</div><div class="seq-activation" style="top:140px; height:100px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Widget</div><div class="seq-activation" style="top:180px; height:40px;"></div></div>
+                        
+                        <!-- Loop Block -->
+                        <div class="seq-loop" style="top:85px; left:10%; right:10%; height:160px;">
+                            <div class="seq-loop-label">Streaming Loop (Multiple Tokens)</div>
+                        </div>
+
+                        <!-- Repetitive Arrows -->
+                        <div class="seq-arrow" style="top:110px; left:16%; width:16%; border-top:2px dashed #F97316; background:none;"><div class="seq-arrow-label active">OnChunk(FString)</div></div>
+                        <div class="seq-arrow" style="top:150px; left:33%; width:16%;"><div class="seq-arrow-label active">AppendActiveMessageText</div></div>
+                        <div class="seq-arrow" style="top:190px; left:50%; width:16%;"><div class="seq-arrow-label active">AppendToTextOutputBlock</div></div>
+                        
+                        <!-- Final Result -->
+                        <div class="seq-arrow" style="top:260px; left:16%; width:16%; border-top:2px solid #64748B; background:none;"><div class="seq-arrow-label" style="color:#FFF;">OnDone(Result)</div></div>
+                    </div>
+                </div>
+
+                <div class="space-y-12">
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">Level 1: Thread Bridge | UmgMcpLiteRtLmAiProvider.cpp</span></div>
+                        <pre><code>FLiteRtLmChunkCallback OnChunk = [this](const FString& Chunk) {
+    AsyncTask(ENamedThreads::GameThread, [this, Chunk]() {
+        ActiveSubsystem->AppendActiveMessageText(Chunk); 
+    });
+};</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">Level 2: Slot Dispatch | UmgMcpActiveMessageSubsystem.cpp</span></div>
+                        <pre><code>void UUmgMcpActiveMessageSubsystem::AppendActiveMessageText(const FString& PartialText) {
+    if (ActiveMessageWidget.IsValid()) {
+        ActiveMessageWidget->AppendToCurrentTextOutputBlock(PartialText);
+        if (RegisteredHub.IsValid()) RegisteredHub.Pin()->RefreshVisibility();
+    }
+}</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">Level 3: Pixel Refresh | SUmgMcpAgentResponseGroup.cpp</span></div>
+                        <pre><code>void SUmgMcpAgentResponseGroup::AppendToCurrentTextOutputBlock(const FString& Text) {
+    CurrentFullText += Text;
+    InternalTextWidget->SetText(FText::FromString(CurrentFullText));
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 04 Closure -->
+        <div class="analysis-card">
+            <div class="analysis-content">
+                <div class="flex items-center gap-4 mb-8">
+                    <span class="bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase">Phase 04</span>
+                    <h4 class="text-2xl font-black text-white uppercase italic">Resource Release</h4>
+                </div>
+
+                <!-- Sequence Diagram 04 -->
+                <div class="seq-diagram">
+                    <div class="seq-lifeline-container">
+                        <div class="seq-lifeline"><div class="seq-actor">Widget</div><div class="seq-activation" style="top:80px; height:40px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Provider</div><div class="seq-activation" style="top:110px; height:60px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor plugin">Plugin API</div><div class="seq-activation" style="top:140px; height:30px;"></div></div>
+                        <div class="seq-arrow" style="top:90px; left:25%; width:25%;"><div class="seq-arrow-label active">RemoveAll(this)</div></div>
+                        <div class="seq-arrow" style="top:120px; left:50%; width:25%;"><div class="seq-arrow-label active">UnloadModel()</div></div>
+                    </div>
+                </div>
+
+                <div class="space-y-8">
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-500 italic">4.1 VRAM Cleanup | UmgMcpLiteRtLmAiProvider.cpp</span></div>
+                        <pre><code>void FUmgMcpLiteRtLmAiProvider::UnloadModel() {
+    FLiteRtLmUnrealApi::UnloadModel();
+}</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-500 italic">4.2 Delegate Safety | WinyunqDialogueWidget.cpp</span></div>
+                        <pre><code>void UWinyunqDialogueWidget::SetTargetNPC(ULiteRtLmComponent* InNPC) {
+    if (CurrentNPC) CurrentNPC->OnTextChunkReceived.RemoveAll(this);
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
-
-    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
-        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / Operational Hub v2.7</p>
-    </footer>
 
     <script>lucide.createIcons();</script>
 </body>

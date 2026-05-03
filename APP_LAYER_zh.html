@@ -2,136 +2,452 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>系统操作规程门户 | LiteRT-LM Unreal</title>
+    <title>系统运行深度解剖 | LiteRT-LM Unreal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Fira+Code:wght@400;500&display=swap');
-        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; }
+        body { background-color: #050506; color: #E2E8F0; font-family: 'Inter', sans-serif; line-height: 1.6; } 
+
+        /* Sidebar - Lifecycle Navigation */
+        .sidebar { background: #0A0A0C; border-right: 1px solid #1E1E22; height: 100vh; position: fixed; width: 260px; padding: 2rem; overflow-y: auto; z-index: 50; }
+        .sidebar-item { display: block; padding: 1rem; border-radius: 12px; border: 1px solid transparent; margin-bottom: 0.5rem; transition: all 0.3s ease; text-decoration: none; }
+        .sidebar-item:hover { background: #111115; border-color: #3B82F6; transform: translateX(5px); }
+        .sidebar-item h4 { font-size: 0.8rem; font-weight: 700; color: #FFF; margin: 0; }
+        .sidebar-item p { font-size: 10px; color: #64748B; margin: 0; }
+        .sidebar-number { font-size: 1.2rem; font-weight: 900; color: rgba(59, 130, 246, 0.2); margin-bottom: 0.2rem; display: block; }
+
+        .main-content { margin-left: 260px; padding: 4rem; max-width: 1400px; }
+
+        /* Fig 1: Topology Driver */
+        .diagram-container { background: #0F0F11; border: 1px solid #1E1E22; border-radius: 24px; padding: 3rem; margin: 2rem 0; overflow-x: auto; position: relative; }
+        .swimlane { display: flex; align-items: center; min-height: 160px; border-bottom: 1px dashed #1E1E22; position: relative; }
+        .swimlane:last-child { border-bottom: none; }
+        .swimlane-label { position: absolute; left: -1.5rem; top: 1rem; transform: rotate(-90deg); transform-origin: left top; font-size: 9px; font-weight: 900; color: #333; text-transform: uppercase; letter-spacing: 0.2em; white-space: nowrap; }
+        .node { background: #111115; border: 1px solid #1E1E22; border-radius: 12px; padding: 1rem; min-width: 180px; text-align: center; position: relative; z-index: 10; cursor: pointer; transition: all 0.3s; }
+        .node:hover { border-color: #3B82F6; transform: translateY(-5px); box-shadow: 0 10px 30px rgba(59, 130, 246, 0.1); }
+        .node h5 { font-size: 11px; font-weight: 900; color: #FFF; margin-bottom: 0.2rem; }
+        .node p { font-size: 9px; color: #64748B; line-height: 1.4; }
+
+        /* Connectors */
+        .connector-v { position: absolute; width: 2px; border-left: 2px dashed #1E1E22; z-index: 1; }
+        .connector-h { position: absolute; height: 2px; border-top: 2px dashed #1E1E22; z-index: 1; }
+
+        /* Sequence Diagram Styling */
+        .seq-diagram { background: #08080A; border: 1px solid #1E1E22; border-radius: 20px; padding: 2rem; margin: 2rem 0; overflow-x: auto; position: relative; }
+        .seq-lifeline-container { display: flex; justify-content: space-around; min-height: 350px; position: relative; }
+        .seq-lifeline { display: flex; flex-direction: column; align-items: center; width: 120px; position: relative; }
+        .seq-lifeline::after { content: ''; position: absolute; top: 40px; bottom: 0; width: 2px; background: repeating-linear-gradient(to bottom, #1E1E22 0, #1E1E22 5px, transparent 5px, transparent 10px); z-index: 1; }
+        .seq-actor { background: #111115; border: 1px solid #333; border-radius: 8px; padding: 0.5rem 1rem; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #FFF; z-index: 5; text-align: center; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .seq-actor.plugin { border-color: #F97316; color: #F97316; }
+        .seq-arrow { position: absolute; height: 2px; background: #3B82F6; z-index: 10; display: flex; align-items: center; }
+        .seq-arrow::after { content: ''; position: absolute; right: -2px; border: 4px solid transparent; border-left-color: #3B82F6; }
+        .seq-arrow.reverse { background: #64748B; border-top: 2px dashed #64748B; background: none; height: 0; }
+        .seq-arrow.reverse::after { border-left-color: transparent; border-right-color: #64748B; right: auto; left: -2px; }
+        .seq-arrow-label { position: absolute; top: -18px; width: 100%; text-align: center; font-size: 9px; font-weight: 700; color: #64748B; white-space: nowrap; }
+        .seq-arrow-label.active { color: #3B82F6; }
+        .seq-activation { position: absolute; width: 8px; background: #1E1E22; border: 1px solid #333; z-index: 2; border-radius: 2px; }
         
-        .phase-node { 
-            background: #0F0F11; 
-            border: 1px solid #1E1E22; 
-            padding: 2.5rem; 
-            border-radius: 24px; 
-            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            position: relative;
-            cursor: pointer;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
+        /* Loop Block */
+        .seq-loop { position: absolute; border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.03); border-radius: 8px; z-index: 0; pointer-events: none; }
+        .seq-loop-label { position: absolute; top: 4px; left: 8px; font-size: 8px; font-weight: 900; color: #3B82F6; text-transform: uppercase; letter-spacing: 0.1em; }
 
-        .phase-node:hover { 
-            border-color: #3B82F6; 
-            background: #111115;
-            transform: scale(1.01) translateX(10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(59, 130, 246, 0.1);
-        }
+        /* Analysis Components */
+        .analysis-card { background: #0F0F11; border: 1px solid #1E1E22; border-radius: 24px; overflow: hidden; margin-top: 5rem; }
+        .analysis-content { padding: 3rem; }
+        .code-container { margin: 2rem 0; background: #0A0A0C; border: 1px solid #1E1E22; border-radius: 16px; overflow: hidden; }
+        .code-header { background: #111115; padding: 0.8rem 1.5rem; border-bottom: 1px solid #1E1E22; display: flex; justify-content: space-between; align-items: center; }
+        pre { padding: 2rem; overflow-x: auto; margin: 0; }
+        pre code { background: transparent; color: #cbd5e1; font-size: 0.85rem; line-height: 1.7; } 
 
-        .phase-number { font-size: 3rem; font-weight: 900; color: rgba(59, 130, 246, 0.1); min-width: 80px; }
-        .phase-info h3 { font-size: 1.5rem; font-weight: 900; color: #FFF; margin-bottom: 0.5rem; }
-        .phase-info p { font-size: 13px; color: #64748B; max-width: 500px; }
-        
-        .node-link-icon { margin-left: auto; color: #333; transition: color 0.3s; }
-        .phase-node:hover .node-link-icon { color: #3B82F6; }
-
-        .tag { font-size: 9px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; margin-right: 8px; }
-        .tag-logic { background: #1E3A8A; color: #60A5FA; }
+        .section-header { margin-top: 8rem; border-left: 4px solid #3B82F6; padding-left: 1.5rem; }
+        .highlight-box { background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; padding: 2rem; margin-top: 1.5rem; }
     </style>
 </head>
-<body class="p-8 md:p-20 max-w-6xl mx-auto">
+<body>
 
-    <header class="mb-32">
-        <div class="flex justify-end gap-6 mb-8">
-            <a href="APP_LAYER.html" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all">English</a>
-            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 border-b-2 border-blue-500 pb-1">实战操作节点</span>
+    <!-- Sidebar - Lifecycle Navigation -->
+    <nav class="sidebar">
+        <div class="mb-10">
+            <h2 class="text-xl font-black text-white tracking-tighter italic">LRT-LM <span class="text-blue-600">API</span></h2>
+            <p class="text-[10px] text-zinc-600 uppercase tracking-widest mt-1">深度运行细节</p>
         </div>
-        <h1 class="text-7xl font-black text-white tracking-tighter italic mb-4 leading-none uppercase">
-            SYSTEM <span class="text-blue-600">HANDBOOK</span>
-        </h1>
-        <p class="text-zinc-500 uppercase tracking-[0.6em] text-[10px] font-bold pl-1">点击大节点进入具体环节：操作引导、时序图与 Demo</p>
-    </header>
 
-    <div class="space-y-6">
-
-        <!-- Node 1: Startup -->
-        <a href="AppLayer/PHASE_STARTUP_zh.html" class="phase-node">
-            <div class="phase-number">01</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Lifecycle</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">物理预占</span>
-                </div>
-                <h3>启动：环境建立 (Startup)</h3>
-                <p>如何执行显存锁定与模型物理映射。包含异步加载操作规程。</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_STARTUP_zh.html" class="sidebar-item">
+            <span class="sidebar-number">01</span>
+            <h4>初始化</h4>
+            <p>显存与物理映射</p>
         </a>
 
-        <!-- Node 2: Input -->
-        <a href="AppLayer/PHASE_INPUT_zh.html" class="phase-node">
-            <div class="phase-number">02</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Data Flow</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">指令注入</span>
-                </div>
-                <h3>输入：会话推送 (Input)</h3>
-                <p>如何绑定 Actor 指针、构建增量消息。包含会话映射与同步操作。</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_INPUT_zh.html" class="sidebar-item">
+            <span class="sidebar-number">02</span>
+            <h4>输入环节</h4>
+            <p>会话与上下文推送</p>
         </a>
 
-        <!-- Node 3: Process -->
-        <a href="AppLayer/PHASE_PROCESS_zh.html" class="phase-node">
-            <div class="phase-number">03</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Physics</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">异步计算</span>
-                </div>
-                <h3>处理：持续推理 (Processing)</h3>
-                <p>解析异步泵送机制与硬件实时遥测。包含后台线程流转时序。</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_PROCESS_zh.html" class="sidebar-item">
+            <span class="sidebar-number">03</span>
+            <h4>处理环节</h4>
+            <p>异步泵与性能遥测</p>
         </a>
 
-        <!-- Node 4: Output -->
-        <a href="AppLayer/PHASE_OUTPUT_zh.html" class="phase-node">
-            <div class="phase-number">04</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Data Flow</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">结果渲染</span>
-                </div>
-                <h3>输出：数据消费 (Output)</h3>
-                <p>如何拿走 Token 流与物理结算单。包含流式 UI 渲染操作与 Demo。</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_OUTPUT_zh.html" class="sidebar-item">
+            <span class="sidebar-number">04</span>
+            <h4>输出环节</h4>
+            <p>流式回传与 UMG 渲染</p>
         </a>
 
-        <!-- Node 5: Shutdown -->
-        <a href="AppLayer/PHASE_SHUTDOWN_zh.html" class="phase-node">
-            <div class="phase-number">05</div>
-            <div class="phase-info">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="tag tag-logic">Lifecycle</span>
-                    <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">资源归还</span>
-                </div>
-                <h3>结束：资源撤场 (Shutdown)</h3>
-                <p>物理卸载与内存释放规程。防止显存泄露与闪退的强制动作。</p>
-            </div>
-            <i data-lucide="arrow-right" class="node-link-icon w-8 h-8"></i>
+        <a href="AppLayer/PHASE_SHUTDOWN_zh.html" class="sidebar-item">
+            <span class="sidebar-number">05</span>
+            <h4>结束环节</h4>
+            <p>资源清理与物理回收</p>
         </a>
+    </nav>
+
+    <div class="main-content">
+
+        <header>
+            <div class="flex justify-between items-center mb-8">
+                <p class="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500">Atomic Integrated Analysis with LiteRTDemo</p>
+                <div class="flex gap-6">
+                    <a href="APP_LAYER.html" class="text-[10px] font-black text-zinc-600 hover:text-white transition-all uppercase tracking-widest">English</a>
+                    <span class="text-[10px] font-black text-blue-500 border-b-2 border-blue-500 pb-1 uppercase tracking-widest">运行解剖</span>
+                </div>
+            </div>
+            <h1 class="text-7xl font-black text-white tracking-tighter italic uppercase mb-8">Analyze By <span class="text-blue-600">Demo</span></h1>
+            <p class="text-zinc-400 text-xl max-w-3xl mb-12">本章将通过“图文码”一体化的原子驱动，拆解 <b>LiteRTDemo</b> 项目中每一个真实的插件交互触点。</p>
+        </header>
+
+        <!-- Fig 1: Topology Driver -->
+        <section id="topology" class="section-header">
+            <h3 class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Topology Step 1</h3>    
+            <h2 class="text-3xl font-black text-white italic">图 1: LiteRTDemo 插件交互拓扑 (原子触点映射)</h2>
+        </section>
+        <div class="diagram-container">
+            <div class="connector-v top-[160px] left-[150px] h-[320px]"></div>
+            <div class="connector-h top-[160px] left-[250px] w-[900px]"></div>
+            <div class="swimlane">
+                <span class="swimlane-label">Interact端</span>
+                <div class="ml-8"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/LiteRTDemo/WinyunqDialogueWidget.cpp#L15" target="_blank" class="node no-underline block border-blue-500/30">
+                    <i data-lucide="mouse-pointer-click" class="w-5 h-5 text-blue-500 mx-auto mb-2"></i>
+                    <h5>意图捕获 (Input)</h5>
+                    <p>UMG 事件监听与响应</p>
+                </a>
+                <div class="ml-6"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/LiteRTDemo/WinyunqDialogueWidget.cpp#L47" target="_blank" class="node no-underline block border-indigo-500/30">
+                    <i data-lucide="send-horizontal" class="w-5 h-5 text-indigo-400 mx-auto mb-2"></i>
+                    <h5>指令派遣 (Dispatch)</h5>
+                    <p>触发组件计算请求</p>
+                </a>
+                <div class="ml-6"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/LiteRTDemo/WinyunqDialogueWidget.cpp#L53" target="_blank" class="node no-underline block border-blue-400/30">
+                    <i data-lucide="type" class="w-5 h-5 text-blue-400 mx-auto mb-2"></i>
+                    <h5>流式渲染 (Output)</h5>
+                    <p>Token 碎片物理回灌</p>
+                </a>
+            </div>
+            <div class="swimlane">
+                <span class="swimlane-label">Bridge层</span>
+                <div class="ml-40"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/UmgMcp/Private/FabServer/AIProviders/Local/UmgMcpLiteRtLmAiProvider.cpp#L208" target="_blank" class="node no-underline block border-orange-500/30">
+                    <i data-lucide="send" class="w-5 h-5 text-orange-500 mx-auto mb-2"></i>
+                    <h5>指令注入 (Push)</h5>
+                    <p>向插件引擎推送封包请求</p>
+                </a>
+                <div class="ml-24"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/UmgMcp/Private/FabServer/AIProviders/Local/UmgMcpLiteRtLmAiProvider.cpp#L106" target="_blank" class="node no-underline block border-white/30">
+                    <i data-lucide="download-cloud" class="w-5 h-5 text-white mx-auto mb-2"></i>
+                    <h5>资产启动 (Load)</h5>
+                    <p>模型物理路径载入</p>
+                </a>
+            </div>
+            <div class="swimlane">
+                <span class="swimlane-label">Logic层</span>
+                <div class="ml-12"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/UmgMcp/Private/FabServer/Agent/UmgMcpAgent.cpp#L62" target="_blank" class="node no-underline block border-yellow-500/30">
+                    <i data-lucide="brain" class="w-5 h-5 text-yellow-500 mx-auto mb-2"></i>
+                    <h5>人格注入 (Prompting)</h5>
+                    <p>定义 AI 行为准则</p>
+                </a>
+                <div class="ml-8"></div>
+                <a href="https://github.com/winyunq/LiteRTDemo/blob/main/Source/UmgMcp/Private/FabServer/Agent/UmgMcpAgent.cpp#L95" target="_blank" class="node no-underline block border-purple-500/30">
+                    <i data-lucide="database" class="w-5 h-5 text-purple-500 mx-auto mb-2"></i>
+                    <h5>上下文管理 (Memory)</h5>
+                    <p>对话历史逻辑归档</p> 
+                </a>
+            </div>
+        </div>
+
+        <!-- Fig 2: Triple Flow Diagrams -->
+        <section id="workflow" class="section-header">
+            <h3 class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Architecture Step 2</h3>        
+            <h2 class="text-3xl font-black text-white italic">图 2: 系统原子运行全流程 (初始化流程 | 使用原子时序 | 物理销毁)</h2>
+        </section>
+
+        <div class="grid grid-cols-1 gap-12 mt-12">
+            <!-- Box 1: Startup Logic -->
+            <div class="highlight-box border-blue-500/20">
+                <h4 class="text-lg font-black text-white mb-6 uppercase flex items-center gap-2"><i data-lucide="play-circle" class="text-blue-500"></i> 1. 初始化物理链路 (Startup Logic)</h4>
+                <div class="flex items-center justify-between px-4">
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-900 border border-purple-500/50 rounded-xl"><i data-lucide="power" class="text-purple-500"></i></div><span class="text-[10px] font-bold">Bootstrapper</span></div>
+                    <i data-lucide="arrow-right" class="text-zinc-700"></i>
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-900 border border-orange-500/50 rounded-xl"><i data-lucide="download-cloud" class="text-white"></i></div><span class="text-[10px] font-bold">资产加载</span></div>
+                    <i data-lucide="arrow-right" class="text-zinc-700"></i>
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-900 border border-yellow-500/50 rounded-xl"><i data-lucide="brain" class="text-yellow-500"></i></div><span class="text-[10px] font-bold">人格注入</span></div>
+                </div>
+            </div>
+
+            <!-- Box 2: Timing Sequence -->
+            <div class="highlight-box border-indigo-500/20">
+                <h4 class="text-lg font-black text-white mb-6 uppercase flex items-center gap-2"><i data-lucide="clock" class="text-indigo-500"></i> 2. 使用原子时序 (Usage Timing & Sequence)</h4>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 bg-zinc-900/50 p-3 rounded-lg border border-white/5">
+                        <span class="text-xs font-black text-blue-500 w-12 text-right">T1</span>
+                        <div class="flex-1 flex items-center gap-3"><i data-lucide="mouse-pointer-click" class="w-4 h-4 text-blue-500"></i><span class="text-xs font-bold text-white">意图捕获 (Input)</span><span class="text-[10px] text-zinc-500">→ 用户按下回车</span></div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-zinc-900/50 p-3 rounded-lg border border-white/5">
+                        <span class="text-xs font-black text-indigo-400 w-12 text-right">T2</span>
+                        <div class="flex-1 flex items-center gap-3"><i data-lucide="send-horizontal" class="w-4 h-4 text-indigo-400"></i><span class="text-xs font-bold text-white">指令派遣 (Dispatch)</span><span class="text-[10px] text-zinc-500">→ UI 触发组件调用</span></div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-zinc-900/50 p-3 rounded-lg border border-white/5">
+                        <span class="text-xs font-black text-orange-500 w-12 text-right">T3</span>
+                        <div class="flex-1 flex items-center gap-3"><i data-lucide="send" class="w-4 h-4 text-orange-500"></i><span class="text-xs font-bold text-white">指令注入 (Push)</span><span class="text-[10px] text-zinc-500">→ API 注入后台计算线程</span></div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-zinc-900/50 p-3 rounded-lg border border-white/5">
+                        <span class="text-xs font-black text-blue-400 w-12 text-right">T4</span>
+                        <div class="flex-1 flex items-center gap-3"><i data-lucide="type" class="w-4 h-4 text-blue-400"></i><span class="text-xs font-bold text-white">流式渲染 (Output)</span><span class="text-[10px] text-zinc-500">→ 物理回灌 UMG 像素</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box 3: Cleanup -->
+            <div class="highlight-box border-red-500/20">
+                <h4 class="text-lg font-black text-white mb-6 uppercase flex items-center gap-2"><i data-lucide="trash-2" class="text-red-500"></i> 3. 物理销毁与回收 (Cleanup)</h4>
+                <div class="flex items-center justify-around">
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-950 border border-red-500/30 rounded-xl"><i data-lucide="git-merge" class="text-zinc-600"></i></div><span class="text-[10px] font-bold text-zinc-600">断开代理</span></div>
+                    <i data-lucide="chevrons-right" class="text-red-900"></i>
+                    <div class="flex flex-col items-center gap-2"><div class="p-4 bg-zinc-900 border border-red-500 rounded-xl"><i data-lucide="database" class="text-red-500"></i></div><span class="text-[10px] font-bold">Session 回收</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Developer Guide -->
+        <section id="practical" class="section-header">
+            <h3 class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Practical Step 3</h3>   
+            <h2 class="text-3xl font-black text-white italic">开发者集成指南：学习 Demo 中驱动插件的方法</h2>   
+            <p class="text-zinc-500 text-sm mt-4">本节将 Demo 项目中所有非插件、非引擎的自定义代码按生命周期拆解。<b>写全准则：除底层 API 外，所有应用层逻辑必须在位。</b></p>
+        </section>
+
+        <!-- 01 Initialization -->
+        <div class="analysis-card">
+            <div class="analysis-content">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="bg-blue-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase">Phase 01</span>
+                    <h4 class="text-2xl font-black text-white uppercase italic">资产初始化与物理加载</h4>
+                </div>
+                <p class="text-blue-400 text-xs font-bold mb-8 italic">提示：你需要学习如何初始化一个 AI 并且在你的项目合适的地方让其进行一次唯一的初始化。</p>
+                
+                <!-- Sequence Diagram 01 -->
+                <div class="seq-diagram">
+                    <div class="seq-lifeline-container">
+                        <div class="seq-lifeline"><div class="seq-actor">Build.cs</div><div class="seq-activation" style="top:80px; height:20px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Provider</div><div class="seq-activation" style="top:120px; height:100px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor plugin">Plugin API</div><div class="seq-activation" style="top:160px; height:40px;"></div></div>
+                        <div class="seq-arrow" style="top:80px; left:20%; width:10%; border-top:2px dashed #333; background:none;"><div class="seq-arrow-label">静态模块挂载</div></div>
+                        <div class="seq-arrow" style="top:130px; left:48%; width:27%;"><div class="seq-arrow-label active">EnsureModelLoadedAsync</div></div>
+                        <div class="seq-arrow" style="top:165px; left:48%; width:27%;"><div class="seq-arrow-label active">LoadModel(Config)</div></div>
+                        <div class="seq-arrow reverse" style="top:205px; left:48%; width:27%;"><div class="seq-arrow-label">OnComplete(bSuccess)</div></div>
+                    </div>
+                </div>
+
+                <div class="space-y-8">
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-500 italic">1.1 模块依赖 | LiteRTDemo.Build.cs</span></div>
+                        <pre><code>PublicDependencyModuleNames.AddRange(new string[] {
+    "Core", "CoreUObject", "Engine", 
+    "LiteRTLMUnreal" // 插件核心二进制包
+});</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-500 italic">1.2 物理加载驱动 | UmgMcpLiteRtLmAiProvider.cpp</span></div>
+                        <pre><code>void FUmgMcpLiteRtLmAiProvider::EnsureModelLoadedAsync(const FString& AbsPath, TFunction&lt;void(bool)&gt; OnComplete) {
+    FLiteRtLmConfig Config = FLiteRtLmUnrealApi::GetAutoConfig();
+    Config.ModelPath = AbsPath;
+    Config.Backend = TEXT("gpu");
+
+    AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [Config, OnComplete]() {
+        bool bSuccess = FLiteRtLmUnrealApi::LoadModel(Config);
+        AsyncTask(ENamedThreads::GameThread, [bSuccess, OnComplete]() {
+            if (OnComplete) OnComplete(bSuccess);
+        });
+    });
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 02 Input -->
+        <div class="analysis-card">
+            <div class="analysis-content">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="bg-indigo-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase">Phase 02</span>
+                    <h4 class="text-2xl font-black text-white uppercase italic">指令下行：从指尖到插件</h4>
+                </div>
+                <p class="text-indigo-400 text-xs font-bold mb-8 italic">提示：你需要学习如何向 AI 发起对话请求，特别的这会要求你接下来需要异步同步的方法更新，这是用户使用的核心输入。</p>
+
+                <!-- Sequence Diagram 02 -->
+                <div class="seq-diagram">
+                    <div class="seq-lifeline-container">
+                        <div class="seq-lifeline"><div class="seq-actor">Widget</div><div class="seq-activation" style="top:80px; height:40px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Subsystem</div><div class="seq-activation" style="top:110px; height:120px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Provider</div><div class="seq-activation" style="top:180px; height:60px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor plugin">Plugin API</div><div class="seq-activation" style="top:210px; height:30px;"></div></div>
+                        <div class="seq-arrow" style="top:90px; left:16%; width:16%;"><div class="seq-arrow-label active">ExecuteSendMessage()</div></div>
+                        <div class="seq-arrow" style="top:130px; left:33%; width:100px; border:none;"><div class="seq-arrow-label">RequestQuestion()</div></div>
+                        <div class="seq-arrow" style="top:190px; left:41%; width:14%;"><div class="seq-arrow-label active">Send(Messages)</div></div>
+                        <div class="seq-arrow" style="top:220px; left:58%; width:16%;"><div class="seq-arrow-label active">SendChatRequest(Agent, Msg, Tools...)</div></div>
+                    </div>
+                </div>
+
+                <div class="space-y-12">
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">一级派遣：UI 意图捕获 | UmgMcpActiveMessageSubsystem.cpp</span></div>
+                        <pre><code>void UUmgMcpActiveMessageSubsystem::ExecuteSendMessage() {
+    auto ChatInput = RegisteredChatInput.Pin();
+    if (!ChatInput.IsValid()) return;
+    FText InputText = ChatInput->GetText();
+    if (!InputText.IsEmpty()) {
+        RequestQuestion(InputText.ToString());
+        ChatInput->ClearText();
+    }
+}</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">二级派遣：中枢协议封装 | UmgMcpActiveMessageSubsystem.cpp</span></div>
+                        <pre><code>void UUmgMcpActiveMessageSubsystem::RequestQuestion(const FString& QuestionText) {
+    bIsGenerating = true;
+    TSharedPtr&lt;FUmgMcpAgent&gt; ActiveAgent = SessionSubsystem->GetMainAgent();
+    if (ActiveAgent.IsValid()) {
+        UpdateActiveMessageMeta(ActiveAgent->Name, LOCTEXT("Thinking", "Thinking..."), true);
+        TSharedPtr&lt;FJsonObject&gt; RequestObj = MakeShared&lt;FJsonObject&gt;();
+        RequestObj->SetStringField(TEXT("role"), TEXT("user"));
+        RequestObj->SetStringField(TEXT("content"), QuestionText);
+        ActiveAgent->Answer(RequestObj);
+    }
+}</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">三级派遣：插件 API 注入 | FUmgMcpLiteRtLmAiProvider.cpp</span></div>
+                        <pre><code>void FUmgMcpLiteRtLmAiProvider::Send(const TArray&lt;FUmgMcpChatMessage&gt;& Messages, ...) {
+    FLiteRtLmUnrealApi::SendChatRequest(
+        AgentPtr, Messages, ToolsJson, OnChunk, OnDone, Params
+    );
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 03 Output -->
+        <div class="analysis-card">
+            <div class="analysis-content">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="bg-blue-400 text-white text-xs font-black px-3 py-1 rounded-full uppercase">Phase 03</span>
+                    <h4 class="text-2xl font-black text-white uppercase italic">流式回灌：从碎片到像素</h4>
+                </div>
+                <p class="text-blue-400 text-xs font-bold mb-8 italic">提示：你需要学习如何从 AI 中取得结果并且最好实时渲染。这里你需要区分两个概念：流式输出和回答完成。流式输出是增量输出，用于增强体验；回答完成是存量输出，用于实现业务逻辑。</p>
+
+                <!-- Sequence Diagram 03 with Loop -->
+                <div class="seq-diagram">
+                    <div class="seq-lifeline-container">
+                        <div class="seq-lifeline"><div class="seq-actor plugin">Plugin</div><div class="seq-activation" style="top:80px; height:200px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Provider</div><div class="seq-activation" style="top:100px; height:160px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Subsystem</div><div class="seq-activation" style="top:140px; height:100px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Widget</div><div class="seq-activation" style="top:180px; height:40px;"></div></div>
+                        
+                        <!-- Loop Block -->
+                        <div class="seq-loop" style="top:85px; left:10%; right:10%; height:160px;">
+                            <div class="seq-loop-label">Streaming Loop (Multiple Tokens)</div>
+                        </div>
+
+                        <!-- Repetitive Arrows -->
+                        <div class="seq-arrow" style="top:110px; left:16%; width:16%; border-top:2px dashed #F97316; background:none;"><div class="seq-arrow-label active">OnChunk(FString)</div></div>
+                        <div class="seq-arrow" style="top:150px; left:33%; width:16%;"><div class="seq-arrow-label active">AppendActiveMessageText</div></div>
+                        <div class="seq-arrow" style="top:190px; left:50%; width:16%;"><div class="seq-arrow-label active">AppendToTextOutputBlock</div></div>
+                        
+                        <!-- Final Result -->
+                        <div class="seq-arrow" style="top:260px; left:16%; width:16%; border-top:2px solid #64748B; background:none;"><div class="seq-arrow-label" style="color:#FFF;">OnDone(Result)</div></div>
+                    </div>
+                </div>
+
+                <div class="space-y-12">
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">一级回灌：线程切换与中转 | UmgMcpLiteRtLmAiProvider.cpp</span></div>
+                        <pre><code>FLiteRtLmChunkCallback OnChunk = [this](const FString& Chunk) {
+    AsyncTask(ENamedThreads::GameThread, [this, Chunk]() {
+        ActiveSubsystem->AppendActiveMessageText(Chunk); 
+    });
+};</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">二级回灌：活跃槽位调度 | UmgMcpActiveMessageSubsystem.cpp</span></div>
+                        <pre><code>void UUmgMcpActiveMessageSubsystem::AppendActiveMessageText(const FString& PartialText) {
+    if (ActiveMessageWidget.IsValid()) {
+        ActiveMessageWidget->AppendToCurrentTextOutputBlock(PartialText);
+        if (RegisteredHub.IsValid()) RegisteredHub.Pin()->RefreshVisibility();
+    }
+}</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-400 italic">三级回灌：像素刷新 | SUmgMcpAgentResponseGroup.cpp</span></div>
+                        <pre><code>void SUmgMcpAgentResponseGroup::AppendToCurrentTextOutputBlock(const FString& Text) {
+    CurrentFullText += Text;
+    InternalTextWidget->SetText(FText::FromString(CurrentFullText));
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 04 Closure -->
+        <div class="analysis-card">
+            <div class="analysis-content">
+                <div class="flex items-center gap-4 mb-8">
+                    <span class="bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase">Phase 04</span>
+                    <h4 class="text-2xl font-black text-white uppercase italic">资源卸载与物理回收</h4>
+                </div>
+
+                <!-- Sequence Diagram 04 -->
+                <div class="seq-diagram">
+                    <div class="seq-lifeline-container">
+                        <div class="seq-lifeline"><div class="seq-actor">Widget</div><div class="seq-activation" style="top:80px; height:40px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor">Provider</div><div class="seq-activation" style="top:110px; height:60px;"></div></div>
+                        <div class="seq-lifeline"><div class="seq-actor plugin">Plugin API</div><div class="seq-activation" style="top:140px; height:30px;"></div></div>
+                        <div class="seq-arrow" style="top:90px; left:25%; width:25%;"><div class="seq-arrow-label active">RemoveAll(this)</div></div>
+                        <div class="seq-arrow" style="top:120px; left:50%; width:25%;"><div class="seq-arrow-label active">UnloadModel()</div></div>
+                    </div>
+                </div>
+
+                <div class="space-y-8">
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-500 italic">4.1 显存物理释放 | UmgMcpLiteRtLmAiProvider.cpp</span></div>
+                        <pre><code>void FUmgMcpLiteRtLmAiProvider::UnloadModel() {
+    FLiteRtLmUnrealApi::UnloadModel();
+}</code></pre>
+                    </div>
+                    <div class="code-container">
+                        <div class="code-header"><span class="text-[11px] font-bold text-zinc-500 italic">4.2 代理断路逻辑 | WinyunqDialogueWidget.cpp</span></div>
+                        <pre><code>void UWinyunqDialogueWidget::SetTargetNPC(ULiteRtLmComponent* InNPC) {
+    if (CurrentNPC) CurrentNPC->OnTextChunkReceived.RemoveAll(this);
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
-
-    <footer class="mt-40 pt-10 border-t border-zinc-900 text-center">
-        <p class="text-[10px] text-zinc-700 uppercase tracking-widest">LiteRT-LM Unreal / Winyunq Core Engineering / Operational Hub v2.7</p>
-    </footer>
 
     <script>lucide.createIcons();</script>
 </body>

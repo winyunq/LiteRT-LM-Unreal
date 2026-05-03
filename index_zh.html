@@ -26,9 +26,9 @@
     <aside class="sidebar w-72 fixed h-full hidden md:flex flex-col p-8 overflow-y-auto">
         <div class="flex items-center gap-3 mb-12">
             <i data-lucide="cpu" class="text-blue-500 w-6 h-6"></i>
-            <span class="text-xl font-black tracking-tighter text-white uppercase">LiteRT-LM <span class="text-blue-500">UE</span></span>
+            <span class="text-xl font-black tracking-tighter text-white uppercase">LiteRT-LM <span class="text-blue-600">UE</span></span>
         </div>
-        
+
         <div class="flex gap-4 mb-6 px-3">
             <a href="index.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
             <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
@@ -36,7 +36,7 @@
 
         <nav class="space-y-1">
             <p class="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 px-3">开发者路线图</p>
-            
+
             <a href="index_zh.html" class="nav-item active flex items-center px-3 py-2 rounded-lg text-xs font-bold transition-all">
                 <span class="pillar-badge">01</span> 项目概览与背景
             </a>
@@ -44,7 +44,7 @@
                 <span class="pillar-badge">02</span> 快速体验
             </a>
             <a href="APP_LAYER_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">03</span> 应用接口层
+                <span class="pillar-badge">03</span> 学习如何使用
             </a>
             <a href="SERVICE_LAYER_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
                 <span class="pillar-badge">04</span> 插件工作流
@@ -60,7 +60,7 @@
             </a>
         </nav>
 
-        <div class="mt-auto pt-10 text-[10px] text-gray-800 font-black uppercase tracking-[3px] italic">
+        <div class="mt-auto pt-10 text-[10px] text-gray-800 font-black uppercase tracking-[3px] italic">        
             Winyunq Engineering
         </div>
     </aside>
@@ -102,18 +102,41 @@
 
                 <!-- Core Pillars Grid -->
                 <div class="grid md:grid-cols-2 gap-8">
-                    <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all">
+                    <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all"> 
                         <i data-lucide="zap" class="w-10 h-10 text-yellow-500 mb-6 group-hover:scale-110 transition-transform"></i>
                         <h3 class="text-xl font-black text-white mb-3 italic">物理级 KV 命中</h3>
                         <p class="text-xs text-gray-500 leading-relaxed">基于底层 C-API 的 Session 指针管理，实现多 Agent 瞬间切换，KV Cache 命中率提升至 98% 以上。</p>
                     </div>
-                    <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all">
+                    <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all"> 
                         <i data-lucide="cpu" class="w-10 h-10 text-blue-500 mb-6 group-hover:scale-110 transition-transform"></i>
                         <h3 class="text-xl font-black text-white mb-3 italic">极致显存管控</h3>
                         <p class="text-xs text-gray-500 leading-relaxed">全自动显存预算分配。支持热-冷显存换入换出，在 8G 显存下也能流畅运行 7B 级多 Agent 对话。</p>
                     </div>
                 </div>
             </div>
+
+            <!-- Promotion Links -->
+            <section class="mt-32 space-y-8">
+                <div class="content-card p-10 border border-blue-500/20 bg-blue-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div class="flex-1">
+                        <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Download Demo Project</h4>
+                        <p class="text-xs text-gray-500">想要直接看到效果？从 GitHub 获取完整的开源 Demo，包含所有交互逻辑与示例资产。</p>
+                    </div>
+                    <a href="https://github.com/winyunq/LiteRTDemo" target="_blank" class="px-8 py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-full hover:scale-105 transition-all flex items-center gap-2">
+                        <i data-lucide="github" class="w-4 h-4"></i> Download from GitHub
+                    </a>
+                </div>
+
+                <div class="content-card p-10 border border-orange-500/20 bg-orange-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div class="flex-1">
+                        <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Buy from Fab</h4>
+                        <p class="text-xs text-gray-500 italic">当前阶段：免费 (大概在 2026.5.30 前会修改为 19 美元以上)。现在获取以享受永久免费更新。</p>
+                    </div>
+                    <a href="#" target="_blank" class="px-8 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-orange-500 transition-all flex items-center gap-2">
+                        <i data-lucide="shopping-cart" class="w-4 h-4"></i> Get it for Free
+                    </a>
+                </div>
+            </section>
 
             <!-- Footer -->
             <footer class="mt-32 pt-12 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-8">
