@@ -14,7 +14,6 @@
 void ULiteRtLmSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
-    FLiteRtLmWrapperLoader::LoadDll();
 }
 
 void ULiteRtLmSubsystem::Deinitialize()
@@ -27,6 +26,12 @@ void ULiteRtLmSubsystem::Deinitialize()
 bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 {
     if (IsModelLoaded()) UnloadModel();
+
+    if (!FLiteRtLmWrapperLoader::LoadDll())
+    {
+        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] Failed to load shared library."));
+        return false;
+    }
 
     if (!FLiteRtLmWrapperLoader::CreateEngine)
     {
