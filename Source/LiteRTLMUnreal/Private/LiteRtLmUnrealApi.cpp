@@ -107,7 +107,7 @@ static LiteRtLm_SamplingParams MapSamplingParams(const FLiteRtLmSamplingParams& 
 
 /**
  * Parse tool_calls from the full JSON response collected during streaming.
- * The DLL returns chunks like: {"role":"assistant","tool_calls":[{"type":"function","function":{"name":"...","arguments":{...}}}]}
+ * The shared library returns chunks like: {"role":"assistant","tool_calls":[{"type":"function","function":{"name":"...","arguments":{...}}}]}
  * We parse tool_calls from the accumulated full_json if present.
  */
 static TArray<TSharedPtr<FJsonObject>> ParseToolCallsFromJson(const FString& FullJsonAccumulated)
@@ -115,7 +115,7 @@ static TArray<TSharedPtr<FJsonObject>> ParseToolCallsFromJson(const FString& Ful
     TArray<TSharedPtr<FJsonObject>> ToolCalls;
     if (FullJsonAccumulated.IsEmpty()) return ToolCalls;
 
-    // The full_json_chunk from DLL may contain multiple JSON fragments.
+    // The full_json_chunk from the shared library may contain multiple JSON fragments.
     // The last chunk with tool_calls is the definitive one.
     // Try parsing the accumulated JSON as a single object first.
     TSharedPtr<FJsonObject> Parsed;
@@ -130,7 +130,7 @@ static TArray<TSharedPtr<FJsonObject>> ParseToolCallsFromJson(const FString& Ful
                 TSharedPtr<FJsonObject> TC = TCVal->AsObject();
                 if (TC.IsValid())
                 {
-                    // The DLL returns {"type":"function","function":{"name":"...","arguments":{...}}}
+                    // The shared library returns {"type":"function","function":{"name":"...","arguments":{...}}}
                     // We need to serialize arguments back to string for OpenAI compatibility
                     const TSharedPtr<FJsonObject>* FuncPtr;
                     if (TC->TryGetObjectField(TEXT("function"), FuncPtr) && FuncPtr)
@@ -211,7 +211,7 @@ static void Internal_LiteRtLmCallback(LiteRtLm_Result Result, void* UserPtr)
         // Parse tool_calls from the accumulated JSON
         FinalResult.ToolCalls = ParseToolCallsFromJson(Ctx->FullJsonResponse);
 
-        // Clean up response text (remove any residual turn markers if DLL leaks them)
+        // Clean up response text (remove any residual turn markers if the shared library leaks them)
         FinalResult.FullText.ReplaceInline(TEXT("<end_of_turn>"), TEXT(""));
         FinalResult.FullText.ReplaceInline(TEXT("<start_of_turn>"), TEXT(""));
         FinalResult.FullText.TrimStartAndEndInline();
@@ -471,13 +471,13 @@ void FLiteRtLmUnrealApi::SendChatRequest(
             return;
         }
 
-        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Calling DLL RunInference... (Tokens=%d, Temp=%.2f)"), 
+        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Calling shared library RunInference... (Tokens=%d, Temp=%.2f)"),
             CParams.max_tokens, CParams.temperature);
             
         FLiteRtLmWrapperLoader::RunInference(Session, CParams, Internal_LiteRtLmCallback, CallbackCtx);
         
         const double AfterRunTime = FPlatformTime::Seconds();
-        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] DLL RunInference returned in %.2f ms."), (AfterRunTime - StartTime) * 1000.0);
+        UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Shared library RunInference returned in %.2f ms."), (AfterRunTime - StartTime) * 1000.0);
 
         if (FLiteRtLmWrapperLoader::WaitUntilDone && EngineHandle)
         {

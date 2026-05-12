@@ -1,4 +1,6 @@
 ﻿Binaries/
+!Source/ThirdParty/**/Binaries/
+!Source/ThirdParty/**/Binaries/**
 Intermediate/
 DerivedDataCache/
 Saved/
@@ -6,3 +8,4 @@ Saved/
 .vs/
 *.sln
 *.suo
+*.profraw

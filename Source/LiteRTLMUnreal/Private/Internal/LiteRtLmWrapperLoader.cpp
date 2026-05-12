@@ -21,10 +21,27 @@ FLiteRtLmWrapperLoader::PN_WaitUntilDone FLiteRtLmWrapperLoader::WaitUntilDone =
 FLiteRtLmWrapperLoader::PN_GetAvailableBackends FLiteRtLmWrapperLoader::GetAvailableBackends = nullptr;
 
 /**
- * Pre-load dependency DLLs from the same directory as the main wrapper DLL.
+ * Returns the platform-specific wrapper library name.
  */
-static void PreloadDependencyDlls(const FString& DllDir)
+static FString GetWrapperLibraryName()
 {
+#if PLATFORM_WINDOWS
+    return TEXT("litert_lm_wrapper.dll");
+#elif PLATFORM_MAC
+    return TEXT("liblitert_lm_wrapper.dylib");
+#elif PLATFORM_LINUX
+    return TEXT("liblitert_lm_wrapper.so");
+#else
+    return TEXT("litert_lm_wrapper");
+#endif
+}
+
+/**
+ * Pre-load dependency libraries from the same directory as the main wrapper library.
+ */
+static void PreloadDependencyLibraries(const FString& LibraryDir)
+{
+#if PLATFORM_WINDOWS
     static const TCHAR* DepNames[] = {
         TEXT("dxcompiler.dll"),
         TEXT("dxil.dll"),
@@ -33,10 +50,28 @@ static void PreloadDependencyDlls(const FString& DllDir)
         TEXT("libLiteRtTopKWebGpuSampler.dll"),
         TEXT("libGemmaModelConstraintProvider.dll"),
     };
+#elif PLATFORM_MAC
+    static const TCHAR* DepNames[] = {
+        TEXT("libLiteRt.dylib"),
+        TEXT("libLiteRtWebGpuAccelerator.dylib"),
+        TEXT("libLiteRtTopKWebGpuSampler.dylib"),
+        TEXT("libLiteRtMetalAccelerator.dylib"),
+        TEXT("libGemmaModelConstraintProvider.dylib"),
+    };
+#elif PLATFORM_LINUX
+    static const TCHAR* DepNames[] = {
+        TEXT("libLiteRt.so"),
+        TEXT("libLiteRtWebGpuAccelerator.so"),
+        TEXT("libLiteRtTopKWebGpuSampler.so"),
+        TEXT("libGemmaModelConstraintProvider.so"),
+    };
+#else
+    static const TCHAR* DepNames[] = {};
+#endif
 
     for (const TCHAR* DepName : DepNames)
     {
-        FString DepPath = FPaths::Combine(DllDir, DepName);
+        FString DepPath = FPaths::Combine(LibraryDir, DepName);
         if (FPaths::FileExists(DepPath))
         {
             void* H = FPlatformProcess::GetDllHandle(*DepPath);
@@ -68,14 +103,14 @@ bool FLiteRtLmWrapperLoader::LoadDll()
 {
     if (DllHandle) return true;
 
-    const FString TargetDllName = TEXT("litert_lm_wrapper.dll");
+    const FString TargetLibraryName = GetWrapperLibraryName();
 
     // 1. Primary path: BaseDir (Standard for Packaged builds or after UBT staging)
-    FString DllPath = FPaths::Combine(FPlatformProcess::BaseDir(), TargetDllName);
+    FString LibraryPath = FPaths::Combine(FPlatformProcess::BaseDir(), TargetLibraryName);
 
-    if (!FPaths::FileExists(DllPath))
+    if (!FPaths::FileExists(LibraryPath))
     {
-        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] DLL not found at BaseDir: %s. Performing global adaptive search..."), *DllPath);
+        UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] Shared library not found at BaseDir: %s. Performing global adaptive search..."), *LibraryPath);
 
         // 2. Adaptive Search: Scan project and engine plugins directories
         // This removes dependency on a specific plugin name ("LiteRT-LM-Unreal")
@@ -85,27 +120,30 @@ bool FLiteRtLmWrapperLoader::LoadDll()
 
         for (const FString& Root : SearchRoots)
         {
-            DllPath = FindFileRecursive(Root, TargetDllName);
-            if (!DllPath.IsEmpty()) break;
+            LibraryPath = FindFileRecursive(Root, TargetLibraryName);
+            if (!LibraryPath.IsEmpty()) break;
         }
 
-        if (DllPath.IsEmpty() || !FPaths::FileExists(DllPath))
+        if (LibraryPath.IsEmpty() || !FPaths::FileExists(LibraryPath))
         {
-            UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] DLL not found in any plugin directory."));
+            UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] Shared library %s not found in any plugin directory."), *TargetLibraryName);
             return false;
         }
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Loading DLL from: %s"), *DllPath);
+    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Loading shared library from: %s"), *LibraryPath);
 
-    // Pre-load dependency DLLs from the same directory to resolve implicit linking
-    PreloadDependencyDlls(FPaths::GetPath(DllPath));
+    // Pre-load dependency libraries from the same directory to resolve implicit linking.
+    const FString LibraryDir = FPaths::GetPath(LibraryPath);
+    FPlatformProcess::PushDllDirectory(*LibraryDir);
+    PreloadDependencyLibraries(LibraryDir);
 
-    DllHandle = FPlatformProcess::GetDllHandle(*DllPath);
+    DllHandle = FPlatformProcess::GetDllHandle(*LibraryPath);
+    FPlatformProcess::PopDllDirectory(*LibraryDir);
 
     if (!DllHandle)
     {
-        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] GetDllHandle failed for: %s (Check if dependencies are missing)"), *DllPath);
+        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] GetDllHandle failed for: %s (Check if dependencies are missing)"), *LibraryPath);
         return false;
     }
 
@@ -130,7 +168,7 @@ bool FLiteRtLmWrapperLoader::LoadDll()
         return false;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] DLL loaded. All symbols resolved."));
+    UE_LOG(LogTemp, Log, TEXT("[LiteRtLm] Shared library loaded. All symbols resolved."));
     return true;
 }
 

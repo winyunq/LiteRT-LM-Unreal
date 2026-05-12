@@ -16,8 +16,8 @@
 - **Number of Blueprints**: 0
 - **Number of C++ Classes**: 4 (Core)
 - **Network Replicated**: No
-- **Supported Development Platforms**: Windows
-- **Supported Target Build Platforms**: Win64 (DX12/Vulkan)
+- **Supported Development Platforms**: Windows, macOS
+- **Supported Target Build Platforms**: Win64 (DX12/Vulkan), macOS arm64 (Metal/CPU)
 
 ## Documentation & Support
 - **Documentation Link**: [https://winyunq.github.io/LiteRT-LM-Unreal/index.html]

@@ -10,7 +10,7 @@ The **LiteRT-LM-Unreal** plugin is built on three pillars:
 
 1.  **Encapsulation of LiteRT-LM**: We wrap Google's native capabilities for both **One-Shot Tasks** (stateless) and **Conversational Flows** (stateful).
 2.  **Strategic Session Management**: Beyond raw inference, we implemented a **Session/API Key-like** mapping system. By managing oid* ctx pointers, we give Unreal developers the power to assign, switch, and persist "memories" for individual Agents.
-3.  **High-Performance Bridge**: We implement a C-style "firewall" DLL to digest heavy dependencies (Abseil, Protobuf), ensuring your Unreal project remains lightweight and stable.
+3.  **High-Performance Bridge**: We implement a C-style "firewall" shared library to digest heavy dependencies (Abseil, Protobuf), ensuring your Unreal project remains lightweight and stable.
 
 ---
 
@@ -26,7 +26,7 @@ struct LiteRtLm_Config {
     int max_num_tokens;          // Context window size (KV Cache pre-allocation)
     int num_threads;             // CPU threads (for CPU backend)
     bool enable_benchmark;       // Print performance logs
-    bool optimize_shader;        // Enable shader optimization (Windows recommended)
+    bool optimize_shader;        // Enable shader optimization where supported
     bool enable_streaming;       // Enable streaming chunk callbacks
 };
 ```
