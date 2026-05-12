@@ -85,10 +85,14 @@ void ULiteRtLmSubsystem::UnloadModel()
     SessionMsgCountMap.Empty();
     SessionToolsMap.Empty();
 
+#if PLATFORM_MAC
+    UE_LOG(LogTemp, Warning, TEXT("[LiteRtLm] Skipping DestroyEngine on macOS to avoid a LiteRT shutdown crash."));
+#else
     if (FLiteRtLmWrapperLoader::DestroyEngine)
     {
         FLiteRtLmWrapperLoader::DestroyEngine(EngineHandle);
     }
+#endif
     EngineHandle = nullptr;
 }
 
