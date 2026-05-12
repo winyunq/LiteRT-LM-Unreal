@@ -30,13 +30,13 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 
     if (!FLiteRtLmWrapperLoader::CreateEngine)
     {
-        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] CreateEngine function pointer is null. DLL not loaded?"));
+        UE_LOG(LogTemp, Error, TEXT("[LiteRtLm] CreateEngine function pointer is null. Shared library not loaded?"));
         return false;
     }
 
     CurrentConfig = InConfig;
 
-    // Construct the C-style config struct matching DLL's LiteRtLm_Config
+    // Construct the C-style config struct matching the shared library's LiteRtLm_Config
     LiteRtLm_Config CConfig;
     FTCHARToUTF8 Utf8ModelPath(*CurrentConfig.ModelPath);
     FTCHARToUTF8 Utf8Backend(*CurrentConfig.Backend);
