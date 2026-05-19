@@ -23,7 +23,7 @@ struct LITERTLMUNREAL_API FLiteRtLmConfig
     FString Backend = TEXT("gpu"); // "cpu", "gpu"
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
-    int32 MaxNumTokens = 2048;
+    int32 MaxNumTokens = 65536;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
     int32 NumThreads = 8;
@@ -44,7 +44,7 @@ struct LITERTLMUNREAL_API FLiteRtLmConfig
     bool bEnableAudio = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
-    int32 PrefillChunkSize = 8192;
+    int32 PrefillChunkSize = 4096;
 };
 
 /**
