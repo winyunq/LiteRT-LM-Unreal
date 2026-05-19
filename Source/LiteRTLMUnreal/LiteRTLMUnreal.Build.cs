@@ -25,29 +25,27 @@ public class LiteRTLMUnreal : ModuleRules
 				PublicIncludePaths.Add(IncludePath);
 			}
 
-			// 2. Automatically search and add library dependencies (DLL/LIB)
-			// Files in subdirectories named after the current platform (e.g., Win64) will be added automatically.
-			if (Directory.Exists(ThirdPartyPath))
+			// 2. Automatically search and add library dependencies for the active platform.
+			// Expected layout: Source/ThirdParty/LiteRtLm/Binaries/<PlatformName>/*
+			string BinaryPlatformDirName = GetBinaryPlatformDirName(Target.Platform);
+			string PlatformBinaryPath = Path.Combine(ThirdPartyPath, "Binaries", BinaryPlatformDirName);
+			if (Directory.Exists(PlatformBinaryPath))
 			{
 				try
 				{
-					var AllFiles = Directory.EnumerateFiles(ThirdPartyPath, "*.*", SearchOption.AllDirectories);
+					var AllFiles = Directory.EnumerateFiles(PlatformBinaryPath, "*.*", SearchOption.AllDirectories);
 					foreach (string FilePath in AllFiles)
 					{
 						string FileName = Path.GetFileName(FilePath);
 						string Extension = Path.GetExtension(FilePath).ToLower();
 
-						// Match current platform (e.g., Win64)
-						if (FilePath.Contains(Target.Platform.ToString()))
+						if (IsRuntimeLibrary(Extension))
 						{
-							if (Extension == ".dll")
-							{
-								RuntimeDependencies.Add("$(BinaryOutputDir)/" + FileName, FilePath);
-							}
-							else if (Extension == ".lib")
-							{
-								PublicAdditionalLibraries.Add(FilePath);
-							}
+							RuntimeDependencies.Add("$(BinaryOutputDir)/" + FileName, FilePath);
+						}
+						else if (IsLinkLibrary(Extension))
+						{
+							PublicAdditionalLibraries.Add(FilePath);
 						}
 					}
 				}
@@ -57,6 +55,26 @@ public class LiteRTLMUnreal : ModuleRules
 				}
 			}
 		}
+	}
+
+	private string GetBinaryPlatformDirName(UnrealTargetPlatform Platform)
+	{
+		if (Platform == UnrealTargetPlatform.Mac)
+		{
+			return "Mac";
+		}
+
+		return Platform.ToString();
+	}
+
+	private bool IsRuntimeLibrary(string Extension)
+	{
+		return Extension == ".dll" || Extension == ".dylib" || Extension == ".so";
+	}
+
+	private bool IsLinkLibrary(string Extension)
+	{
+		return Extension == ".lib" || Extension == ".a";
 	}
 
 	/// <summary>

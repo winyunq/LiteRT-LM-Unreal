@@ -6,11 +6,11 @@ This document provides a detailed explanation of the implementation and function
 
 The plugin follows a **Bridge Pattern** to integrate Google's LiteRT-LM (TensorFlow Lite) into Unreal Engine 5.
 
-### 1.1 The C-Style "Firewall" DLL
-LiteRT-LM carries heavy dependencies (Abseil, Protobuf, Flatbuffers). To prevent these from polluting the Unreal Engine global namespace and causing version conflicts, we encapsulate the entire inference engine inside a standalone C++ DLL (`litert_lm_wrapper.dll`).
+### 1.1 The C-Style "Firewall" Shared Library
+LiteRT-LM carries heavy dependencies (Abseil, Protobuf, Flatbuffers). To prevent these from polluting the Unreal Engine global namespace and causing version conflicts, we encapsulate the entire inference engine inside a standalone C++ shared library (`litert_lm_wrapper.dll` on Windows, `liblitert_lm_wrapper.dylib` on macOS).
 
-- **Interface**: The DLL exports a minimalist `extern "C"` interface.
-- **Loader**: `FLiteRtLmWrapperLoader` dynamically loads this DLL at runtime using `FPlatformProcess::GetDllHandle`, ensuring the plugin remains "Zero-Link" and easy to redistribute.
+- **Interface**: The shared library exports a minimalist `extern "C"` interface.
+- **Loader**: `FLiteRtLmWrapperLoader` dynamically loads this shared library at runtime using `FPlatformProcess::GetDllHandle`, ensuring the plugin remains "Zero-Link" and easy to redistribute.
 
 ## 2. Core Functional Modules
 
@@ -25,7 +25,7 @@ The primary entry point for developers. It wraps the low-level DLL calls into id
 #### Key Functions:
 - `SendChatRequest`: The core inference function. It handles:
   1. **Message Normalization**: Merges 'system' prompts into the next 'user' message (as Gemma models lack a native system role).
-  2. **Incremental Sync**: Only sends new messages to the DLL to utilize the KV-cache effectively.
+  2. **Incremental Sync**: Only sends new messages to the shared library to utilize the KV-cache effectively.
   3. **Thread Safety**: Offloads inference to `ENamedThreads::AnyBackgroundThreadNormalTask` to keep the Game Thread responsive.
 
 ### 2.3 Session & KV-Cache Strategy

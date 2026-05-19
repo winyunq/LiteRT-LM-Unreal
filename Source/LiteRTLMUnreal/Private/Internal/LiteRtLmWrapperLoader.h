@@ -5,7 +5,7 @@
 #include "litert_lm_wrapper.h"
 
 /**
- * Helper to dynamically load the LiteRT-LM DLL and resolve function pointers.
+ * Helper to dynamically load the LiteRT-LM shared library and resolve function pointers.
  */
 class FLiteRtLmWrapperLoader
 {
