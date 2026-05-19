@@ -42,16 +42,6 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 
     CurrentConfig = InConfig;
 
-    // 强制限制多模态下的最大上下文长度，彻底避免由于 128K context 等超大预分配开销导致的加载 OOM 失败
-    if (CurrentConfig.bEnableVision || CurrentConfig.bEnableAudio)
-    {
-        if (CurrentConfig.MaxNumTokens > 4096)
-        {
-            UE_LOG(LogLiteRtLm, Warning, TEXT("Multimodal context length %d is too large for WebGPU. Capping at 4096 to prevent OOM / nullptr engine creation."), CurrentConfig.MaxNumTokens);
-            CurrentConfig.MaxNumTokens = 4096;
-        }
-    }
-
     // 固化内存生命周期至全局静态空间，规避 TStringConversion 无法默认构造与赋值的问题
     // 确保底层 DLL 异步多线程在整个 Engine 生命周期内 safe 读取字符指针，彻底防止野指针崩溃
     static std::string StaticModelPath;
@@ -70,33 +60,19 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
     CConfig.bOptimizeShader  = CurrentConfig.bOptimizeShader ? 1 : 0;
     CConfig.bEnableVision   = CurrentConfig.bEnableVision ? 1 : 0;
     CConfig.bEnableAudio    = CurrentConfig.bEnableAudio ? 1 : 0;
+    CConfig.prefill_chunk_size = CurrentConfig.PrefillChunkSize;
 
-    UE_LOG(LogLiteRtLm, Log, TEXT("Loading model: Path=%s, Backend=%s, MaxTokens=%d, Threads=%d, Vision=%d, Audio=%d"),
+    UE_LOG(LogLiteRtLm, Log, TEXT("Loading model: Path=%s, Backend=%s, MaxTokens=%d, ChunkSize=%d, Threads=%d, Vision=%d, Audio=%d"),
         *CurrentConfig.ModelPath, *CurrentConfig.Backend,
-        CurrentConfig.MaxNumTokens, CurrentConfig.NumThreads,
+        CurrentConfig.MaxNumTokens, CurrentConfig.PrefillChunkSize, CurrentConfig.NumThreads,
         CurrentConfig.bEnableVision, CurrentConfig.bEnableAudio);
 
     EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
 
-    // 智能多级降级：若多模态引擎加载失败，首先尝试压缩 MaxNumTokens 到 2048（降低 VRAM 占用）保持多模态能力重试
+    // 智能退避：若多模态引擎加载失败，则自动降级关闭 Vision 与 Audio 退回纯文本重新加载
     if (!EngineHandle && (CConfig.bEnableVision || CConfig.bEnableAudio))
     {
-        if (CConfig.max_num_tokens > 2048)
-        {
-            UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load multimodal engine with token limit %d. Retrying with compressed limit 2048 to save VRAM..."), CConfig.max_num_tokens);
-            CConfig.max_num_tokens = 2048;
-            EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
-            if (EngineHandle)
-            {
-                CurrentConfig.MaxNumTokens = 2048;
-            }
-        }
-    }
-
-    // 最终退避：若压缩后依然失败，则自动降级关闭 Vision 与 Audio 退回纯文本
-    if (!EngineHandle && (CConfig.bEnableVision || CConfig.bEnableAudio))
-    {
-        UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load model with compressed multimodal options. Retrying with pure text mode fallback..."));
+        UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load model with multimodal options. Retrying with pure text mode fallback..."));
         CConfig.bEnableVision = 0;
         CConfig.bEnableAudio = 0;
         

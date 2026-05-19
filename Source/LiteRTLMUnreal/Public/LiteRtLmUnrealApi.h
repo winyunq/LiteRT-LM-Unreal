@@ -42,6 +42,9 @@ struct LITERTLMUNREAL_API FLiteRtLmConfig
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
     bool bEnableAudio = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
+    int32 PrefillChunkSize = 0;
 };
 
 /**
