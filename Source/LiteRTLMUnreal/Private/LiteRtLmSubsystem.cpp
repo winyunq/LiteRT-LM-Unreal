@@ -45,15 +45,15 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
     // 强制限制多模态下的最大上下文长度，彻底避免由于 128K context 等超大预分配开销导致的加载 OOM 失败
     if (CurrentConfig.bEnableVision || CurrentConfig.bEnableAudio)
     {
-        if (CurrentConfig.MaxNumTokens > 8192)
+        if (CurrentConfig.MaxNumTokens > 4096)
         {
-            UE_LOG(LogLiteRtLm, Warning, TEXT("Multimodal context length %d is too large for WebGPU. Capping at 8192 to prevent OOM / nullptr engine creation."), CurrentConfig.MaxNumTokens);
-            CurrentConfig.MaxNumTokens = 8192;
+            UE_LOG(LogLiteRtLm, Warning, TEXT("Multimodal context length %d is too large for WebGPU. Capping at 4096 to prevent OOM / nullptr engine creation."), CurrentConfig.MaxNumTokens);
+            CurrentConfig.MaxNumTokens = 4096;
         }
     }
 
     // 固化内存生命周期至全局静态空间，规避 TStringConversion 无法默认构造与赋值的问题
-    // 确保底层 DLL 异步多线程在整个 Engine 生命周期内安全读取字符指针，彻底防止野指针崩溃
+    // 确保底层 DLL 异步多线程在整个 Engine 生命周期内 safe 读取字符指针，彻底防止野指针崩溃
     static std::string StaticModelPath;
     static std::string StaticBackend;
     
@@ -78,10 +78,25 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 
     EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
 
-    // 智能动态降级：若多模态引擎加载失败，则自动降级关闭 Vision 与 Audio 并重试，确保引擎 100% 顺畅启动
+    // 智能多级降级：若多模态引擎加载失败，首先尝试压缩 MaxNumTokens 到 2048（降低 VRAM 占用）保持多模态能力重试
     if (!EngineHandle && (CConfig.bEnableVision || CConfig.bEnableAudio))
     {
-        UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load model with multimodal options. Retrying with pure text mode fallback..."));
+        if (CConfig.max_num_tokens > 2048)
+        {
+            UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load multimodal engine with token limit %d. Retrying with compressed limit 2048 to save VRAM..."), CConfig.max_num_tokens);
+            CConfig.max_num_tokens = 2048;
+            EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
+            if (EngineHandle)
+            {
+                CurrentConfig.MaxNumTokens = 2048;
+            }
+        }
+    }
+
+    // 最终退避：若压缩后依然失败，则自动降级关闭 Vision 与 Audio 退回纯文本
+    if (!EngineHandle && (CConfig.bEnableVision || CConfig.bEnableAudio))
+    {
+        UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load model with compressed multimodal options. Retrying with pure text mode fallback..."));
         CConfig.bEnableVision = 0;
         CConfig.bEnableAudio = 0;
         
