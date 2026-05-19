@@ -21,6 +21,8 @@ extern "C" {
         int num_threads;             // CPU 线程数
         int bEnableBenchmark;        // 是否开启性能日志
         int bOptimizeShader;         // [UE5 专用] 是否优化着色器
+        int bEnableVision;           // 是否启用视觉(Vision)引擎
+        int bEnableAudio;            // 是否启用音频(Audio)引擎
     } LiteRtLm_Config;
 
     typedef struct {
