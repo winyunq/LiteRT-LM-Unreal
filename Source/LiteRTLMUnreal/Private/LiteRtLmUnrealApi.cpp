@@ -577,6 +577,34 @@ void FLiteRtLmUnrealApi::SendChatRequest(
     TArray<TSharedPtr<FJsonObject>> NormMessages = NormalizeMessages(Messages);
     if (NormMessages.Num() == 0) return;
 
+    // 1.5 降级保护自愈：若当前引擎已被降级为纯文本模式 (Vision=0)，则必须将所有多模态 Array 消息拍扁为纯文本 String，防止底座因格式不兼容而解析秒退
+    const bool bIsVisionEnabled = Subsystem->GetCurrentConfig().bEnableVision;
+    if (!bIsVisionEnabled)
+    {
+        for (auto& Msg : NormMessages)
+        {
+            const TArray<TSharedPtr<FJsonValue>>* ContentArray = nullptr;
+            if (Msg->TryGetArrayField(TEXT("content"), ContentArray))
+            {
+                FString FlatText;
+                for (const auto& Val : *ContentArray)
+                {
+                    TSharedPtr<FJsonObject> Item = Val->AsObject();
+                    if (Item.IsValid())
+                    {
+                        FString Type = Item->GetStringField(TEXT("type"));
+                        if (Type == TEXT("text"))
+                        {
+                            FlatText += Item->GetStringField(TEXT("text"));
+                        }
+                    }
+                }
+                Msg->RemoveField(TEXT("content"));
+                Msg->SetStringField(TEXT("content"), FlatText);
+            }
+        }
+    }
+
     // 2. 切换并还原目标 Agent 的物理 KV 显存缓存
     if (!Subsystem->PrepareActiveAgent(SessionKey, ToolsJson))
     {
