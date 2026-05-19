@@ -42,6 +42,26 @@ public class LiteRTLMUnreal : ModuleRules
 						if (IsRuntimeLibrary(Extension))
 						{
 							RuntimeDependencies.Add("$(BinaryOutputDir)/" + FileName, FilePath);
+
+							// 物理强制同步自愈：如果 Binaries 输出目录下的 DLL 没有更新或不存在，则自动复制过去；若相同则无事发生
+							string PluginBinOutputDir = Path.Combine(PluginDirectory, "Binaries", BinaryPlatformDirName);
+							if (!Directory.Exists(PluginBinOutputDir))
+							{
+								Directory.CreateDirectory(PluginBinOutputDir);
+							}
+							string DestFilePath = Path.Combine(PluginBinOutputDir, FileName);
+
+							try
+							{
+								if (!File.Exists(DestFilePath) || File.GetLastWriteTime(FilePath) != File.GetLastWriteTime(DestFilePath) || new FileInfo(FilePath).Length != new FileInfo(DestFilePath).Length)
+								{
+									File.Copy(FilePath, DestFilePath, true);
+								}
+							}
+							catch (System.Exception)
+							{
+								// 忽略进程占用时的抛错，保障构建流程可用性
+							}
 						}
 						else if (IsLinkLibrary(Extension))
 						{

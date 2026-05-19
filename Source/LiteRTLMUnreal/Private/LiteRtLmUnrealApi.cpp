@@ -38,9 +38,10 @@ FLiteRtLmConfig FLiteRtLmUnrealApi::GetAutoConfig()
     }
 
     Config.bEnableVision = true;
-    Config.bEnableAudio = true;
+    // Note: bEnableAudio require CPU, so bEnableAudio and bEnableVision is 冲突的。
+    Config.bEnableAudio = false;
 
-    UE_LOG(LogLiteRtLm, Log, TEXT("AutoConfig: AvailableVRAM=%d MB, Target=%d MB, Backend=%s, Vision=1, Audio=1"),
+    UE_LOG(LogLiteRtLm, Log, TEXT("AutoConfig: AvailableVRAM=%d MB, Target=%d MB, Backend=%s, Vision=1, Audio=0"),
         AvailableMB, TargetVramMB, *Config.Backend);
 
     return Config;
