@@ -36,6 +36,12 @@ struct LITERTLMUNREAL_API FLiteRtLmConfig
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
     bool bEnableStreaming = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
+    bool bEnableVision = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
+    bool bEnableAudio = false;
 };
 
 /**

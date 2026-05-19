@@ -2,6 +2,8 @@
 #ifndef LITERT_LM_WRAPPER_H
 #define LITERT_LM_WRAPPER_H
 
+#include <stddef.h>
+
 #ifdef _WIN32
   #define DLL_EXPORT __declspec(dllexport)
 #else
@@ -23,6 +25,7 @@ extern "C" {
         int bOptimizeShader;         // [UE5 专用] 是否优化着色器
         int bEnableVision;           // 是否启用视觉(Vision)引擎
         int bEnableAudio;            // 是否启用音频(Audio)引擎
+        int prefill_chunk_size;      // 单次处理的上下文（分块 prefill 限制，<=0 为不限制）
     } LiteRtLm_Config;
 
     typedef struct {
@@ -35,12 +38,12 @@ extern "C" {
          * @brief 强制约束类型 (Constrained Decoding)
          * 0: 无约束, 1: Regex, 2: JSON Schema, 3: Lark Grammar
          */
-        int constraint_type;
+         int constraint_type;
 
         /**
          * @brief 约束字符串内容 (如正则表达式、JSON Schema 或 Lark 语法)
          */
-        const char* constraint_string;
+         const char* constraint_string;
     } LiteRtLm_SamplingParams;
 
     typedef struct {
@@ -48,13 +51,13 @@ extern "C" {
          * @brief 文本片段指针。
          * @warning 此指针仅在回调函数执行期间有效！
          */
-        const char* text_chunk; 
+         const char* text_chunk; 
 
         /**
          * @brief 完整的 JSON 响应片段。
          * 包含模型返回的所有原始信息（如 tool_calls, channels, content 等）。
          */
-        const char* full_json_chunk;
+         const char* full_json_chunk;
 
         const char* error_msg;
         int bIsDone;
@@ -68,60 +71,62 @@ extern "C" {
     // 返回支持的后端列表（如 "cpu,gpu"）
     DLL_EXPORT const char* LiteRtLm_GetAvailableBackends();
 
-    // --- 1. 引擎生命周期 ---
+    // --- 1. 引擎生命周期与单会话状态接口 ---
     
+    // 创建引擎，DLL 内部将自动隐式创建唯一的全局对话状态与活跃 KV 缓存
     DLL_EXPORT void* LiteRtLm_CreateEngine(LiteRtLm_Config config);
+
+    // 销毁引擎，同时自动隐式销毁内部唯一的对话状态
     DLL_EXPORT void LiteRtLm_DestroyEngine(void* engine_ptr);
 
-    // --- 2. 会话状态机接口 ---
-    
-    // 创建基础会话
-    DLL_EXPORT void* LiteRtLm_CreateConversation(void* engine_ptr);
+    // 向全局会话追加用户消息 (支持多模态 JSON 格式)
+    // 示例: {"role": "user", "content": [{"type": "text", "text": "..."}, {"type": "image", "path": "..."}]}
+    DLL_EXPORT void LiteRtLm_AppendUserMessage(const char* json_msg);
 
-    // 创建带配置的会话 (支持 MCP/Tools 定义, 系统提示词等)
-    // json_preface 格式参考 JsonPreface 结构，包含 messages, tools, extra_context
-    DLL_EXPORT void* LiteRtLm_CreateConversationWithConfig(
-        void* engine_ptr, 
-        const char* json_preface_str,
-        int bEnableConstrainedDecoding
-    );
+    // 向全局会话追加 AI 消息 (用于同步历史)
+    DLL_EXPORT void LiteRtLm_AppendAssistantMessage(const char* text);
 
-    DLL_EXPORT void LiteRtLm_DestroyConversation(void* conv_ptr);
-
-    // 向会话追加用户消息 (纯文本)
-    DLL_EXPORT void LiteRtLm_AppendUserMessage(void* conv_ptr, const char* text);
-
-    // 向会话追加多模态或复杂消息 (JSON 格式)
-    // 允许发送包含图片、工具结果或特定角色的消息
-    // 示例: {"role": "user", "content": [{"type": "text", "text": "..."}, {"type": "image", "image": "base64..."}]}
-    DLL_EXPORT void LiteRtLm_AppendMessageJson(void* conv_ptr, const char* json_msg);
-
-    // 向会话追加 AI 消息 (用于同步历史)
-    DLL_EXPORT void LiteRtLm_AppendAssistantMessage(void* conv_ptr, const char* text);
-
-    // [核心] 触发增量推理
+    // [核心] 触发全局会话增量推理
     DLL_EXPORT void LiteRtLm_RunInference(
-        void* conv_ptr, 
         LiteRtLm_SamplingParams params,
         LiteRtLmCallback callback, 
         void* user_ptr
     );
 
-    // 中断推理
-    DLL_EXPORT void LiteRtLm_StopMessage(void* conv_ptr);
+    // 中断当前全局推理任务
+    DLL_EXPORT void LiteRtLm_StopMessage();
 
     /**
      * @brief 阻塞等待引擎完成所有异步任务（推理生成）。
      * 
-     * RunInference 是非阻塞的（仅提交任务到 WebGPU 队列），
+     * RunInference 是非阻塞的（仅提交任务到 GPU/CPU 队列），
      * 必须在 RunInference 之后调用此函数驱动回调分发。
-     * 典型用法：在后台线程中依次调用 RunInference + WaitUntilDone。
      * 
      * @param engine_ptr  CreateEngine 返回的引擎指针
      * @param timeout_sec 超时秒数 (<=0 使用引擎默认超时 10 分钟)
      * @return 0=成功, 1=超时, -1=错误
      */
     DLL_EXPORT int LiteRtLm_WaitUntilDone(void* engine_ptr, int timeout_sec);
+
+    // --- 2. GPU 物理 KV 缓存直接锁显存导出与恢复接口 ---
+
+    /**
+     * @brief 导出当前的全局物理 KV 缓存数据到 CPU 内存备份包
+     * 
+     * @param data_ptr 外部接收缓冲区的指针。为 nullptr 时，仅通过 out_size 返回物理大包所需的字节数。
+     * @param out_size 传入时为外部缓冲区的最大承载大小，返回时为实际写入/所需的字节数。
+     * @return 0=成功, 其他=失败错误码
+     */
+    DLL_EXPORT int LiteRtLm_GetKVCache(void* data_ptr, size_t* out_size);
+
+    /**
+     * @brief 从 CPU 内存恢复或擦写当前的全局物理 KV Cache 缓存
+     * 
+     * @param data_ptr CPU 中备份的 KV 缓存物理包二进制指针。当为 nullptr 且 size 为 0 时，等价于重置/清空当前的活跃物理 KV 缓存。
+     * @param size 备份包的实际字节数大小。
+     * @return 0=成功, 其他=失败错误码
+     */
+    DLL_EXPORT int LiteRtLm_SetKVCache(const void* data_ptr, size_t size);
 
 #ifdef __cplusplus
 }

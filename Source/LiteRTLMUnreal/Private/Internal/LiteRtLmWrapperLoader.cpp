@@ -10,16 +10,14 @@ void* FLiteRtLmWrapperLoader::DllHandle = nullptr;
 
 FLiteRtLmWrapperLoader::PN_CreateEngine FLiteRtLmWrapperLoader::CreateEngine = nullptr;
 FLiteRtLmWrapperLoader::PN_DestroyEngine FLiteRtLmWrapperLoader::DestroyEngine = nullptr;
-FLiteRtLmWrapperLoader::PN_CreateConversation FLiteRtLmWrapperLoader::CreateConversation = nullptr;
-FLiteRtLmWrapperLoader::PN_CreateConversationWithConfig FLiteRtLmWrapperLoader::CreateConversationWithConfig = nullptr;
-FLiteRtLmWrapperLoader::PN_DestroyConversation FLiteRtLmWrapperLoader::DestroyConversation = nullptr;
 FLiteRtLmWrapperLoader::PN_AppendUserMessage FLiteRtLmWrapperLoader::AppendUserMessage = nullptr;
-FLiteRtLmWrapperLoader::PN_AppendMessageJson FLiteRtLmWrapperLoader::AppendMessageJson = nullptr;
 FLiteRtLmWrapperLoader::PN_AppendAssistantMessage FLiteRtLmWrapperLoader::AppendAssistantMessage = nullptr;
 FLiteRtLmWrapperLoader::PN_RunInference FLiteRtLmWrapperLoader::RunInference = nullptr;
 FLiteRtLmWrapperLoader::PN_StopMessage FLiteRtLmWrapperLoader::StopMessage = nullptr;
 FLiteRtLmWrapperLoader::PN_WaitUntilDone FLiteRtLmWrapperLoader::WaitUntilDone = nullptr;
 FLiteRtLmWrapperLoader::PN_GetAvailableBackends FLiteRtLmWrapperLoader::GetAvailableBackends = nullptr;
+FLiteRtLmWrapperLoader::PNGetKVCache FLiteRtLmWrapperLoader::GetKVCache = nullptr;
+FLiteRtLmWrapperLoader::PNSetKVCache FLiteRtLmWrapperLoader::SetKVCache = nullptr;
 
 /**
  * Returns the platform-specific wrapper library name.
@@ -136,6 +134,12 @@ bool FLiteRtLmWrapperLoader::LoadDll()
 
     // Pre-load dependency libraries from the same directory to resolve implicit linking.
     const FString LibraryDir = FPaths::GetPath(LibraryPath);
+    
+#if PLATFORM_WINDOWS
+    // 永久注册当前插件依赖目录到虚幻进程搜索路径，保障底层多模态加载在任何生命周期调用 LoadLibrary 时均能顺利自动检索到所有加速动态库
+    FPlatformProcess::AddDllDirectory(*LibraryDir);
+#endif
+    
     FPlatformProcess::PushDllDirectory(*LibraryDir);
     PreloadDependencyLibraries(LibraryDir);
 
@@ -151,16 +155,14 @@ bool FLiteRtLmWrapperLoader::LoadDll()
     // Resolve Symbols
     CreateEngine = (PN_CreateEngine)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_CreateEngine"));
     DestroyEngine = (PN_DestroyEngine)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_DestroyEngine"));
-    CreateConversation = (PN_CreateConversation)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_CreateConversation"));
-    CreateConversationWithConfig = (PN_CreateConversationWithConfig)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_CreateConversationWithConfig"));
-    DestroyConversation = (PN_DestroyConversation)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_DestroyConversation"));
     AppendUserMessage = (PN_AppendUserMessage)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_AppendUserMessage"));
-    AppendMessageJson = (PN_AppendMessageJson)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_AppendMessageJson"));
     AppendAssistantMessage = (PN_AppendAssistantMessage)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_AppendAssistantMessage"));
     RunInference = (PN_RunInference)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_RunInference"));
     StopMessage = (PN_StopMessage)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_StopMessage"));
     WaitUntilDone = (PN_WaitUntilDone)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_WaitUntilDone"));
     GetAvailableBackends = (PN_GetAvailableBackends)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_GetAvailableBackends"));
+    GetKVCache = (PNGetKVCache)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_GetKVCache"));
+    SetKVCache = (PNSetKVCache)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_SetKVCache"));
 
     if (!CreateEngine || !RunInference)
     {
@@ -183,14 +185,12 @@ void FLiteRtLmWrapperLoader::UnloadDll()
 
     CreateEngine = nullptr;
     DestroyEngine = nullptr;
-    CreateConversation = nullptr;
-    CreateConversationWithConfig = nullptr;
-    DestroyConversation = nullptr;
     AppendUserMessage = nullptr;
-    AppendMessageJson = nullptr;
     AppendAssistantMessage = nullptr;
     RunInference = nullptr;
     StopMessage = nullptr;
     WaitUntilDone = nullptr;
     GetAvailableBackends = nullptr;
+    GetKVCache = nullptr;
+    SetKVCache = nullptr;
 }

@@ -21,8 +21,30 @@ public:
     bool LoadModel(const FLiteRtLmConfig& InConfig);
     void UnloadModel();
 
-    // Session Management
-    void* GetOrCreateSession(void* Ctx, const FString& ToolsJson = TEXT(""));
+    // Session Management (Agent-level KV Cache Context Switch)
+    
+    /**
+     * @brief       准备并激活指定 Agent 的上下文
+     * 
+     * @param       参数名称: AgentKey                      数据类型:        void*
+     * @param       参数名称: ToolsJson                     数据类型:        const FString&
+     * 
+     * @return      是否准备成功                            数据类型:        bool
+     **/
+    bool PrepareActiveAgent(void* AgentKey, const FString& ToolsJson);
+
+    /**
+     * @brief       释放指定 Agent 的内存 KV 缓存
+     * 
+     * @param       参数名称: AgentKey                      数据类型:        void*
+     **/
+    void ReleaseAgentCache(void* AgentKey);
+
+    /**
+     * @brief       释放指定 Agent 的会话上下文及内存 KV 缓存 (兼容旧接口)
+     * 
+     * @param       参数名称: Ctx                           数据类型:        void*
+     **/
     void ReleaseSession(void* Ctx);
 
     // Per-session message tracking (for incremental message sync)
@@ -32,6 +54,8 @@ public:
     // Getters
     void* GetEngineHandle() const { return EngineHandle; }
     bool IsModelLoaded() const { return EngineHandle != nullptr; }
+    bool IsVisionEnabled() const { return CurrentConfig.bEnableVision; }
+    const FLiteRtLmConfig& GetCurrentConfig() const { return CurrentConfig; }
 
     /**
      * Query available GPU VRAM via DXGI (Windows only).
@@ -41,11 +65,16 @@ public:
 
 private:
     void* EngineHandle = nullptr;
-    TMap<void*, void*> SessionMap;
-    TMap<void*, int32> SessionMsgCountMap;
+    void* CurrentActiveAgentKey = nullptr;
 
-    /** Tracks which ToolsJson was used to create each session (for invalidation). */
-    TMap<void*, FString> SessionToolsMap;
+    struct FLiteRtLmAgentCache
+    {
+        TArray<uint8> KVCacheData;
+        int32 MsgCount = 0;
+        FString ToolsJson;
+    };
+
+    TMap<void*, FLiteRtLmAgentCache> AgentCacheMap;
 
     UPROPERTY()
     FLiteRtLmConfig CurrentConfig;

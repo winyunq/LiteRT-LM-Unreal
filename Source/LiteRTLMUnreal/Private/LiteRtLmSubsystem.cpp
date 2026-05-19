@@ -3,6 +3,7 @@
 #include "Engine/Engine.h"
 #include "Internal/LiteRtLmWrapperLoader.h"
 #include "Misc/CoreDelegates.h"
+#include <string>
 
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -41,23 +42,56 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 
     CurrentConfig = InConfig;
 
-    // Construct the C-style config struct matching the shared library's LiteRtLm_Config
-    LiteRtLm_Config CConfig;
-    FTCHARToUTF8 Utf8ModelPath(*CurrentConfig.ModelPath);
-    FTCHARToUTF8 Utf8Backend(*CurrentConfig.Backend);
+    // 强制限制多模态下的最大上下文长度，彻底避免由于 128K context 等超大预分配开销导致的加载 OOM 失败
+    if (CurrentConfig.bEnableVision || CurrentConfig.bEnableAudio)
+    {
+        if (CurrentConfig.MaxNumTokens > 8192)
+        {
+            UE_LOG(LogLiteRtLm, Warning, TEXT("Multimodal context length %d is too large for WebGPU. Capping at 8192 to prevent OOM / nullptr engine creation."), CurrentConfig.MaxNumTokens);
+            CurrentConfig.MaxNumTokens = 8192;
+        }
+    }
 
-    CConfig.model_path      = Utf8ModelPath.Get();
-    CConfig.backend         = Utf8Backend.Get();
+    // 固化内存生命周期至全局静态空间，规避 TStringConversion 无法默认构造与赋值的问题
+    // 确保底层 DLL 异步多线程在整个 Engine 生命周期内安全读取字符指针，彻底防止野指针崩溃
+    static std::string StaticModelPath;
+    static std::string StaticBackend;
+    
+    StaticModelPath = TCHAR_TO_UTF8(*CurrentConfig.ModelPath);
+    StaticBackend   = TCHAR_TO_UTF8(*CurrentConfig.Backend);
+
+    // 零初始化 C 风格结构体，防范内存垃圾，一次性绑定开关配置
+    LiteRtLm_Config CConfig = {};
+    CConfig.model_path      = StaticModelPath.c_str();
+    CConfig.backend         = StaticBackend.c_str();
     CConfig.max_num_tokens  = CurrentConfig.MaxNumTokens;
     CConfig.num_threads     = CurrentConfig.NumThreads;
     CConfig.bEnableBenchmark = CurrentConfig.bEnableBenchmark ? 1 : 0;
     CConfig.bOptimizeShader  = CurrentConfig.bOptimizeShader ? 1 : 0;
+    CConfig.bEnableVision   = CurrentConfig.bEnableVision ? 1 : 0;
+    CConfig.bEnableAudio    = CurrentConfig.bEnableAudio ? 1 : 0;
 
-    UE_LOG(LogLiteRtLm, Log, TEXT("Loading model: Path=%s, Backend=%s, MaxTokens=%d, Threads=%d"),
+    UE_LOG(LogLiteRtLm, Log, TEXT("Loading model: Path=%s, Backend=%s, MaxTokens=%d, Threads=%d, Vision=%d, Audio=%d"),
         *CurrentConfig.ModelPath, *CurrentConfig.Backend,
-        CurrentConfig.MaxNumTokens, CurrentConfig.NumThreads);
+        CurrentConfig.MaxNumTokens, CurrentConfig.NumThreads,
+        CurrentConfig.bEnableVision, CurrentConfig.bEnableAudio);
 
     EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
+
+    // 智能动态降级：若多模态引擎加载失败，则自动降级关闭 Vision 与 Audio 并重试，确保引擎 100% 顺畅启动
+    if (!EngineHandle && (CConfig.bEnableVision || CConfig.bEnableAudio))
+    {
+        UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load model with multimodal options. Retrying with pure text mode fallback..."));
+        CConfig.bEnableVision = 0;
+        CConfig.bEnableAudio = 0;
+        
+        EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
+        if (EngineHandle)
+        {
+            CurrentConfig.bEnableVision = false;
+            CurrentConfig.bEnableAudio = false;
+        }
+    }
 
     if (!EngineHandle)
     {
@@ -65,7 +99,8 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
         return false;
     }
 
-    UE_LOG(LogLiteRtLm, Log, TEXT("Model loaded successfully. EngineHandle=%p"), EngineHandle);
+    UE_LOG(LogLiteRtLm, Log, TEXT("Model loaded successfully. EngineHandle=%p, Vision=%d, Audio=%d"), 
+        EngineHandle, CurrentConfig.bEnableVision ? 1 : 0, CurrentConfig.bEnableAudio ? 1 : 0);
     return true;
 }
 
@@ -73,17 +108,8 @@ void ULiteRtLmSubsystem::UnloadModel()
 {
     if (!EngineHandle) return;
 
-    // Release all sessions first
-    for (auto& It : SessionMap)
-    {
-        if (It.Value && FLiteRtLmWrapperLoader::DestroyConversation)
-        {
-            FLiteRtLmWrapperLoader::DestroyConversation(It.Value);
-        }
-    }
-    SessionMap.Empty();
-    SessionMsgCountMap.Empty();
-    SessionToolsMap.Empty();
+    AgentCacheMap.Empty();
+    CurrentActiveAgentKey = nullptr;
 
     if (FLiteRtLmWrapperLoader::DestroyEngine)
     {
@@ -92,81 +118,113 @@ void ULiteRtLmSubsystem::UnloadModel()
     EngineHandle = nullptr;
 }
 
-void* ULiteRtLmSubsystem::GetOrCreateSession(void* Ctx, const FString& ToolsJson)
+bool ULiteRtLmSubsystem::PrepareActiveAgent(void* AgentKey, const FString& ToolsJson)
 {
-    if (!IsModelLoaded()) return nullptr;
+    if (!IsModelLoaded()) return false;
 
-    // Check if session exists and tools haven't changed
-    if (void** Found = SessionMap.Find(Ctx))
+    /// 1. 检查 Agent 是否需要因为 ToolsJson 变化而重置其物理缓存
+    FLiteRtLmAgentCache& TargetCache = AgentCacheMap.FindOrAdd(AgentKey);
+    if (TargetCache.ToolsJson != ToolsJson)
     {
-        const FString* ExistingTools = SessionToolsMap.Find(Ctx);
-        if (ExistingTools && *ExistingTools == ToolsJson)
+        UE_LOG(LogLiteRtLm, Warning, TEXT("[KV Cache] ToolsJson changed for Agent %p. Resetting cache."), AgentKey);
+        TargetCache.KVCacheData.Empty();
+        TargetCache.MsgCount = 0;
+        TargetCache.ToolsJson = ToolsJson;
+        
+        /// 如果刚好是当前的活跃 Agent，也必须在显存中干净重置它
+        if (CurrentActiveAgentKey == AgentKey)
         {
-            return *Found;
+            if (FLiteRtLmWrapperLoader::SetKVCache)
+            {
+                FLiteRtLmWrapperLoader::SetKVCache(nullptr, 0);
+            }
         }
-        // Tools changed – destroy old session and create new one
-        if (FLiteRtLmWrapperLoader::DestroyConversation)
+    }
+
+    /// 2. 如果检测到切换 Agent 对话，才进行 KV 缓存大包的导出与物理还原
+    if (CurrentActiveAgentKey != AgentKey)
+    {
+        /// 备份当前活跃 Agent 的显存大包数据
+        if (CurrentActiveAgentKey != nullptr && FLiteRtLmWrapperLoader::GetKVCache)
         {
-            FLiteRtLmWrapperLoader::DestroyConversation(*Found);
+            size_t CacheSize = 0;
+            int32 R1 = FLiteRtLmWrapperLoader::GetKVCache(nullptr, &CacheSize);
+            if (R1 == 0 && CacheSize > 0)
+            {
+                FLiteRtLmAgentCache& ActiveCache = AgentCacheMap.FindOrAdd(CurrentActiveAgentKey);
+                ActiveCache.KVCacheData.SetNumUninitialized(CacheSize);
+                int32 R2 = FLiteRtLmWrapperLoader::GetKVCache(ActiveCache.KVCacheData.GetData(), &CacheSize);
+                if (R2 == 0)
+                {
+                    UE_LOG(LogLiteRtLm, Log, TEXT("[KV Cache] Successfully backed up %d bytes for Agent %p on switch"), CacheSize, CurrentActiveAgentKey);
+                }
+                else
+                {
+                    UE_LOG(LogLiteRtLm, Error, TEXT("[KV Cache] Failed to backup KV cache for Agent %p on switch, Code=%d"), CurrentActiveAgentKey, R2);
+                }
+            }
         }
-        SessionMap.Remove(Ctx);
-        SessionMsgCountMap.Remove(Ctx);
-        SessionToolsMap.Remove(Ctx);
+
+        /// 物理还原或擦写目标 Agent 的 GPU 显存
+        if (FLiteRtLmWrapperLoader::SetKVCache)
+        {
+            if (TargetCache.KVCacheData.Num() > 0)
+            {
+                int32 R3 = FLiteRtLmWrapperLoader::SetKVCache(TargetCache.KVCacheData.GetData(), TargetCache.KVCacheData.Num());
+                if (R3 == 0)
+                {
+                    UE_LOG(LogLiteRtLm, Log, TEXT("[KV Cache] Successfully restored %d bytes for Agent %p"), TargetCache.KVCacheData.Num(), AgentKey);
+                }
+                else
+                {
+                    UE_LOG(LogLiteRtLm, Error, TEXT("[KV Cache] Failed to restore KV cache for Agent %p, Code=%d"), AgentKey, R3);
+                }
+            }
+            else
+            {
+                /// 目标 Agent 没有历史缓存备份，执行显存大包零擦除
+                int32 R4 = FLiteRtLmWrapperLoader::SetKVCache(nullptr, 0);
+                UE_LOG(LogLiteRtLm, Log, TEXT("[KV Cache] Cleared active KV cache for new Agent %p, Code=%d"), AgentKey, R4);
+            }
+        }
+
+        /// 切换当前驻留在 GPU 中的活跃 Agent 指针标识
+        CurrentActiveAgentKey = AgentKey;
     }
 
-    void* NewSession = nullptr;
+    return true;
+}
 
-    if (!ToolsJson.IsEmpty() && FLiteRtLmWrapperLoader::CreateConversationWithConfig)
+void ULiteRtLmSubsystem::ReleaseAgentCache(void* AgentKey)
+{
+    if (CurrentActiveAgentKey == AgentKey)
     {
-        // Build json_preface with tools
-        FString JsonPreface = FString::Printf(TEXT("{\"tools\":%s}"), *ToolsJson);
-        FTCHARToUTF8 Utf8Preface(*JsonPreface);
-        NewSession = FLiteRtLmWrapperLoader::CreateConversationWithConfig(
-            EngineHandle,
-            Utf8Preface.Get(),
-            1  // Enable constrained decoding for tool-aware sessions
-        );
-    }
-    else if (FLiteRtLmWrapperLoader::CreateConversation)
-    {
-        NewSession = FLiteRtLmWrapperLoader::CreateConversation(EngineHandle);
+        /// 释放当前的活跃显存缓存
+        if (FLiteRtLmWrapperLoader::SetKVCache)
+        {
+            FLiteRtLmWrapperLoader::SetKVCache(nullptr, 0);
+        }
+        CurrentActiveAgentKey = nullptr;
     }
 
-    if (NewSession)
-    {
-        SessionMap.Add(Ctx, NewSession);
-        SessionMsgCountMap.Add(Ctx, 0);
-        SessionToolsMap.Add(Ctx, ToolsJson);
-        return NewSession;
-    }
-
-    UE_LOG(LogLiteRtLm, Error, TEXT("Failed to create conversation session."));
-    return nullptr;
+    AgentCacheMap.Remove(AgentKey);
 }
 
 void ULiteRtLmSubsystem::ReleaseSession(void* Ctx)
 {
-    if (void** Found = SessionMap.Find(Ctx))
-    {
-        if (*Found && FLiteRtLmWrapperLoader::DestroyConversation)
-        {
-            FLiteRtLmWrapperLoader::DestroyConversation(*Found);
-        }
-        SessionMap.Remove(Ctx);
-        SessionMsgCountMap.Remove(Ctx);
-        SessionToolsMap.Remove(Ctx);
-    }
+    ReleaseAgentCache(Ctx);
 }
 
 int32 ULiteRtLmSubsystem::GetSessionMsgCount(void* Ctx) const
 {
-    const int32* Count = SessionMsgCountMap.Find(Ctx);
-    return Count ? *Count : 0;
+    const FLiteRtLmAgentCache* Found = AgentCacheMap.Find(Ctx);
+    return Found ? Found->MsgCount : 0;
 }
 
 void ULiteRtLmSubsystem::SetSessionMsgCount(void* Ctx, int32 Count)
 {
-    SessionMsgCountMap.Add(Ctx, Count);
+    FLiteRtLmAgentCache& Cache = AgentCacheMap.FindOrAdd(Ctx);
+    Cache.MsgCount = Count;
 }
 
 int32 ULiteRtLmSubsystem::QueryAvailableVramMB(int32 DefaultMB)
