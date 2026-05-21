@@ -46,9 +46,11 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
     // 确保底层 DLL 异步多线程在整个 Engine 生命周期内 safe 读取字符指针，彻底防止野指针崩溃
     static std::string StaticModelPath;
     static std::string StaticBackend;
+    static std::string StaticToolsJson;
     
     StaticModelPath = TCHAR_TO_UTF8(*CurrentConfig.ModelPath);
     StaticBackend   = TCHAR_TO_UTF8(*CurrentConfig.Backend);
+    StaticToolsJson = TCHAR_TO_UTF8(*CurrentConfig.ToolsJson);
 
     // 零初始化 C 风格结构体，防范内存垃圾，一次性绑定开关配置
     LiteRtLm_Config CConfig = {};
@@ -61,6 +63,9 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
     CConfig.bEnableVision   = CurrentConfig.bEnableVision ? 1 : 0;
     CConfig.bEnableAudio    = CurrentConfig.bEnableAudio ? 1 : 0;
     CConfig.prefill_chunk_size = CurrentConfig.PrefillChunkSize;
+    CConfig.tools_json      = StaticToolsJson.empty() ? nullptr : StaticToolsJson.c_str();
+    CConfig.bShareConstantTensors = CurrentConfig.bShareConstantTensors ? 1 : 0;
+    CConfig.bEnableHostMappedPointer = CurrentConfig.bEnableHostMappedPointer ? 1 : 0;
 
     UE_LOG(LogLiteRtLm, Log, TEXT("Loading model: Path=%s, Backend=%s, MaxTokens=%d, ChunkSize=%d, Threads=%d, Vision=%d, Audio=%d"),
         *CurrentConfig.ModelPath, *CurrentConfig.Backend,
@@ -69,20 +74,24 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
 
     EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
 
-    // 智能退避：若多模态引擎加载失败，则自动降级关闭 Vision 与 Audio 退回纯文本重新加载
-    if (!EngineHandle && (CConfig.bEnableVision || CConfig.bEnableAudio))
-    {
-        UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load model with multimodal options. Retrying with pure text mode fallback..."));
-        CConfig.bEnableVision = 0;
-        CConfig.bEnableAudio = 0;
-        
-        EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
-        if (EngineHandle)
-        {
-            CurrentConfig.bEnableVision = false;
-            CurrentConfig.bEnableAudio = false;
-        }
-    }
+    // [注释] 原有的"Vision 失败后降级纯文本重试"逻辑已被禁用。
+    // 原因：CreateEngine 在 GPU backend + 纯文本模式下会卡死，不返回。
+    // LiteRT-LM 插件层不应承担重试职责；失败应直接上报，
+    // 由上层 UmgMcpAiSubsystem 的 Candidate Cascade 容灾机制处理。
+    // 若未来底层 DLL 确认纯文本 fallback 不会卡死，可在此恢复。
+    //
+    // if (!EngineHandle && (CConfig.bEnableVision || CConfig.bEnableAudio))
+    // {
+    //     UE_LOG(LogLiteRtLm, Warning, TEXT("Failed to load model with multimodal options. Retrying with pure text mode fallback..."));
+    //     CConfig.bEnableVision = 0;
+    //     CConfig.bEnableAudio  = 0;
+    //     EngineHandle = FLiteRtLmWrapperLoader::CreateEngine(CConfig);
+    //     if (EngineHandle)
+    //     {
+    //         CurrentConfig.bEnableVision = false;
+    //         CurrentConfig.bEnableAudio  = false;
+    //     }
+    // }
 
     if (!EngineHandle)
     {
