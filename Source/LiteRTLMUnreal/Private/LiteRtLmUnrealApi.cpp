@@ -227,12 +227,7 @@ static void Internal_LiteRtLmCallback(LiteRtLm_Result Result, void* UserPtr)
             FLiteRtLmDoneCallback DoneCopy = Ctx->OnDone;
             AsyncTask(ENamedThreads::GameThread, [DoneCopy, FinalResult, Ctx]() {
                 DoneCopy.ExecuteIfBound(FinalResult);
-                delete Ctx; // Lifecycle ends here
             });
-        }
-        else
-        {
-            delete Ctx;
         }
     }
 }
@@ -455,30 +450,35 @@ static TArray<TSharedPtr<FJsonObject>> NormalizeMessages(
 
         if (Role == TEXT("tool"))
         {
-            // Convert tool results to a user message
+            FString ToolName;
+            Msg->TryGetStringField(TEXT("name"), ToolName);
             FString ToolCallId;
             Msg->TryGetStringField(TEXT("tool_call_id"), ToolCallId);
-            NewMsg->SetStringField(TEXT("role"), TEXT("user"));
-            if (bIsContentArray)
+
+            NewMsg->SetStringField(TEXT("role"), TEXT("tool"));
+
+            TSharedPtr<FJsonObject> ToolResponseObj = MakeShared<FJsonObject>();
+            ToolResponseObj->SetStringField(TEXT("name"), ToolName);
+
+            // 尝试解析为 JSON 对象嵌套，以保证高精度的 JSON 结构体投递，若非 JSON 则保留字符串
+            TSharedPtr<FJsonObject> ContentJsonObj;
+            TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ContentStr);
+            if (FJsonSerializer::Deserialize(Reader, ContentJsonObj) && ContentJsonObj.IsValid())
             {
-                // Unpack array content and serialize
-                FString AccumText;
-                for (const auto& Val : *ContentArrayPtr)
-                {
-                    TSharedPtr<FJsonObject> Item = Val->AsObject();
-                    if (Item.IsValid() && Item->GetStringField(TEXT("type")) == TEXT("text"))
-                    {
-                        AccumText += Item->GetStringField(TEXT("text"));
-                    }
-                }
-                NewMsg->SetStringField(TEXT("content"),
-                    FString::Printf(TEXT("[Tool Result] (id: %s)\n%s"), *ToolCallId, *AccumText));
+                ToolResponseObj->SetObjectField(TEXT("response"), ContentJsonObj);
             }
             else
             {
-                NewMsg->SetStringField(TEXT("content"),
-                    FString::Printf(TEXT("[Tool Result] (id: %s)\n%s"), *ToolCallId, *ContentStr));
+                ToolResponseObj->SetStringField(TEXT("response"), ContentStr);
             }
+
+            TSharedPtr<FJsonObject> ToolResponseWrapper = MakeShared<FJsonObject>();
+            ToolResponseWrapper->SetObjectField(TEXT("tool_response"), ToolResponseObj);
+
+            TArray<TSharedPtr<FJsonValue>> ContentArray;
+            ContentArray.Add(MakeShared<FJsonValueObject>(ToolResponseWrapper));
+            NewMsg->SetArrayField(TEXT("content"), ContentArray);
+
             Result.Add(NewMsg);
             continue;
         }
@@ -769,6 +769,9 @@ void FLiteRtLmUnrealApi::SendChatRequest(
         {
             UE_LOG(LogLiteRtLm, Warning, TEXT("WaitUntilDone not available. EngineHandle=%p"), EngineHandle);
         }
+
+        // 安全释放回调上下文，此时底座推理已彻底停工，主线程已安全读取，物理杜绝抢跑和 Double Free
+        delete CallbackCtx;
     });
 }
 
