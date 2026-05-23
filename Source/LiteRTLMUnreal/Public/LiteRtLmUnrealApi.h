@@ -45,6 +45,15 @@ struct LITERTLMUNREAL_API FLiteRtLmConfig
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
     int32 PrefillChunkSize = 4096;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
+    FString ToolsJson;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
+    bool bShareConstantTensors = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LiteRT-LM")
+    bool bEnableHostMappedPointer = true;
 };
 
 /**

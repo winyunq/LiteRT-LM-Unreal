@@ -16,17 +16,22 @@ extern "C" {
 
     // --- 数据结构 ---
 
-    typedef struct {
-        const char* model_path;      // 模型路径
-        const char* backend;         // 推理后端 ("cpu", "gpu", "gpu,gpu,cpu" 等)
-        int max_num_tokens;          // 最大上下文长度
-        int num_threads;             // CPU 线程数
-        int bEnableBenchmark;        // 是否开启性能日志
-        int bOptimizeShader;         // [UE5 专用] 是否优化着色器
-        int bEnableVision;           // 是否启用视觉(Vision)引擎
-        int bEnableAudio;            // 是否启用音频(Audio)引擎
-        int prefill_chunk_size;      // 单次处理的上下文（分块 prefill 限制，<=0 为不限制）
-    } LiteRtLm_Config;
+typedef struct {
+    const char* model_path;      
+    const char* backend;         
+    const char* tools_json;      
+
+    int max_num_tokens;          
+    int num_threads;             
+    int prefill_chunk_size;      
+
+    unsigned int bEnableBenchmark         : 1;
+    unsigned int bOptimizeShader          : 1;
+    unsigned int bEnableVision            : 1;
+    unsigned int bEnableAudio             : 1;
+    unsigned int bShareConstantTensors    : 1;
+    unsigned int bEnableHostMappedPointer : 1;
+} LiteRtLm_Config;
 
     typedef struct {
         float temperature;  // 采样温度
