@@ -39,4 +39,6 @@ public:
 
 private:
     static void* DllHandle;
+    static TArray<void*> PreloadedHandles;
+    static void PreloadDependencyLibraries(const FString& LibraryDir);
 };

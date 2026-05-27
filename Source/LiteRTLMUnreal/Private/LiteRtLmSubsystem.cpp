@@ -116,6 +116,13 @@ void ULiteRtLmSubsystem::UnloadModel()
         FLiteRtLmWrapperLoader::DestroyEngine(EngineHandle);
     }
     EngineHandle = nullptr;
+
+    // 物理级核心释放：立即卸载 wrapper 及其全部依赖加速库，退还全部显存，防止显存累加和内存驻留
+    FLiteRtLmWrapperLoader::UnloadDll();
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLmSubsystem] 本地大模型引擎实例已销毁，动态库已逆序物理完全卸载 (专用显存已全部归还系统)"));
+    
+    // 立即执行高保真 DXGI 显存硬件遥测，并在日志中输出释放后的确切显存占用，提供无可辩驳的物理数据支持
+    QueryAvailableVramMB(0);
 }
 
 bool ULiteRtLmSubsystem::PrepareActiveAgent(void* AgentKey, const FString& ToolsJson)

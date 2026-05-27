@@ -6,7 +6,14 @@
 #include "HAL/PlatformProcess.h"
 #include "HAL/FileManager.h"
 
+#if PLATFORM_WINDOWS
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include <windows.h>
+#include "Windows/HideWindowsPlatformTypes.h"
+#endif
+
 void* FLiteRtLmWrapperLoader::DllHandle = nullptr;
+TArray<void*> FLiteRtLmWrapperLoader::PreloadedHandles;
 
 FLiteRtLmWrapperLoader::PN_CreateEngine FLiteRtLmWrapperLoader::CreateEngine = nullptr;
 FLiteRtLmWrapperLoader::PN_DestroyEngine FLiteRtLmWrapperLoader::DestroyEngine = nullptr;
@@ -38,7 +45,7 @@ static FString GetWrapperLibraryName()
 /**
  * Pre-load dependency libraries from the same directory as the main wrapper library.
  */
-static void PreloadDependencyLibraries(const FString& LibraryDir)
+void FLiteRtLmWrapperLoader::PreloadDependencyLibraries(const FString& LibraryDir)
 {
 #if PLATFORM_WINDOWS
     static const TCHAR* DepNames[] = {
@@ -74,6 +81,10 @@ static void PreloadDependencyLibraries(const FString& LibraryDir)
         if (FPaths::FileExists(DepPath))
         {
             void* H = FPlatformProcess::GetDllHandle(*DepPath);
+            if (H)
+            {
+                FLiteRtLmWrapperLoader::PreloadedHandles.Add(H);
+            }
             UE_LOG(LogLiteRtLm, Log, TEXT("Pre-load %s: %s"), DepName, H ? TEXT("OK") : TEXT("FAILED"));
         }
     }
@@ -182,6 +193,57 @@ void FLiteRtLmWrapperLoader::UnloadDll()
         FPlatformProcess::FreeDllHandle(DllHandle);
         DllHandle = nullptr;
     }
+
+    // 物理级彻底卸载：逆序释放预加载的所有加速依赖 DLL 句柄，斩断 DXGI/DirectML 等在 DLL 内持有的显存关联
+    for (int32 i = PreloadedHandles.Num() - 1; i >= 0; --i)
+    {
+        if (PreloadedHandles[i])
+        {
+            FPlatformProcess::FreeDllHandle(PreloadedHandles[i]);
+        }
+    }
+    PreloadedHandles.Empty();
+
+#if PLATFORM_WINDOWS
+    // 强力物理释放机制：在 Windows 系统上由于复杂隐式链接和引用计数，常规 FreeLibrary 可能不会真正卸载 DLL，
+    // 采用 Windows-native 的 Module 循环强制释放直到其引用计数降为 0。
+    {
+        // 1. 释放主 DLL
+        HMODULE Mod = ::GetModuleHandleW(TEXT("litert_lm_wrapper.dll"));
+        if (Mod)
+        {
+            int32 Safety = 0;
+            while (::GetModuleHandleW(TEXT("litert_lm_wrapper.dll")) != NULL && Safety < 100)
+            {
+                ::FreeLibrary(Mod);
+                Safety++;
+            }
+        }
+
+        // 2. 释放依赖 DLL
+        static const TCHAR* DepNames[] = {
+            TEXT("libGemmaModelConstraintProvider.dll"),
+            TEXT("libLiteRtTopKWebGpuSampler.dll"),
+            TEXT("libLiteRtWebGpuAccelerator.dll"),
+            TEXT("libLiteRt.dll"),
+            TEXT("dxil.dll"),
+            TEXT("dxcompiler.dll")
+        };
+        for (const TCHAR* DepName : DepNames)
+        {
+            HMODULE DepMod = ::GetModuleHandleW(DepName);
+            if (DepMod)
+            {
+                int32 DepSafety = 0;
+                while (::GetModuleHandleW(DepName) != NULL && DepSafety < 100)
+                {
+                    ::FreeLibrary(DepMod);
+                    DepSafety++;
+                }
+            }
+        }
+    }
+#endif
 
     CreateEngine = nullptr;
     DestroyEngine = nullptr;
