@@ -178,3 +178,5 @@ public:
 
     static void ReleaseSession(void* SessionKey);
 };
+    static bool LoadActiveKVCacheToFile(const FString& FilePath);
+};
