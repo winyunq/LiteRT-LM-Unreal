@@ -18,7 +18,7 @@ TArray<void*> FLiteRtLmWrapperLoader::PreloadedHandles;
 FLiteRtLmWrapperLoader::PN_CreateEngine FLiteRtLmWrapperLoader::CreateEngine = nullptr;
 FLiteRtLmWrapperLoader::PN_DestroyEngine FLiteRtLmWrapperLoader::DestroyEngine = nullptr;
 FLiteRtLmWrapperLoader::PN_AppendUserMessage FLiteRtLmWrapperLoader::AppendUserMessage = nullptr;
-FLiteRtLmWrapperLoader::PN_AppendAssistantMessage FLiteRtLmWrapperLoader::AppendAssistantMessage = nullptr;
+FLiteRtLmWrapperLoader::PN_AppendHistoryMessage FLiteRtLmWrapperLoader::AppendHistoryMessage = nullptr;
 FLiteRtLmWrapperLoader::PN_RunInference FLiteRtLmWrapperLoader::RunInference = nullptr;
 FLiteRtLmWrapperLoader::PN_StopMessage FLiteRtLmWrapperLoader::StopMessage = nullptr;
 FLiteRtLmWrapperLoader::PN_WaitUntilDone FLiteRtLmWrapperLoader::WaitUntilDone = nullptr;
@@ -167,7 +167,7 @@ bool FLiteRtLmWrapperLoader::LoadDll()
     CreateEngine = (PN_CreateEngine)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_CreateEngine"));
     DestroyEngine = (PN_DestroyEngine)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_DestroyEngine"));
     AppendUserMessage = (PN_AppendUserMessage)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_AppendUserMessage"));
-    AppendAssistantMessage = (PN_AppendAssistantMessage)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_AppendAssistantMessage"));
+    AppendHistoryMessage = (PN_AppendHistoryMessage)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_AppendHistoryMessage"));
     RunInference = (PN_RunInference)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_RunInference"));
     StopMessage = (PN_StopMessage)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_StopMessage"));
     WaitUntilDone = (PN_WaitUntilDone)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_WaitUntilDone"));
@@ -248,7 +248,7 @@ void FLiteRtLmWrapperLoader::UnloadDll()
     CreateEngine = nullptr;
     DestroyEngine = nullptr;
     AppendUserMessage = nullptr;
-    AppendAssistantMessage = nullptr;
+    AppendHistoryMessage = nullptr;
     RunInference = nullptr;
     StopMessage = nullptr;
     WaitUntilDone = nullptr;

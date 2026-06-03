@@ -619,14 +619,6 @@ void FLiteRtLmUnrealApi::SendChatRequest(
     {
         FString Role = NormMessages[i]->GetStringField(TEXT("role"));
 
-        // 关键断片修复：如果历史消息的角色是 assistant，说明是底座大模型自己上轮生成的回复。
-        // 底座内部早已自动将其追加在 Conversation 的物理历史中，我们若在循环里重复写入，会把 pending 缓存霸占并覆盖掉。
-        // 因此，直接跳过 assistant 消息的历史写入，防止覆盖掉后续真正的外部工具结果输入！
-        if (Role == TEXT("assistant"))
-        {
-            continue;
-        }
-
         TSharedPtr<FJsonObject> MsgObj = MakeShared<FJsonObject>();
         MsgObj->SetStringField(TEXT("role"), Role);
 
@@ -650,7 +642,7 @@ void FLiteRtLmUnrealApi::SendChatRequest(
         TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MsgJson);
         FJsonSerializer::Serialize(MsgObj.ToSharedRef(), Writer);
 
-        FLiteRtLmWrapperLoader::AppendUserMessage(TCHAR_TO_UTF8(*MsgJson));
+        FLiteRtLmWrapperLoader::AppendHistoryMessage(TCHAR_TO_UTF8(*MsgJson));
     }
 
     // 4. Append the last user message to trigger inference
