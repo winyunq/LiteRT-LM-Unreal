@@ -20,7 +20,6 @@ void ULiteRtLmSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void ULiteRtLmSubsystem::Deinitialize()
 {
     UnloadModel();
-    FLiteRtLmWrapperLoader::UnloadDll();
     Super::Deinitialize();
 }
 
@@ -108,7 +107,6 @@ void ULiteRtLmSubsystem::UnloadModel()
 {
     if (!EngineHandle) return;
 
-    AgentCacheMap.Empty();
     CurrentActiveAgentKey = nullptr;
 
     if (FLiteRtLmWrapperLoader::DestroyEngine)
@@ -117,9 +115,7 @@ void ULiteRtLmSubsystem::UnloadModel()
     }
     EngineHandle = nullptr;
 
-    // 物理级核心释放：立即卸载 wrapper 及其全部依赖加速库，退还全部显存，防止显存累加和内存驻留
-    FLiteRtLmWrapperLoader::UnloadDll();
-    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLmSubsystem] 本地大模型引擎实例已销毁，动态库已逆序物理完全卸载 (专用显存已全部归还系统)"));
+    UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLmSubsystem] 本地大模型引擎实例已销毁 (已完成 DestroyEngine)"));
     
     // 立即执行高保真 DXGI 显存硬件遥测，并在日志中输出释放后的确切显存占用，提供无可辩驳的物理数据支持
     QueryAvailableVramMB(0);
@@ -129,16 +125,36 @@ bool ULiteRtLmSubsystem::PrepareActiveAgent(void* AgentKey, const FString& Tools
 {
     if (!IsModelLoaded()) return false;
 
-    /// 1. 检查 Agent 是否需要因为 ToolsJson 变化而重置其物理缓存
+    /// 1. 检查 Agent 是否需要因为 ToolsJson 变化而重置其物理缓存并重新载入模型
     FLiteRtLmAgentCache& TargetCache = AgentCacheMap.FindOrAdd(AgentKey);
     if (TargetCache.ToolsJson != ToolsJson)
     {
-        UE_LOG(LogLiteRtLm, Warning, TEXT("[KV Cache] ToolsJson changed for Agent %p. Resetting cache."), AgentKey);
+        UE_LOG(LogLiteRtLm, Warning, TEXT("[KV Cache] ToolsJson changed for Agent %p. Resetting cache and reloading model for MCP tools binding."), AgentKey);
         TargetCache.KVCacheData.Empty();
         TargetCache.MsgCount = 0;
         TargetCache.ToolsJson = ToolsJson;
         
+        /// 备份当前活跃 Agent 的显存大包数据，防止重载模型时丢失
+        /*
+        if (CurrentActiveAgentKey != nullptr && FLiteRtLmWrapperLoader::GetKVCache)
+        {
+            size_t CacheSize = 0;
+            int32 R1 = FLiteRtLmWrapperLoader::GetKVCache(nullptr, &CacheSize);
+            if (R1 == 0 && CacheSize > 0)
+            {
+                FLiteRtLmAgentCache& ActiveCache = AgentCacheMap.FindOrAdd(CurrentActiveAgentKey);
+                ActiveCache.KVCacheData.SetNumUninitialized(CacheSize);
+                int32 R2 = FLiteRtLmWrapperLoader::GetKVCache(ActiveCache.KVCacheData.GetData(), &CacheSize);
+                if (R2 == 0)
+                {
+                    UE_LOG(LogLiteRtLm, Log, TEXT("[KV Cache] Successfully backed up %d bytes for Agent %p before model reload"), CacheSize, CurrentActiveAgentKey);
+                }
+            }
+        }
+        */
+
         /// 如果刚好是当前的活跃 Agent，也必须在显存中干净重置它
+        /*
         if (CurrentActiveAgentKey == AgentKey)
         {
             if (FLiteRtLmWrapperLoader::SetKVCache)
@@ -146,12 +162,19 @@ bool ULiteRtLmSubsystem::PrepareActiveAgent(void* AgentKey, const FString& Tools
                 FLiteRtLmWrapperLoader::SetKVCache(nullptr, 0);
             }
         }
+        */
+
+        // 重新载入模型以应用更新后的 tools_json 注册工具到 C 引擎实例中
+        FLiteRtLmConfig ModelConfigCopy = CurrentConfig;
+        ModelConfigCopy.ToolsJson = ToolsJson;
+        LoadModel(ModelConfigCopy);
     }
 
     /// 2. 如果检测到切换 Agent 对话，才进行 KV 缓存大包的导出与物理还原
     if (CurrentActiveAgentKey != AgentKey)
     {
         /// 备份当前活跃 Agent 的显存大包数据
+        /*
         if (CurrentActiveAgentKey != nullptr && FLiteRtLmWrapperLoader::GetKVCache)
         {
             size_t CacheSize = 0;
@@ -171,8 +194,10 @@ bool ULiteRtLmSubsystem::PrepareActiveAgent(void* AgentKey, const FString& Tools
                 }
             }
         }
+        */
 
         /// 物理还原或擦写目标 Agent 的 GPU 显存
+        /*
         if (FLiteRtLmWrapperLoader::SetKVCache)
         {
             if (TargetCache.KVCacheData.Num() > 0)
@@ -194,6 +219,7 @@ bool ULiteRtLmSubsystem::PrepareActiveAgent(void* AgentKey, const FString& Tools
                 UE_LOG(LogLiteRtLm, Log, TEXT("[KV Cache] Cleared active KV cache for new Agent %p, Code=%d"), AgentKey, R4);
             }
         }
+        */
 
         /// 切换当前驻留在 GPU 中的活跃 Agent 指针标识
         CurrentActiveAgentKey = AgentKey;
@@ -207,10 +233,12 @@ void ULiteRtLmSubsystem::ReleaseAgentCache(void* AgentKey)
     if (CurrentActiveAgentKey == AgentKey)
     {
         /// 释放当前的活跃显存缓存
+        /*
         if (FLiteRtLmWrapperLoader::SetKVCache)
         {
             FLiteRtLmWrapperLoader::SetKVCache(nullptr, 0);
         }
+        */
         CurrentActiveAgentKey = nullptr;
     }
 

@@ -173,15 +173,15 @@ static TArray<TSharedPtr<FJsonObject>> ParseToolCallsFromJson(const FString& Ful
 
 static void Internal_LiteRtLmCallback(LiteRtLm_Result Result, void* UserPtr)
 {
-    UE_LOG(LogLiteRtLm, Log, TEXT("Internal_LiteRtLmCallback invoked. bIsDone=%d"), Result.bIsDone);
+    // UE_LOG(LogLiteRtLm, Log, TEXT("Internal_LiteRtLmCallback invoked. bIsDone=%d"), Result.bIsDone);
     FLiteRtLmCallbackContext* Ctx = static_cast<FLiteRtLmCallbackContext*>(UserPtr);
     if (!Ctx) return;
 
-    UE_LOG(LogLiteRtLm, Log, TEXT("Callback: text=%s, json=%s, done=%d, err=%s"),
-        Result.text_chunk ? UTF8_TO_TCHAR(Result.text_chunk) : TEXT("(null)"),
-        Result.full_json_chunk ? TEXT("(has json)") : TEXT("(null)"),
-        Result.bIsDone,
-        Result.error_msg ? UTF8_TO_TCHAR(Result.error_msg) : TEXT("(none)"));
+    // UE_LOG(LogLiteRtLm, Log, TEXT("Callback: text=%s, json=%s, done=%d, err=%s"),
+    //     Result.text_chunk ? UTF8_TO_TCHAR(Result.text_chunk) : TEXT("(null)"),
+    //     Result.full_json_chunk ? TEXT("(has json)") : TEXT("(null)"),
+    //     Result.bIsDone,
+    //     Result.error_msg ? UTF8_TO_TCHAR(Result.error_msg) : TEXT("(none)"));
 
     if (Result.text_chunk)
     {
