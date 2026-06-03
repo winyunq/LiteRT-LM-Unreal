@@ -153,22 +153,30 @@ public:
     // ===== Core API: SendChatRequest =====
 
     /**
+     * @brief       标准化消息，处理 system 合并、多模态扁平化、工具回复映射等底座兼容规则
+     */
+    static TArray<TSharedPtr<FJsonObject>> NormalizeMessages(const TArray<TSharedPtr<FJsonObject>>& InMessages);
+
+    /**
+     * @brief       向全局会话中灌入完整的对话历史，建立 KV Cache
+     * 
+     * @param       HistoryMessages 完整的历史消息列表（不含当前待推理的最末条）
+     */
+    static void RestoreHistory(const TArray<TSharedPtr<FJsonObject>>& HistoryMessages);
+
+    /**
      * Send a chat request – analogous to Google's generateContent.
-     * Internally handles session management, incremental message sync,
-     * tool injection via json_preface, and structured tool_call parsing.
+     * Internally handles sending the last user message and running the inference on a background thread.
      *
      * @param SessionKey  Unique key for session (typically the Agent pointer).
-     * @param Messages    Complete conversation history (role/content JSON objects).
-     * @param ToolsJson   Tool definitions JSON array string (can be empty).
-     *                    Format: [{"name":"...", "parameters":{...}}]
+     * @param LastMessage The latest message to send (typically the current user prompt).
      * @param OnChunk     Streaming text callback (game thread).
      * @param OnDone      Completion callback with FullText + ToolCalls (game thread).
      * @param Params      Sampling parameters.
      */
     static void SendChatRequest(
         void* SessionKey,
-        const TArray<TSharedPtr<FJsonObject>>& Messages,
-        const FString& ToolsJson,
+        const TSharedPtr<FJsonObject>& LastMessage,
         FLiteRtLmChunkCallback OnChunk = FLiteRtLmChunkCallback(),
         FLiteRtLmDoneCallback OnDone = FLiteRtLmDoneCallback(),
         const FLiteRtLmSamplingParams& Params = FLiteRtLmSamplingParams()
@@ -177,6 +185,4 @@ public:
     // ===== Session Management =====
 
     static void ReleaseSession(void* SessionKey);
-};
-    static bool LoadActiveKVCacheToFile(const FString& FilePath);
 };

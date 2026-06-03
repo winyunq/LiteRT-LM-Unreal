@@ -88,8 +88,27 @@ typedef struct {
     // 示例: {"role": "user", "content": [{"type": "text", "text": "..."}, {"type": "image", "path": "..."}]}
     DLL_EXPORT void LiteRtLm_AppendUserMessage(const char* json_msg);
 
-    // 向全局会话追加 AI 消息 (用于同步历史)
-    DLL_EXPORT void LiteRtLm_AppendAssistantMessage(const char* text);
+    /**
+     * @brief 向全局会话追加历史消息 (立即执行 Prefill 建立 KV Cache)
+     * 
+     * 此函数用于同步已有的对话历史。它会立即触发引擎的预填充(Prefill)逻辑以建立 KV Cache，
+     * 但不会触发生成过程。参数为包含 role 的完整 JSON 消息。
+     * 
+     * Demo (恢复历史并提问):
+     * @code
+     * // 1. 恢复历史 (立即建立 KV Cache)
+     * LiteRtLm_AppendHistoryMessage("{\"role\": \"system\", \"content\": \"你是一个助手\"}");
+     * LiteRtLm_AppendHistoryMessage("{\"role\": \"user\", \"content\": \"你好\"}");
+     * LiteRtLm_AppendHistoryMessage("{\"role\": \"assistant\", \"content\": \"你好！有什么可以帮你的？\"}");
+     * 
+     * // 2. 准备新问题 (覆盖式准备，不立即执行)
+     * LiteRtLm_AppendUserMessage("{\"role\": \"user\", \"content\": \"今天天气怎么样？\"}");
+     * 
+     * // 3. 触发推理 (基于历史缓存秒回)
+     * LiteRtLm_RunInference(params, callback, user_ptr);
+     * @endcode
+     */
+    DLL_EXPORT void LiteRtLm_AppendHistoryMessage(const char* json_msg);
 
     // [核心] 触发全局会话增量推理
     DLL_EXPORT void LiteRtLm_RunInference(

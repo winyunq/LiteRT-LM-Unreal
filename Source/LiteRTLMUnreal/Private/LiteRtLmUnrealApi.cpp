@@ -242,7 +242,7 @@ static void Internal_LiteRtLmCallback(LiteRtLm_Result Result, void* UserPtr)
  * - Convert tool-result messages to user messages with structured JSON
  * - Pass through user/assistant messages with rich multi-modal content arrays
  */
-static TArray<TSharedPtr<FJsonObject>> NormalizeMessages(
+TArray<TSharedPtr<FJsonObject>> FLiteRtLmUnrealApi::NormalizeMessages(
     const TArray<TSharedPtr<FJsonObject>>& InMessages)
 {
     TArray<TSharedPtr<FJsonObject>> Result;
@@ -550,13 +550,82 @@ static TArray<TSharedPtr<FJsonObject>> NormalizeMessages(
 }
 
 // ============================================================
+// RestoreHistory
+// ============================================================
+
+void FLiteRtLmUnrealApi::RestoreHistory(const TArray<TSharedPtr<FJsonObject>>& HistoryMessages)
+{
+    for (int32 i = 0; i < HistoryMessages.Num(); ++i)
+    {
+        const TSharedPtr<FJsonObject>& Msg = HistoryMessages[i];
+        if (!Msg.IsValid()) continue;
+
+        FString Role = Msg->GetStringField(TEXT("role"));
+
+        TSharedPtr<FJsonObject> MsgObj = MakeShared<FJsonObject>();
+        MsgObj->SetStringField(TEXT("role"), Role);
+
+        // 自适应拼装：若为纯文本则输出简单 String，以完美对齐底座 AppendHistoryMessage 的高兼容格式
+        bool bHasRichContent = false;
+        const TArray<TSharedPtr<FJsonValue>>* ContentArray = nullptr;
+        if (Msg->TryGetArrayField(TEXT("content"), ContentArray) && ContentArray)
+        {
+            for (const auto& Val : *ContentArray)
+            {
+                TSharedPtr<FJsonObject> Item = Val->AsObject();
+                if (Item.IsValid())
+                {
+                    FString Type = Item->GetStringField(TEXT("type"));
+                    if (Type != TEXT("text"))
+                    {
+                        bHasRichContent = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (bHasRichContent && ContentArray)
+        {
+            MsgObj->SetArrayField(TEXT("content"), *ContentArray);
+        }
+        else
+        {
+            FString PlainTextContent;
+            if (ContentArray)
+            {
+                for (const auto& Val : *ContentArray)
+                {
+                    TSharedPtr<FJsonObject> Item = Val->AsObject();
+                    if (Item.IsValid() && Item->GetStringField(TEXT("type")) == TEXT("text"))
+                    {
+                        PlainTextContent += Item->GetStringField(TEXT("text"));
+                    }
+                }
+            }
+            else
+            {
+                PlainTextContent = Msg->GetStringField(TEXT("content"));
+            }
+            MsgObj->SetStringField(TEXT("content"), PlainTextContent);
+        }
+
+        FString MsgJson;
+        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MsgJson);
+        FJsonSerializer::Serialize(MsgObj.ToSharedRef(), Writer);
+
+        UE_LOG(LogLiteRtLm, Log, TEXT("AppendHistoryMessage [%d] (JSON): %s"), i, *MsgJson.Left(200));
+        FLiteRtLmWrapperLoader::AppendHistoryMessage(TCHAR_TO_UTF8(*MsgJson));
+    }
+}
+
+// ============================================================
 // SendChatRequest
 // ============================================================
 
 void FLiteRtLmUnrealApi::SendChatRequest(
     void* SessionKey,
-    const TArray<TSharedPtr<FJsonObject>>& Messages,
-    const FString& ToolsJson,
+    const TSharedPtr<FJsonObject>& LastMessage,
     FLiteRtLmChunkCallback OnChunk,
     FLiteRtLmDoneCallback OnDone,
     const FLiteRtLmSamplingParams& Params)
@@ -574,79 +643,9 @@ void FLiteRtLmUnrealApi::SendChatRequest(
         return;
     }
 
-    // 1. Normalize messages (merge system role, flatten tool results)
-    TArray<TSharedPtr<FJsonObject>> NormMessages = NormalizeMessages(Messages);
-    if (NormMessages.Num() == 0) return;
-    // 2. 切换并还原目标 Agent 的物理 KV 显存缓存
-    if (!Subsystem->PrepareActiveAgent(SessionKey, ToolsJson))
-    {
-        if (OnDone.IsBound())
-        {
-            FLiteRtLmResult ErrResult;
-            ErrResult.ErrorMsg = TEXT("Failed to prepare active agent KV cache.");
-            ErrResult.bIsDone = true;
-            OnDone.ExecuteIfBound(ErrResult);
-        }
-        return;
-    }
+    if (!LastMessage.IsValid()) return;
 
-    // 3. Incremental message sync – only append new messages
-    int32 LastSentCount = Subsystem->GetSessionMsgCount(SessionKey);
-
-    // If history shrank (agent was reset), drop session and recreate
-    if (LastSentCount > NormMessages.Num())
-    {
-        Subsystem->ReleaseAgentCache(SessionKey);
-        if (!Subsystem->PrepareActiveAgent(SessionKey, ToolsJson))
-        {
-            if (OnDone.IsBound())
-            {
-                FLiteRtLmResult ErrResult;
-                ErrResult.ErrorMsg = TEXT("Failed to re-prepare active agent KV cache after reset.");
-                ErrResult.bIsDone = true;
-                OnDone.ExecuteIfBound(ErrResult);
-            }
-            return;
-        }
-        LastSentCount = 0;
-    }
-
-    const int32 LastMsgIdx = NormMessages.Num() - 1;
-
-    // Append all history messages except the last one (which triggers inference)
-    // Deprecated AppendMessageJson in favor of AppendUserMessage for unifying on multi-modal rich JSON.
-    for (int32 i = LastSentCount; i < LastMsgIdx; ++i)
-    {
-        FString Role = NormMessages[i]->GetStringField(TEXT("role"));
-
-        TSharedPtr<FJsonObject> MsgObj = MakeShared<FJsonObject>();
-        MsgObj->SetStringField(TEXT("role"), Role);
-
-        const TArray<TSharedPtr<FJsonValue>>* ContentArray = nullptr;
-        if (NormMessages[i]->TryGetArrayField(TEXT("content"), ContentArray))
-        {
-            MsgObj->SetArrayField(TEXT("content"), *ContentArray);
-        }
-        else
-        {
-            // 对齐 main.cpp 的高标准，将纯文本也封装成带 type: 'text' 的 Typed Content 数组传给底座
-            TArray<TSharedPtr<FJsonValue>> TextContentArray;
-            TSharedPtr<FJsonObject> TextObj = MakeShared<FJsonObject>();
-            TextObj->SetStringField(TEXT("type"), TEXT("text"));
-            TextObj->SetStringField(TEXT("text"), NormMessages[i]->GetStringField(TEXT("content")));
-            TextContentArray.Add(MakeShared<FJsonValueObject>(TextObj));
-            MsgObj->SetArrayField(TEXT("content"), TextContentArray);
-        }
-
-        FString MsgJson;
-        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MsgJson);
-        FJsonSerializer::Serialize(MsgObj.ToSharedRef(), Writer);
-
-        FLiteRtLmWrapperLoader::AppendHistoryMessage(TCHAR_TO_UTF8(*MsgJson));
-    }
-
-    // 4. Append the last user message to trigger inference
-    FString LastRole = NormMessages[LastMsgIdx]->GetStringField(TEXT("role"));
+    FString LastRole = LastMessage->GetStringField(TEXT("role"));
 
     if (LastRole == TEXT("assistant"))
     {
@@ -659,7 +658,7 @@ void FLiteRtLmUnrealApi::SendChatRequest(
         TArray<TSharedPtr<FJsonValue>> TextContentArray;
         TSharedPtr<FJsonObject> TextObj = MakeShared<FJsonObject>();
         TextObj->SetStringField(TEXT("type"), TEXT("text"));
-        TextObj->SetStringField(TEXT("text"), NormMessages[LastMsgIdx]->GetStringField(TEXT("content")));
+        TextObj->SetStringField(TEXT("text"), LastMessage->GetStringField(TEXT("content")));
         TextContentArray.Add(MakeShared<FJsonValueObject>(TextObj));
         MsgObj->SetArrayField(TEXT("content"), TextContentArray);
 
@@ -688,7 +687,7 @@ void FLiteRtLmUnrealApi::SendChatRequest(
         MsgObj->SetStringField(TEXT("role"), LastRole);
 
         const TArray<TSharedPtr<FJsonValue>>* ContentArray = nullptr;
-        if (NormMessages[LastMsgIdx]->TryGetArrayField(TEXT("content"), ContentArray))
+        if (LastMessage->TryGetArrayField(TEXT("content"), ContentArray))
         {
             MsgObj->SetArrayField(TEXT("content"), *ContentArray);
         }
@@ -698,7 +697,7 @@ void FLiteRtLmUnrealApi::SendChatRequest(
             TArray<TSharedPtr<FJsonValue>> TextContentArray;
             TSharedPtr<FJsonObject> TextObj = MakeShared<FJsonObject>();
             TextObj->SetStringField(TEXT("type"), TEXT("text"));
-            TextObj->SetStringField(TEXT("text"), NormMessages[LastMsgIdx]->GetStringField(TEXT("content")));
+            TextObj->SetStringField(TEXT("text"), LastMessage->GetStringField(TEXT("content")));
             TextContentArray.Add(MakeShared<FJsonValueObject>(TextObj));
             MsgObj->SetArrayField(TEXT("content"), TextContentArray);
         }
@@ -711,31 +710,12 @@ void FLiteRtLmUnrealApi::SendChatRequest(
         FLiteRtLmWrapperLoader::AppendUserMessage(TCHAR_TO_UTF8(*UserJson));
     }
 
-    // 5. Update message count (will be finalized in done callback)
-    // 必须加上底座引擎在本轮推理中自动追加的这一条 assistant 消息，保证多轮对话角色交替与计数完美对齐
-    const int32 NewSentCount = NormMessages.Num() + 1;
-
-    // Wrap the user's OnDone to also update the session message count
-    FLiteRtLmDoneCallback WrappedOnDone = FLiteRtLmDoneCallback::CreateLambda(
-        [OnDone, Subsystem, SessionKey, NewSentCount](const FLiteRtLmResult& Result)
-        {
-            UE_LOG(LogLiteRtLm, Log, TEXT("OnDone: text_len=%d, tool_calls=%d, err=%s"),
-                Result.FullText.Len(), Result.ToolCalls.Num(), *Result.ErrorMsg);
-            if (Subsystem)
-            {
-                Subsystem->SetSessionMsgCount(SessionKey, NewSentCount);
-            }
-            OnDone.ExecuteIfBound(Result);
-        });
-
-    // 6. Run inference on a background thread
-    // SendMessageAsync only submits work to the WebGPU queue.
-    // WaitUntilDone drives the engine event loop and triggers callbacks.
+    // Run inference on a background thread
     void* EngineHandle = Subsystem->GetEngineHandle();
     UE_LOG(LogLiteRtLm, Log, TEXT("RunInference: Engine=%p, MaxTokens=%d, Temp=%.2f"),
         EngineHandle, Params.MaxTokens, Params.Temperature);
 
-    FLiteRtLmCallbackContext* CallbackCtx = new FLiteRtLmCallbackContext(OnChunk, WrappedOnDone, Params.ConstraintString);
+    FLiteRtLmCallbackContext* CallbackCtx = new FLiteRtLmCallbackContext(OnChunk, OnDone, Params.ConstraintString);
     LiteRtLm_SamplingParams CParams = MapSamplingParams(Params, CallbackCtx);
 
     AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [EngineHandle, CParams, CallbackCtx]()

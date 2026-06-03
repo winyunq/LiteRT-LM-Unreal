@@ -24,8 +24,7 @@ void ULiteRtLmComponent::SendChatMessage(const FString& UserMessage)
 
     FLiteRtLmUnrealApi::SendChatRequest(
         this,
-        { UserMsg },
-        TEXT(""),
+        UserMsg,
         FLiteRtLmChunkCallback::CreateUObject(this, &ULiteRtLmComponent::HandleInternalChunk),
         FLiteRtLmDoneCallback::CreateUObject(this, &ULiteRtLmComponent::HandleInternalDone),
         SamplingParams
