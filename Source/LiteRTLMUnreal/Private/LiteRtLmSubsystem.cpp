@@ -4,6 +4,11 @@
 #include "Internal/LiteRtLmWrapperLoader.h"
 #include "Misc/CoreDelegates.h"
 #include <string>
+#include "Dom/JsonObject.h"
+#include "Dom/JsonValue.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -40,6 +45,37 @@ bool ULiteRtLmSubsystem::LoadModel(const FLiteRtLmConfig& InConfig)
     }
 
     CurrentConfig = InConfig;
+
+    // 物理注册注入底座大脑的 MCP 具体 JSON 字符串信息或提示为空
+    if (CurrentConfig.ToolsJson.IsEmpty())
+    {
+        UE_LOG(LogLiteRtLm, Log, TEXT("[LiteRtLmSubsystem] 本地底座模型初始化装载！未指定任何活跃工具 (注册 MCP 工具列表为空)。"));
+    }
+    else
+    {
+        TArray<TSharedPtr<FJsonValue>> JsonArray;
+        TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(CurrentConfig.ToolsJson);
+        if (FJsonSerializer::Deserialize(Reader, JsonArray) && JsonArray.Num() > 0)
+        {
+            FString ToolsLogString;
+            TSharedRef<TJsonWriter<TCHAR, TPrettyJsonPrintPolicy<TCHAR>>> PrettyWriter = TJsonWriterFactory<TCHAR, TPrettyJsonPrintPolicy<TCHAR>>::Create(&ToolsLogString);
+            FJsonSerializer::Serialize(JsonArray, PrettyWriter);
+
+            TArray<FString> LogLines;
+            ToolsLogString.ParseIntoArrayLines(LogLines, false);
+
+            UE_LOG(LogLiteRtLm, Log, TEXT("==================== [LiteRtLmProvider] 注册 MCP 具体 JSON 字符串信息开始 ===================="));
+            for (const FString& Line : LogLines)
+            {
+                UE_LOG(LogLiteRtLm, Log, TEXT("%s"), *Line);
+            }
+            UE_LOG(LogLiteRtLm, Log, TEXT("==================== [LiteRtLmProvider] 注册 MCP 具体 JSON 字符串信息结束 ===================="));
+        }
+        else
+        {
+            UE_LOG(LogLiteRtLm, Warning, TEXT("[LiteRtLmSubsystem] 物理注册 MCP 工具失败：ToolsJson 格式不合规。 Raw: %s"), *CurrentConfig.ToolsJson);
+        }
+    }
 
     // 固化内存生命周期至全局静态空间，规避 TStringConversion 无法默认构造与赋值的问题
     // 确保底层 DLL 异步多线程在整个 Engine 生命周期内 safe 读取字符指针，彻底防止野指针崩溃
