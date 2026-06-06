@@ -7,6 +7,7 @@ public class LiteRTLMUnreal : ModuleRules
 {
 	public LiteRTLMUnreal(ReadOnlyTargetRules Target) : base(Target)
 	{
+		bUseUnity = false;
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
