@@ -1,4 +1,4 @@
-// Copyright (c) 2025-2026 Winyunq. All rights reserved.
+﻿// Copyright (c) 2025-2026 Winyunq. All rights reserved.
 #include "LiteRtLmSubsystem.h"
 #include "Engine/Engine.h"
 #include "Internal/LiteRtLmWrapperLoader.h"
