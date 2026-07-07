@@ -54,6 +54,12 @@ public:
     UFUNCTION(BlueprintPure, Category = "LiteRT-LM|Model", meta = (DisplayName = "Does LiteRT-LM Downloaded Model Exist", Keywords = "LiteRT LM downloaded persistent model exists android"))
     static bool DoesLiteRtLmDownloadedModelExist(const FString& ModelFileName);
 
+    UFUNCTION(BlueprintCallable, Category = "LiteRT-LM|Model", meta = (DisplayName = "Prepare LiteRT-LM Project Model File", Keywords = "LiteRT LM bundled project content model extract android persistent"))
+    static bool PrepareLiteRtLmProjectModelFile(
+        const FString& ModelFileName,
+        FString& OutModelPath,
+        FString& OutErrorMessage);
+
     UFUNCTION(BlueprintPure, Category = "LiteRT-LM|Hardware", meta = (DisplayName = "Query LiteRT-LM Available VRAM", Keywords = "LiteRT LM vram gpu memory"))
     static int32 QueryLiteRtLmAvailableVramMB(int32 DefaultMB = 4096);
 

@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "Engine/Engine.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformFileManager.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
@@ -12,6 +13,157 @@
 
 namespace LiteRtLmBlueprintLibrary
 {
+    static FString CleanModelFileName(const FString& ModelFileName)
+    {
+        return FPaths::GetCleanFilename(ModelFileName.IsEmpty() ? TEXT("gemma-4-E2B-it.litertlm") : ModelFileName);
+    }
+
+    static FString ResolveDownloadedModelPath(const FString& ModelFileName)
+    {
+        const FString CleanFileName = CleanModelFileName(ModelFileName);
+        if (CleanFileName.IsEmpty())
+        {
+            return TEXT("");
+        }
+
+        return FPaths::ConvertRelativePathToFull(FPaths::ProjectPersistentDownloadDir() / TEXT("LiteRTModels") / CleanFileName);
+    }
+
+    static bool CopyFileStreaming(const FString& SourcePath, const FString& TargetPath, FString& OutErrorMessage)
+    {
+        TUniquePtr<FArchive> Reader(IFileManager::Get().CreateFileReader(*SourcePath));
+        if (!Reader.IsValid())
+        {
+            OutErrorMessage = FString::Printf(TEXT("Could not open bundled model for read: %s"), *SourcePath);
+            return false;
+        }
+
+        IFileManager::Get().MakeDirectory(*FPaths::GetPath(TargetPath), true);
+
+        const FString PartialPath = TargetPath + TEXT(".part");
+        IFileManager::Get().Delete(*PartialPath, false, true, true);
+
+        TUniquePtr<FArchive> Writer(IFileManager::Get().CreateFileWriter(*PartialPath));
+        if (!Writer.IsValid())
+        {
+            OutErrorMessage = FString::Printf(TEXT("Could not create extracted model file: %s"), *PartialPath);
+            return false;
+        }
+
+        TArray<uint8> Buffer;
+        Buffer.SetNumUninitialized(1024 * 1024);
+
+        int64 RemainingBytes = Reader->TotalSize();
+        while (RemainingBytes > 0)
+        {
+            const int64 ChunkSize64 = FMath::Min<int64>(RemainingBytes, Buffer.Num());
+            const int32 ChunkSize = static_cast<int32>(ChunkSize64);
+            Reader->Serialize(Buffer.GetData(), ChunkSize);
+            if (Reader->IsError())
+            {
+                Writer.Reset();
+                IFileManager::Get().Delete(*PartialPath, false, true, true);
+                OutErrorMessage = FString::Printf(TEXT("Read failed while extracting bundled model: %s"), *SourcePath);
+                return false;
+            }
+
+            Writer->Serialize(Buffer.GetData(), ChunkSize);
+            if (Writer->IsError())
+            {
+                Writer.Reset();
+                IFileManager::Get().Delete(*PartialPath, false, true, true);
+                OutErrorMessage = FString::Printf(TEXT("Write failed while extracting bundled model: %s"), *PartialPath);
+                return false;
+            }
+
+            RemainingBytes -= ChunkSize64;
+        }
+
+        Writer.Reset();
+        Reader.Reset();
+
+        if (!IFileManager::Get().Move(*TargetPath, *PartialPath, true, true, false, true))
+        {
+            IFileManager::Get().Delete(*PartialPath, false, true, true);
+            OutErrorMessage = FString::Printf(TEXT("Could not move extracted model to: %s"), *TargetPath);
+            return false;
+        }
+
+        return true;
+    }
+
+    static bool PrepareProjectModelFile(const FString& ModelFileName, FString& OutModelPath, FString& OutErrorMessage)
+    {
+        OutModelPath.Reset();
+        OutErrorMessage.Reset();
+
+        FString Normalized = ModelFileName;
+        FPaths::NormalizeFilename(Normalized);
+
+        if (Normalized.IsEmpty())
+        {
+            OutErrorMessage = TEXT("Model file name is empty.");
+            return false;
+        }
+
+        if (!FPaths::IsRelative(Normalized))
+        {
+            OutModelPath = FPaths::ConvertRelativePathToFull(Normalized);
+            if (IFileManager::Get().FileExists(*OutModelPath))
+            {
+                return true;
+            }
+
+            OutErrorMessage = FString::Printf(TEXT("Model file does not exist: %s"), *OutModelPath);
+            return false;
+        }
+
+        const FString ContentModelPath = Normalized.StartsWith(TEXT("Content/"))
+            ? FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / Normalized)
+            : FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Models") / Normalized);
+
+        const FString DownloadedModelPath = ResolveDownloadedModelPath(Normalized);
+        const bool bContentExists = IFileManager::Get().FileExists(*ContentModelPath);
+        const bool bDownloadedExists = !DownloadedModelPath.IsEmpty() && IFileManager::Get().FileExists(*DownloadedModelPath);
+
+#if PLATFORM_ANDROID
+        if (bContentExists)
+        {
+            const int64 SourceSize = IFileManager::Get().FileSize(*ContentModelPath);
+            const int64 TargetSize = IFileManager::Get().FileSize(*DownloadedModelPath);
+            if (bDownloadedExists && SourceSize > 0 && SourceSize == TargetSize)
+            {
+                OutModelPath = DownloadedModelPath;
+                return true;
+            }
+
+            UE_LOG(LogLiteRtLm, Log, TEXT("Extracting bundled LiteRT-LM model to persistent storage: %s"), *DownloadedModelPath);
+            if (CopyFileStreaming(ContentModelPath, DownloadedModelPath, OutErrorMessage))
+            {
+                OutModelPath = DownloadedModelPath;
+                return true;
+            }
+
+            UE_LOG(LogLiteRtLm, Warning, TEXT("%s"), *OutErrorMessage);
+        }
+#else
+        if (bContentExists)
+        {
+            OutModelPath = ContentModelPath;
+            return true;
+        }
+#endif
+
+        if (bDownloadedExists)
+        {
+            OutModelPath = DownloadedModelPath;
+            return true;
+        }
+
+        OutErrorMessage = FString::Printf(TEXT("Model file was not found in Content/Models or persistent storage: %s"), *Normalized);
+        return false;
+    }
+
     static FLiteRtLmConfig BuildConfig(
         const FString& ModelPath,
         bool bUseAutoConfig,
@@ -345,19 +497,21 @@ FString ULiteRtLmBlueprintLibrary::ResolveLiteRtLmProjectModelPath(const FString
 
 FString ULiteRtLmBlueprintLibrary::ResolveLiteRtLmDownloadedModelPath(const FString& ModelFileName)
 {
-    const FString CleanFileName = FPaths::GetCleanFilename(ModelFileName.IsEmpty() ? TEXT("gemma-4-E2B-it.litertlm") : ModelFileName);
-    if (CleanFileName.IsEmpty())
-    {
-        return TEXT("");
-    }
-
-    return FPaths::ConvertRelativePathToFull(FPaths::ProjectPersistentDownloadDir() / TEXT("LiteRTModels") / CleanFileName);
+    return LiteRtLmBlueprintLibrary::ResolveDownloadedModelPath(ModelFileName);
 }
 
 bool ULiteRtLmBlueprintLibrary::DoesLiteRtLmDownloadedModelExist(const FString& ModelFileName)
 {
     const FString ModelPath = ResolveLiteRtLmDownloadedModelPath(ModelFileName);
     return !ModelPath.IsEmpty() && FPlatformFileManager::Get().GetPlatformFile().FileExists(*ModelPath);
+}
+
+bool ULiteRtLmBlueprintLibrary::PrepareLiteRtLmProjectModelFile(
+    const FString& ModelFileName,
+    FString& OutModelPath,
+    FString& OutErrorMessage)
+{
+    return LiteRtLmBlueprintLibrary::PrepareProjectModelFile(ModelFileName, OutModelPath, OutErrorMessage);
 }
 
 int32 ULiteRtLmBlueprintLibrary::QueryLiteRtLmAvailableVramMB(int32 DefaultMB)
@@ -408,8 +562,16 @@ bool ULiteRtLmBlueprintLibrary::LoadLiteRtLmProjectModel(
     bool bEnableAudio,
     bool bEnableStreaming)
 {
+    FString PreparedModelPath;
+    FString PrepareError;
+    if (!PrepareLiteRtLmProjectModelFile(ModelFileName, PreparedModelPath, PrepareError))
+    {
+        UE_LOG(LogLiteRtLm, Warning, TEXT("PrepareLiteRtLmProjectModelFile failed: %s"), *PrepareError);
+        PreparedModelPath = ResolveLiteRtLmProjectModelPath(ModelFileName);
+    }
+
     return LoadLiteRtLmModelFromPath(
-        ResolveLiteRtLmProjectModelPath(ModelFileName),
+        PreparedModelPath,
         bUseAutoConfig,
         Backend,
         MaxNumTokens,
