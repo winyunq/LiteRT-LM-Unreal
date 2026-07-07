@@ -12,6 +12,7 @@ public class LiteRTLMUnreal : ModuleRules
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Projects", "Json" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "HTTP" });
 
 		// 1. Automatically find the third-party library directory (no longer hardcoded)
 		string TargetLibName = "LiteRtLm";

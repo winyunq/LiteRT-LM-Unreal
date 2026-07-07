@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "Engine/Engine.h"
+#include "HAL/PlatformFileManager.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -327,7 +328,36 @@ FString ULiteRtLmBlueprintLibrary::ResolveLiteRtLmProjectModelPath(const FString
         return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / Normalized);
     }
 
-    return FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Models") / Normalized);
+    const FString ContentModelPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Models") / Normalized);
+    if (FPlatformFileManager::Get().GetPlatformFile().FileExists(*ContentModelPath))
+    {
+        return ContentModelPath;
+    }
+
+    const FString DownloadedModelPath = ResolveLiteRtLmDownloadedModelPath(Normalized);
+    if (!DownloadedModelPath.IsEmpty() && FPlatformFileManager::Get().GetPlatformFile().FileExists(*DownloadedModelPath))
+    {
+        return DownloadedModelPath;
+    }
+
+    return ContentModelPath;
+}
+
+FString ULiteRtLmBlueprintLibrary::ResolveLiteRtLmDownloadedModelPath(const FString& ModelFileName)
+{
+    const FString CleanFileName = FPaths::GetCleanFilename(ModelFileName.IsEmpty() ? TEXT("gemma-4-E2B-it.litertlm") : ModelFileName);
+    if (CleanFileName.IsEmpty())
+    {
+        return TEXT("");
+    }
+
+    return FPaths::ConvertRelativePathToFull(FPaths::ProjectPersistentDownloadDir() / TEXT("LiteRTModels") / CleanFileName);
+}
+
+bool ULiteRtLmBlueprintLibrary::DoesLiteRtLmDownloadedModelExist(const FString& ModelFileName)
+{
+    const FString ModelPath = ResolveLiteRtLmDownloadedModelPath(ModelFileName);
+    return !ModelPath.IsEmpty() && FPlatformFileManager::Get().GetPlatformFile().FileExists(*ModelPath);
 }
 
 int32 ULiteRtLmBlueprintLibrary::QueryLiteRtLmAvailableVramMB(int32 DefaultMB)
@@ -380,6 +410,31 @@ bool ULiteRtLmBlueprintLibrary::LoadLiteRtLmProjectModel(
 {
     return LoadLiteRtLmModelFromPath(
         ResolveLiteRtLmProjectModelPath(ModelFileName),
+        bUseAutoConfig,
+        Backend,
+        MaxNumTokens,
+        NumThreads,
+        bEnableBenchmark,
+        bOptimizeShader,
+        bEnableVision,
+        bEnableAudio,
+        bEnableStreaming);
+}
+
+bool ULiteRtLmBlueprintLibrary::LoadLiteRtLmDownloadedModel(
+    const FString& ModelFileName,
+    bool bUseAutoConfig,
+    const FString& Backend,
+    int32 MaxNumTokens,
+    int32 NumThreads,
+    bool bEnableBenchmark,
+    bool bOptimizeShader,
+    bool bEnableVision,
+    bool bEnableAudio,
+    bool bEnableStreaming)
+{
+    return LoadLiteRtLmModelFromPath(
+        ResolveLiteRtLmDownloadedModelPath(ModelFileName),
         bUseAutoConfig,
         Backend,
         MaxNumTokens,

@@ -48,6 +48,12 @@ public:
     UFUNCTION(BlueprintPure, Category = "LiteRT-LM|Model", meta = (DisplayName = "Resolve LiteRT-LM Model Path", Keywords = "LiteRT LM content models path"))
     static FString ResolveLiteRtLmProjectModelPath(const FString& ModelFileName);
 
+    UFUNCTION(BlueprintPure, Category = "LiteRT-LM|Model", meta = (DisplayName = "Resolve LiteRT-LM Downloaded Model Path", Keywords = "LiteRT LM downloaded persistent model path android"))
+    static FString ResolveLiteRtLmDownloadedModelPath(const FString& ModelFileName);
+
+    UFUNCTION(BlueprintPure, Category = "LiteRT-LM|Model", meta = (DisplayName = "Does LiteRT-LM Downloaded Model Exist", Keywords = "LiteRT LM downloaded persistent model exists android"))
+    static bool DoesLiteRtLmDownloadedModelExist(const FString& ModelFileName);
+
     UFUNCTION(BlueprintPure, Category = "LiteRT-LM|Hardware", meta = (DisplayName = "Query LiteRT-LM Available VRAM", Keywords = "LiteRT LM vram gpu memory"))
     static int32 QueryLiteRtLmAvailableVramMB(int32 DefaultMB = 4096);
 
@@ -69,6 +75,19 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "LiteRT-LM|Lifecycle", meta = (DisplayName = "Load LiteRT-LM Model", AdvancedDisplay = "Backend,MaxNumTokens,NumThreads,bEnableBenchmark,bOptimizeShader,bEnableVision,bEnableAudio,bEnableStreaming", Keywords = "LiteRT LM load project content models"))
     static bool LoadLiteRtLmProjectModel(
+        const FString& ModelFileName,
+        bool bUseAutoConfig = true,
+        const FString& Backend = TEXT("gpu"),
+        int32 MaxNumTokens = 2048,
+        int32 NumThreads = 8,
+        bool bEnableBenchmark = false,
+        bool bOptimizeShader = true,
+        bool bEnableVision = false,
+        bool bEnableAudio = false,
+        bool bEnableStreaming = true);
+
+    UFUNCTION(BlueprintCallable, Category = "LiteRT-LM|Lifecycle", meta = (DisplayName = "Load LiteRT-LM Downloaded Model", AdvancedDisplay = "Backend,MaxNumTokens,NumThreads,bEnableBenchmark,bOptimizeShader,bEnableVision,bEnableAudio,bEnableStreaming", Keywords = "LiteRT LM load downloaded persistent model android"))
+    static bool LoadLiteRtLmDownloadedModel(
         const FString& ModelFileName,
         bool bUseAutoConfig = true,
         const FString& Backend = TEXT("gpu"),
