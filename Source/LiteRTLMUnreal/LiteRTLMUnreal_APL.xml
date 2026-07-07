@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LiteRT-LM Android packaging additions -->
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+  <init>
+    <log text="LiteRT-LM Android init"/>
+    <setBool result="bLiteRtLmSupported" value="false"/>
+    <isArch arch="arm64-v8a">
+      <setBool result="bLiteRtLmSupported" value="true"/>
+    </isArch>
+    <if condition="bLiteRtLmSupported">
+      <false>
+        <log text="LiteRT-LM unsupported Android architecture: $S(Architecture)"/>
+      </false>
+    </if>
+  </init>
+
+  <resourceCopies>
+    <if condition="bLiteRtLmSupported">
+      <true>
+        <copyFile src="$S(AbsPluginDir)/../ThirdParty/LiteRtLm/Binaries/Android/$S(Architecture)/liblitert_lm_wrapper.so"
+                  dst="$S(BuildDir)/libs/$S(Architecture)/liblitert_lm_wrapper.so" />
+        <copyFile src="$S(AbsPluginDir)/../ThirdParty/LiteRtLm/Binaries/Android/$S(Architecture)/libGemmaModelConstraintProvider.so"
+                  dst="$S(BuildDir)/libs/$S(Architecture)/libGemmaModelConstraintProvider.so" />
+        <copyFile src="$S(AbsPluginDir)/../ThirdParty/LiteRtLm/Binaries/Android/$S(Architecture)/libLiteRt.so"
+                  dst="$S(BuildDir)/libs/$S(Architecture)/libLiteRt.so" />
+        <copyFile src="$S(AbsPluginDir)/../ThirdParty/LiteRtLm/Binaries/Android/$S(Architecture)/libLiteRtGpuAccelerator.so"
+                  dst="$S(BuildDir)/libs/$S(Architecture)/libLiteRtGpuAccelerator.so" />
+        <copyFile src="$S(AbsPluginDir)/../ThirdParty/LiteRtLm/Binaries/Android/$S(Architecture)/libLiteRtOpenClAccelerator.so"
+                  dst="$S(BuildDir)/libs/$S(Architecture)/libLiteRtOpenClAccelerator.so" />
+        <copyFile src="$S(AbsPluginDir)/../ThirdParty/LiteRtLm/Binaries/Android/$S(Architecture)/libLiteRtTopKOpenClSampler.so"
+                  dst="$S(BuildDir)/libs/$S(Architecture)/libLiteRtTopKOpenClSampler.so" />
+        <copyFile src="$S(AbsPluginDir)/../ThirdParty/LiteRtLm/Binaries/Android/$S(Architecture)/libLiteRtTopKWebGpuSampler.so"
+                  dst="$S(BuildDir)/libs/$S(Architecture)/libLiteRtTopKWebGpuSampler.so" />
+        <copyFile src="$S(AbsPluginDir)/../ThirdParty/LiteRtLm/Binaries/Android/$S(Architecture)/libLiteRtWebGpuAccelerator.so"
+                  dst="$S(BuildDir)/libs/$S(Architecture)/libLiteRtWebGpuAccelerator.so" />
+        <log text="Copied LiteRT-LM Android native libraries"/>
+      </true>
+    </if>
+  </resourceCopies>
+</root>

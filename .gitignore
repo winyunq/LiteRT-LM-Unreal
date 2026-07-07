@@ -1,6 +1,8 @@
 Binaries/
 !Source/ThirdParty/**/Binaries/
 !Source/ThirdParty/**/Binaries/**
+Source/ThirdParty/**/Binaries/Android/
+Source/ThirdParty/**/Binaries/Android/**
 Intermediate/
 DerivedDataCache/
 Saved/

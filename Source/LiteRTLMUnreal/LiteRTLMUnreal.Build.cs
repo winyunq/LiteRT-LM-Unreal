@@ -30,6 +30,15 @@ public class LiteRTLMUnreal : ModuleRules
 			// Expected layout: Source/ThirdParty/LiteRtLm/Binaries/<PlatformName>/*
 			string BinaryPlatformDirName = GetBinaryPlatformDirName(Target.Platform);
 			string PlatformBinaryPath = Path.Combine(ThirdPartyPath, "Binaries", BinaryPlatformDirName);
+			if (Target.Platform == UnrealTargetPlatform.Android)
+			{
+				string AndroidPluginPath = Path.Combine(ModuleDirectory, "LiteRTLMUnreal_APL.xml");
+				if (File.Exists(AndroidPluginPath))
+				{
+					AdditionalPropertiesForReceipt.Add("AndroidPlugin", AndroidPluginPath);
+				}
+			}
+
 			if (Directory.Exists(PlatformBinaryPath))
 			{
 				try
@@ -42,7 +51,10 @@ public class LiteRTLMUnreal : ModuleRules
 
 						if (IsRuntimeLibrary(Extension))
 						{
-							RuntimeDependencies.Add("$(BinaryOutputDir)/" + FileName, FilePath);
+							if (Target.Platform != UnrealTargetPlatform.Android)
+							{
+								RuntimeDependencies.Add("$(BinaryOutputDir)/" + FileName, FilePath);
+							}
 						}
 						else if (IsLinkLibrary(Extension))
 						{

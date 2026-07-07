@@ -35,6 +35,8 @@ static FString GetWrapperLibraryName()
     return TEXT("litert_lm_wrapper.dll");
 #elif PLATFORM_MAC
     return TEXT("liblitert_lm_wrapper.dylib");
+#elif PLATFORM_ANDROID
+    return TEXT("liblitert_lm_wrapper.so");
 #elif PLATFORM_LINUX
     return TEXT("liblitert_lm_wrapper.so");
 #else
@@ -71,12 +73,31 @@ void FLiteRtLmWrapperLoader::PreloadDependencyLibraries(const FString& LibraryDi
         TEXT("libLiteRtTopKWebGpuSampler.so"),
         TEXT("libGemmaModelConstraintProvider.so"),
     };
+#elif PLATFORM_ANDROID
+    static const TCHAR* DepNames[] = {
+        TEXT("libLiteRt.so"),
+        TEXT("libLiteRtGpuAccelerator.so"),
+        TEXT("libLiteRtOpenClAccelerator.so"),
+        TEXT("libLiteRtTopKOpenClSampler.so"),
+        TEXT("libLiteRtTopKWebGpuSampler.so"),
+        TEXT("libLiteRtWebGpuAccelerator.so"),
+        TEXT("libGemmaModelConstraintProvider.so"),
+    };
 #else
     static const TCHAR* DepNames[] = {};
 #endif
 
     for (const TCHAR* DepName : DepNames)
     {
+#if PLATFORM_ANDROID
+        FString DepPath = DepName;
+        void* H = FPlatformProcess::GetDllHandle(*DepPath);
+        if (H)
+        {
+            FLiteRtLmWrapperLoader::PreloadedHandles.Add(H);
+        }
+        UE_LOG(LogLiteRtLm, Log, TEXT("Pre-load %s: %s"), DepName, H ? TEXT("OK") : TEXT("FAILED"));
+#else
         FString DepPath = FPaths::Combine(LibraryDir, DepName);
         if (FPaths::FileExists(DepPath))
         {
@@ -87,6 +108,7 @@ void FLiteRtLmWrapperLoader::PreloadDependencyLibraries(const FString& LibraryDi
             }
             UE_LOG(LogLiteRtLm, Log, TEXT("Pre-load %s: %s"), DepName, H ? TEXT("OK") : TEXT("FAILED"));
         }
+#endif
     }
 }
 
@@ -115,6 +137,16 @@ bool FLiteRtLmWrapperLoader::LoadDll()
 
     const FString TargetLibraryName = GetWrapperLibraryName();
 
+#if PLATFORM_ANDROID
+    PreloadDependencyLibraries(TEXT(""));
+    DllHandle = FPlatformProcess::GetDllHandle(*TargetLibraryName);
+
+    if (!DllHandle)
+    {
+        UE_LOG(LogLiteRtLm, Error, TEXT("GetDllHandle failed for Android library: %s"), *TargetLibraryName);
+        return false;
+    }
+#else
     // 1. Primary path: BaseDir (Standard for Packaged builds or after UBT staging)
     FString LibraryPath = FPaths::Combine(FPlatformProcess::BaseDir(), TargetLibraryName);
 
@@ -162,6 +194,7 @@ bool FLiteRtLmWrapperLoader::LoadDll()
         UE_LOG(LogLiteRtLm, Error, TEXT("GetDllHandle failed for: %s (Check if dependencies are missing)"), *LibraryPath);
         return false;
     }
+#endif
 
     // Resolve Symbols
     CreateEngine = (PN_CreateEngine)FPlatformProcess::GetDllExport(DllHandle, TEXT("LiteRtLm_CreateEngine"));
