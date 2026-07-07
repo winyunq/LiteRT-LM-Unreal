@@ -4,6 +4,7 @@
 #include "LiteRtLmSubsystem.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Engine/Engine.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -177,10 +178,28 @@ namespace LiteRtLmBlueprintLibrary
                 });
         }
 
+        TArray<TSharedPtr<FJsonObject>> NormalizedMessages = FLiteRtLmUnrealApi::NormalizeMessages(Messages);
+        if (NormalizedMessages.Num() == 0)
+        {
+            ExecuteError(OnDone, TEXT("LiteRT-LM request has no valid messages."));
+            return;
+        }
+
+        if (ULiteRtLmSubsystem* Subsystem = GEngine ? GEngine->GetEngineSubsystem<ULiteRtLmSubsystem>() : nullptr)
+        {
+            Subsystem->PrepareActiveAgent(ResolvedSessionOwner, ToolsJson);
+        }
+
+        TArray<TSharedPtr<FJsonObject>> HistoryMessages;
+        for (int32 Index = 0; Index < NormalizedMessages.Num() - 1; ++Index)
+        {
+            HistoryMessages.Add(NormalizedMessages[Index]);
+        }
+
+        FLiteRtLmUnrealApi::RestoreHistory(HistoryMessages);
         FLiteRtLmUnrealApi::SendChatRequest(
             ResolvedSessionOwner,
-            Messages,
-            ToolsJson,
+            NormalizedMessages.Last(),
             NativeChunk,
             NativeDone,
             SamplingParams);
