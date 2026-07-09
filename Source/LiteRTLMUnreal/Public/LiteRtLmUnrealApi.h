@@ -148,6 +148,7 @@ public:
     static FLiteRtLmConfig GetAutoConfig();
     static bool LoadModel(const FLiteRtLmConfig& Config);
     static void UnloadModel();
+    static void StopInference();
     static bool IsModelLoaded();
 
     // ===== Core API: SendChatRequest =====

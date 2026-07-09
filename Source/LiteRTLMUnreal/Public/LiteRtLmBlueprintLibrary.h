@@ -108,6 +108,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "LiteRT-LM|Lifecycle", meta = (DisplayName = "Unload LiteRT-LM Model", Keywords = "LiteRT LM unload release model gpu"))
     static void UnloadLiteRtLmModel();
 
+    UFUNCTION(BlueprintCallable, Category = "LiteRT-LM|Inference", meta = (DisplayName = "Stop LiteRT-LM Inference", Keywords = "LiteRT LM stop inference cancel abort"))
+    static void StopLiteRtLmInference();
+
     UFUNCTION(BlueprintPure, Category = "LiteRT-LM|Lifecycle", meta = (DisplayName = "Is LiteRT-LM Model Loaded", Keywords = "LiteRT LM loaded ready"))
     static bool IsLiteRtLmModelLoaded();
 

@@ -613,6 +613,11 @@ void ULiteRtLmBlueprintLibrary::UnloadLiteRtLmModel()
     FLiteRtLmUnrealApi::UnloadModel();
 }
 
+void ULiteRtLmBlueprintLibrary::StopLiteRtLmInference()
+{
+    FLiteRtLmUnrealApi::StopInference();
+}
+
 bool ULiteRtLmBlueprintLibrary::IsLiteRtLmModelLoaded()
 {
     return FLiteRtLmUnrealApi::IsModelLoaded();

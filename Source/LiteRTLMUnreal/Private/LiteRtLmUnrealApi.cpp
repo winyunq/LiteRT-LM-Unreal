@@ -11,6 +11,8 @@ DEFINE_LOG_CATEGORY(LogLiteRtLm);
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 
+#include <atomic>
+
 // ============================================================
 // Lifecycle
 // ============================================================
@@ -64,6 +66,18 @@ void FLiteRtLmUnrealApi::UnloadModel()
     }
 }
 
+void FLiteRtLmUnrealApi::StopInference()
+{
+    if (!FLiteRtLmWrapperLoader::StopMessage)
+    {
+        UE_LOG(LogLiteRtLm, Warning, TEXT("StopInference requested, but LiteRtLm_StopMessage is not available."));
+        return;
+    }
+
+    UE_LOG(LogLiteRtLm, Warning, TEXT("StopInference requested; calling LiteRtLm_StopMessage."));
+    FLiteRtLmWrapperLoader::StopMessage();
+}
+
 bool FLiteRtLmUnrealApi::IsModelLoaded()
 {
     if (ULiteRtLmSubsystem* Subsystem = GEngine ? GEngine->GetEngineSubsystem<ULiteRtLmSubsystem>() : nullptr)
@@ -84,9 +98,15 @@ struct FLiteRtLmCallbackContext
     FString FullResponse;
     FString FullJsonResponse;
     FTCHARToUTF8 Utf8Constraint; // Keep UTF8 string alive during inference
+    std::atomic<bool> bDoneDispatched;
 
     FLiteRtLmCallbackContext(FLiteRtLmChunkCallback InChunk, FLiteRtLmDoneCallback InDone, const FString& InConstraint)
-        : OnChunk(InChunk), OnDone(InDone), FullResponse(TEXT("")), FullJsonResponse(TEXT("")), Utf8Constraint(*InConstraint)
+        : OnChunk(InChunk)
+        , OnDone(InDone)
+        , FullResponse(TEXT(""))
+        , FullJsonResponse(TEXT(""))
+        , Utf8Constraint(*InConstraint)
+        , bDoneDispatched(false)
     {}
 };
 
@@ -171,6 +191,38 @@ static TArray<TSharedPtr<FJsonObject>> ParseToolCallsFromJson(const FString& Ful
     return ToolCalls;
 }
 
+static void DispatchFallbackDoneIfNeeded(FLiteRtLmCallbackContext* Ctx, const FString& ErrorMessage)
+{
+    if (!Ctx || Ctx->bDoneDispatched.exchange(true))
+    {
+        return;
+    }
+
+    FLiteRtLmResult FinalResult;
+    FinalResult.FullText = Ctx->FullResponse;
+    FinalResult.FullJson = Ctx->FullJsonResponse;
+    FinalResult.ErrorMsg = ErrorMessage;
+    FinalResult.TokensPerSec = 0.0f;
+    FinalResult.bIsDone = true;
+    FinalResult.ToolCalls = ParseToolCallsFromJson(Ctx->FullJsonResponse);
+    FinalResult.FullText.ReplaceInline(TEXT("<end_of_turn>"), TEXT(""));
+    FinalResult.FullText.ReplaceInline(TEXT("<start_of_turn>"), TEXT(""));
+    FinalResult.FullText.TrimStartAndEndInline();
+
+    UE_LOG(LogLiteRtLm, Warning, TEXT("%s Dispatching fallback done. TextLen=%d JsonLen=%d"),
+        *ErrorMessage,
+        FinalResult.FullText.Len(),
+        FinalResult.FullJson.Len());
+
+    if (Ctx->OnDone.IsBound())
+    {
+        FLiteRtLmDoneCallback DoneCopy = Ctx->OnDone;
+        AsyncTask(ENamedThreads::GameThread, [DoneCopy, FinalResult]() {
+            DoneCopy.ExecuteIfBound(FinalResult);
+        });
+    }
+}
+
 static void Internal_LiteRtLmCallback(LiteRtLm_Result Result, void* UserPtr)
 {
     // UE_LOG(LogLiteRtLm, Log, TEXT("Internal_LiteRtLmCallback invoked. bIsDone=%d"), Result.bIsDone);
@@ -207,6 +259,12 @@ static void Internal_LiteRtLmCallback(LiteRtLm_Result Result, void* UserPtr)
 
     if (Result.bIsDone)
     {
+        if (Ctx->bDoneDispatched.exchange(true))
+        {
+            UE_LOG(LogLiteRtLm, Warning, TEXT("Ignoring duplicate LiteRT-LM done callback."));
+            return;
+        }
+
         FLiteRtLmResult FinalResult;
         FinalResult.FullText = Ctx->FullResponse;
         FinalResult.FullJson = Ctx->FullJsonResponse;
@@ -225,7 +283,7 @@ static void Internal_LiteRtLmCallback(LiteRtLm_Result Result, void* UserPtr)
         if (Ctx->OnDone.IsBound())
         {
             FLiteRtLmDoneCallback DoneCopy = Ctx->OnDone;
-            AsyncTask(ENamedThreads::GameThread, [DoneCopy, FinalResult, Ctx]() {
+            AsyncTask(ENamedThreads::GameThread, [DoneCopy, FinalResult]() {
                 DoneCopy.ExecuteIfBound(FinalResult);
             });
         }
@@ -726,6 +784,8 @@ void FLiteRtLmUnrealApi::SendChatRequest(
         if (!FLiteRtLmWrapperLoader::RunInference)
         {
             UE_LOG(LogLiteRtLm, Error, TEXT("RunInference function pointer is NULL!"));
+            DispatchFallbackDoneIfNeeded(CallbackCtx, TEXT("LiteRT-LM RunInference function pointer is NULL."));
+            delete CallbackCtx;
             return;
         }
 
@@ -744,10 +804,15 @@ void FLiteRtLmUnrealApi::SendChatRequest(
             const double EndTime = FPlatformTime::Seconds();
             UE_LOG(LogLiteRtLm, Log, TEXT("WaitUntilDone finished in %.2f ms with result: %d"), 
                 (EndTime - AfterRunTime) * 1000.0, Result);
+
+            DispatchFallbackDoneIfNeeded(
+                CallbackCtx,
+                FString::Printf(TEXT("LiteRT-LM inference finished without a done callback. WaitUntilDone result=%d."), Result));
         }
         else
         {
             UE_LOG(LogLiteRtLm, Warning, TEXT("WaitUntilDone not available. EngineHandle=%p"), EngineHandle);
+            DispatchFallbackDoneIfNeeded(CallbackCtx, TEXT("LiteRT-LM WaitUntilDone is not available after inference returned."));
         }
 
         // 安全释放回调上下文，此时底座推理已彻底停工，主线程已安全读取，物理杜绝抢跑和 Double Free
