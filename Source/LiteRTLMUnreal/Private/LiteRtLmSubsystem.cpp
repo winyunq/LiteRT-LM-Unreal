@@ -165,7 +165,7 @@ bool ULiteRtLmSubsystem::PrepareActiveAgent(void* AgentKey, const FString& Tools
     FLiteRtLmAgentCache& TargetCache = AgentCacheMap.FindOrAdd(AgentKey);
     if (TargetCache.ToolsJson != ToolsJson)
     {
-        UE_LOG(LogLiteRtLm, Warning, TEXT("[KV Cache] ToolsJson changed for Agent %p. Resetting cache and reloading model for MCP tools binding."), AgentKey);
+        UE_LOG(LogLiteRtLm, Warning, TEXT("[KV Cache] ToolsJson changed for Agent %p. Resetting cache for MCP tools binding."), AgentKey);
         TargetCache.KVCacheData.Empty();
         TargetCache.MsgCount = 0;
         TargetCache.ToolsJson = ToolsJson;
@@ -200,10 +200,23 @@ bool ULiteRtLmSubsystem::PrepareActiveAgent(void* AgentKey, const FString& Tools
         }
         */
 
-        // 重新载入模型以应用更新后的 tools_json 注册工具到 C 引擎实例中
-        FLiteRtLmConfig ModelConfigCopy = CurrentConfig;
-        ModelConfigCopy.ToolsJson = ToolsJson;
-        LoadModel(ModelConfigCopy);
+        // 只有当当前引擎没有用同一份 tools_json 初始化时才重载。
+        // AI Werewolf demo 会在 LoadModel 阶段注册固定 MCP 工具，首次 Agent 绑定不应再次销毁/创建 2.6GB 模型。
+        if (CurrentConfig.ToolsJson != ToolsJson)
+        {
+            UE_LOG(LogLiteRtLm, Warning, TEXT("[KV Cache] Reloading model because engine ToolsJson differs from Agent ToolsJson."));
+            FLiteRtLmConfig ModelConfigCopy = CurrentConfig;
+            ModelConfigCopy.ToolsJson = ToolsJson;
+            if (!LoadModel(ModelConfigCopy))
+            {
+                UE_LOG(LogLiteRtLm, Error, TEXT("[KV Cache] Failed to reload model for updated MCP tools."));
+                return false;
+            }
+        }
+        else
+        {
+            UE_LOG(LogLiteRtLm, Log, TEXT("[KV Cache] Engine already has matching MCP tools; no model reload needed."));
+        }
     }
 
     /// 2. 如果检测到切换 Agent 对话，才进行 KV 缓存大包的导出与物理还原
