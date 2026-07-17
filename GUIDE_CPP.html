@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C++ Integration Guide — LiteRT-LM Unreal</title>
+  <meta name="description" content="Use LiteRT-LM Unreal from gameplay C++, another Unreal plugin, or the complete native SDK without rebuilding conversation features.">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="GUIDE_CPP_zh.html">
+  <link rel="alternate" hreflang="en" href="GUIDE_CPP.html">
+</head>
+<body>
+  <a class="skip-link" href="#article">Skip to C++ guide</a>
+  <header class="site-header"><nav class="nav" aria-label="Primary navigation">
+    <a class="brand" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <div class="nav-links"><a href="index.html">Overview</a><a href="GUIDE_QUICK_START.html">Quick chat</a><a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Multiple conversations</a><a href="SYSTEMS.html">All systems</a><a aria-current="page" href="GUIDE_CPP.html">C++</a><a class="lang-switch" href="GUIDE_CPP_zh.html" lang="zh-CN">中文</a></div>
+  </nav></header>
+
+  <main class="docs-layout">
+    <aside class="toc" aria-label="On this page">
+      <p class="toc-title">C++ path</p>
+      <a href="#choose">Choose the surface</a>
+      <a href="#build">1. Add the module</a>
+      <a href="#quickchat">2. One conversation</a>
+      <a href="#agents">3. Multiple Agents</a>
+      <a href="#ownership">Ownership and async rules</a>
+      <a href="#native">Native SDK / C ABI</a>
+      <a href="#shipping">Shipping checklist</a>
+    </aside>
+
+    <article class="article" id="article">
+      <header class="article-header">
+        <p class="eyebrow">Unreal C++ · Plugin development · Native ABI</p>
+        <h1>Reuse the full plugin from C++</h1>
+        <p class="hero-copy">The Blueprint layer is built on exported UObject classes, not a separate implementation. C++ gameplay code can create the same conversations, bind the same events, use memory/tools/MCP, and opt into the complete native SDK when it truly needs the lower layer.</p>
+      </header>
+
+      <section id="choose">
+        <h2>Choose the highest useful surface</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Your code needs</th><th>Use</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td><strong>One chat with automatic setup</strong></td><td><code>ULiteRtLmQuickChat</code></td><td>Smallest ownership and event surface.</td></tr>
+            <tr><td><strong>Multiple identities, memory, tools</strong></td><td><code>ULiteRtLmAgent</code></td><td>Full product-facing conversation object.</td></tr>
+            <tr><td><strong>Model status or Agent factory overloads</strong></td><td><code>ULiteRtLmSubsystem</code></td><td>Shared Engine Subsystem and C++ conveniences.</td></tr>
+            <tr><td><strong>MCP routes and schema lifecycle</strong></td><td><code>ULiteRtLmMcpGateway</code></td><td>Owns routing, pending calls, and history replay.</td></tr>
+            <tr><td><strong>Direct upstream handles/functions</strong></td><td><code>LiteRtLmNativeSdk.h</code></td><td>Complete official C API plus header-only C++ ownership/overloads.</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout good"><strong>Do not reimplement a feature just because Blueprint also exposes it.</strong> Quick Chat, Agent memory, tools, MCP, diagnostics, and lifecycle are public C++ APIs. Move down a layer only when the higher layer cannot express your requirement.</div>
+      </section>
+
+      <section id="build">
+        <h2>1. Add the Unreal module dependency</h2>
+        <p>In your gameplay module or plugin module <code>.Build.cs</code>:</p>
+        <pre><code>PrivateDependencyModuleNames.AddRange(new[]
+{
+    "Core",
+    "CoreUObject",
+    "Engine",
+    "LiteRTLMUnreal"
+});</code></pre>
+        <p>Use <code>PublicDependencyModuleNames</code> instead if your own public headers expose LiteRT-LM types. The module publishes the scenario headers and native SDK include path.</p>
+      </section>
+
+      <section id="quickchat">
+        <h2>2. Create one conversation in an Actor</h2>
+        <p>Declare an owned Quick Chat and dynamic handlers in your Actor header:</p>
+        <pre><code>#include "LiteRtLmQuickChat.h"
+#include "LiteRtLmUnrealApi.h"
+
+UPROPERTY(Transient)
+TObjectPtr&lt;ULiteRtLmQuickChat&gt; QuickChat;
+
+UFUNCTION()
+void HandleAnswer(const FLiteRtLmResult&amp; Result);
+
+UFUNCTION()
+void HandleChatError(const FLiteRtLmError&amp; Error);</code></pre>
+        <p>Create once—typically in BeginPlay—bind events before Ask, then keep using the same object:</p>
+        <pre><code>#include "LiteRtLmBlueprintLibrary.h"
+
+void ALocalChatActor::BeginPlay()
+{
+    Super::BeginPlay();
+
+    QuickChat = ULiteRtLmBlueprintLibrary::CreateQuickChat(
+        this,
+        TEXT("Answer concisely in the user's language."));
+
+    if (!IsValid(QuickChat))
+    {
+        return;
+    }
+
+    QuickChat-&gt;OnAnswer.AddDynamic(this, &amp;ALocalChatActor::HandleAnswer);
+    QuickChat-&gt;OnError.AddDynamic(this, &amp;ALocalChatActor::HandleChatError);
+    QuickChat-&gt;AskOnce(TEXT("Hello from Unreal C++."));
+}
+
+void ALocalChatActor::HandleAnswer(const FLiteRtLmResult&amp; Result)
+{
+    UE_LOG(LogTemp, Display, TEXT("AI: %s"), *Result.Text);
+}</code></pre>
+        <p>The single-argument <code>AskOnce</code> and <code>AskStreaming</code> overloads use default request options. Use the two-argument overload when a particular request needs custom <code>FLiteRtLmAskOptions</code>.</p>
+      </section>
+
+      <section id="agents">
+        <h2>3. Create multiple independent Agents</h2>
+        <p>Get the shared Engine Subsystem and use its C++ overloads:</p>
+        <pre><code>#include "LiteRtLmAgent.h"
+#include "LiteRtLmSubsystem.h"
+
+ULiteRtLmSubsystem* Runtime =
+    GEngine-&gt;GetEngineSubsystem&lt;ULiteRtLmSubsystem&gt;();
+
+ULiteRtLmAgent* Judge = Runtime
+    ? Runtime-&gt;CreateAgent(
+        TEXT("Judge"),
+        TEXT("Apply the game rules and return structured decisions."))
+    : nullptr;
+
+if (IsValid(Judge))
+{
+    Judge-&gt;OnCompleted.AddDynamic(this, &amp;AMatchDirector::HandleJudgeResult);
+    Judge-&gt;Ask(TEXT("Evaluate the current round."));
+}</code></pre>
+        <p><code>CreateAgent</code> has C++ overloads for display name; display name + system prompt; and display name + system prompt + tool declaration JSON. <code>Ask</code>, <code>AskMessagesJson</code>, and <code>SubmitToolResult</code> also have default-options overloads.</p>
+        <p>Store every Agent in a <code>UPROPERTY</code> array/map owned by the match or gameplay system. For public events, append the actual event to each relevant Agent’s memory; for private events, call only the intended recipients.</p>
+      </section>
+
+      <section id="ownership">
+        <h2>Ownership and asynchronous rules</h2>
+        <ul>
+          <li><strong>Keep UObjects referenced:</strong> use <code>UPROPERTY</code>/<code>TObjectPtr</code> fields. A temporary local pointer is not an ownership plan.</li>
+          <li><strong>Bind before Ask:</strong> completion and error delivery is asynchronous.</li>
+          <li><strong>Use Request IDs:</strong> Ask returns identity immediately; the event carries the terminal result later.</li>
+          <li><strong>Do not overlap requests on one Agent:</strong> check <code>IsBusy()</code> or handle the rejection error.</li>
+          <li><strong>One model, many conversations:</strong> Agents share the runtime and serial inference queue, but never share canonical memory unless your code copies messages.</li>
+          <li><strong>Close explicitly at a gameplay boundary:</strong> especially when replacing a match/scene with outstanding requests.</li>
+        </ul>
+      </section>
+
+      <section id="native">
+        <h2>Use the complete native SDK when required</h2>
+        <p>Include the umbrella header:</p>
+        <pre><code>#include "LiteRtLmNativeSdk.h"</code></pre>
+        <p>It includes the complete upstream C declarations from <code>c/engine.h</code>. In C++, it also includes the exception-free header-only <code>litert_lm_native.hpp</code> ownership and overload layer. Every owner exposes <code>get()</code> and <code>release()</code>, so newly added upstream functions remain reachable without waiting for another wrapper method.</p>
+        <div class="callout warn"><strong>Native SDK linkage is an explicit opt-in.</strong> The scenario module does not link <code>LiteRtLm_Native.lib</code>. A Win64 consumer that directly calls native symbols must add the import library from <code>Source/ThirdParty/LiteRtLm/Binaries/Win64</code> and ship its sibling runtime bundle.</div>
+        <p>Example for a project module whose <code>ModuleDirectory</code> is under <code>Project/Source/YourModule</code>:</p>
+        <pre><code>if (Target.Platform == UnrealTargetPlatform.Win64)
+{
+    string ProjectRoot = Path.GetFullPath(
+        Path.Combine(ModuleDirectory, "..", ".."));
+    string LiteRtLmBin = Path.Combine(
+        ProjectRoot,
+        "Plugins", "LiteRT-LM-Unreal", "Source", "ThirdParty",
+        "LiteRtLm", "Binaries", "Win64");
+
+    PublicAdditionalLibraries.Add(
+        Path.Combine(LiteRtLmBin, "LiteRtLm_Native.lib"));
+}</code></pre>
+        <p>Adjust discovery when the consuming module lives in another plugin. Keep the higher UObject layer for Unreal lifetime, delegates, memory, MCP, and packaging unless direct native control is the actual requirement.</p>
+      </section>
+
+      <section id="shipping">
+        <h2>C++ shipping checklist</h2>
+        <ul class="checklist">
+          <li>The consuming module depends on <code>LiteRTLMUnreal</code>.</li>
+          <li>UObject references are reflected and survive garbage collection.</li>
+          <li>Dynamic handlers are <code>UFUNCTION</code>s with exact delegate signatures.</li>
+          <li>Win64/Android target binaries and the model are present in the staged build.</li>
+          <li>Direct native callers explicitly link the import library on supported targets.</li>
+          <li>A packaged smoke test creates one conversation, receives one completion, then sends a second message through the same object.</li>
+        </ul>
+      </section>
+
+      <nav class="next-links" aria-label="Next pages"><a href="SYSTEMS.html#headers">Browse every public header →</a><a href="dll_reference.html">Open the DLL reference →</a></nav>
+    </article>
+  </main>
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="index.html">Overview</a> · <a href="GUIDE_CPP_zh.html" lang="zh-CN">中文</a></span></div></footer>
+</body>
+</html>

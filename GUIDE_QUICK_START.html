@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quick Chat Tutorial — LiteRT-LM Unreal</title>
+  <meta name="description" content="A step-by-step Blueprint tutorial for the default single-conversation Quick Chat API in LiteRT-LM Unreal.">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="GUIDE_QUICK_START_zh.html">
+  <link rel="alternate" hreflang="en" href="GUIDE_QUICK_START.html">
+</head>
+<body>
+  <a class="skip-link" href="#article">Skip to tutorial</a>
+  <header class="site-header"><nav class="nav" aria-label="Primary navigation">
+    <a class="brand" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <div class="nav-links"><a href="index.html">Overview</a><a aria-current="page" href="GUIDE_QUICK_START.html">Quick chat</a><a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Multiple conversations</a><a href="SYSTEMS.html">All systems</a><a href="GUIDE_CPP.html">C++</a><a class="lang-switch" href="GUIDE_QUICK_START_zh.html" lang="zh-CN">中文</a></div>
+  </nav></header>
+
+  <main class="docs-layout">
+    <aside class="toc" aria-label="On this page">
+      <p class="toc-title">On this page</p>
+      <a href="#result">What you will build</a>
+      <a href="#output-mode">Choose output mode</a>
+      <a href="#enable">1. Enable the plugin</a>
+      <a href="#model">2. Set the model path</a>
+      <a href="#blueprint">3. Create the Blueprint</a>
+      <a href="#graph">4. Build the graph</a>
+      <a href="#ui">5. Send from your UI</a>
+      <a href="#streaming">6. Add streaming</a>
+      <a href="#lifecycle">Conversation lifecycle</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+    </aside>
+
+    <article class="article" id="article">
+      <header class="article-header">
+        <p class="eyebrow">Blueprint · Beginner · 10–15 minutes</p>
+        <h1>Build one local AI conversation</h1>
+        <p class="hero-copy">This tutorial creates a Quick Chat object once, keeps its reference, receives the final answer through an event, and sends more messages through the same conversation.</p>
+      </header>
+
+      <section id="result">
+        <h2>What you will build</h2>
+        <p>At the end, pressing Play creates one conversation. A test message is queued, and the answer is printed. You can then replace the test message with your UMG input without changing the conversation setup.</p>
+        <div class="callout good"><strong>Quick Chat is the default single-conversation API.</strong> It wraps one normal <code>ULiteRtLmAgent</code>. Every call to <code>Create Quick Chat</code> creates a new independent conversation, so create it once for each chat you intend to keep.</div>
+        <ul class="checklist">
+          <li>A valid <code>.litertlm</code> model is available.</li>
+          <li>The plugin is enabled for the project.</li>
+          <li>You can create an Actor Blueprint or use an existing gameplay Blueprint.</li>
+        </ul>
+      </section>
+
+      <section id="output-mode">
+        <h2>Choose the output users should see</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Desired behavior</th><th>Call</th><th>Read output from</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Show the complete answer at once</strong></td><td><code>Ask Once</code></td><td><code>On Answer → Result.Text</code></td></tr>
+            <tr><td><strong>Show text as it is generated</strong></td><td><code>Ask Streaming</code></td><td>Append <code>On Text Chunk</code>; use <code>On Answer</code> as the terminal result</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout warn"><strong>The return value of Ask is a request ID, not the model answer.</strong> Answers are asynchronous. Always read them from the event.</div>
+      </section>
+
+      <section id="enable">
+        <h2>1. Enable LiteRT-LM</h2>
+        <div class="step"><div class="step-head"><span class="step-number">1</span><div><h3>Open the Plugins window</h3><p>In Unreal Editor, open <strong>Edit → Plugins</strong>, search for <strong>LiteRT-LM</strong>, enable it, and restart the editor when prompted.</p></div></div></div>
+        <p>If the plugin does not appear, verify that the plugin directory is inside your project’s <code>Plugins</code> folder or installed through Fab for this engine installation.</p>
+      </section>
+
+      <section id="model">
+        <h2>2. Point the plugin to a model</h2>
+        <div class="step"><div class="step-head"><span class="step-number">2</span><div><h3>Set Model Path</h3><p>Open <strong>Edit → Project Settings</strong>. Search for <strong>LiteRT-LM</strong>, then set <strong>Model Path</strong> to the <code>.litertlm</code> model that will be available at runtime.</p></div></div></div>
+        <figure><img src="assets/screenshots/ue5-project-settings-model-path.png" alt="LiteRT-LM Model Path in Unreal Engine Project Settings"><figcaption>The demo project’s LiteRT-LM settings. Your model name can differ; the important part is that the final runtime path resolves to a real file.</figcaption></figure>
+        <div class="callout"><strong>No Load Model node is required.</strong> The first conversation triggers lazy model initialization. Use <code>Get LiteRT-LM Runtime</code> when you need readiness, status, or diagnostics in a loading screen.</div>
+      </section>
+
+      <section id="blueprint">
+        <h2>3. Create a Blueprint that owns the conversation</h2>
+        <div class="step"><div class="step-head"><span class="step-number">3</span><div><h3>Create or open an Actor Blueprint</h3><p>For the first test, create an Actor Blueprint named <code>BP_LocalChat</code> and place one instance in the level. The same setup can later live in a Player Controller, Game Instance subsystem wrapper, widget owner, or any long-lived gameplay object.</p></div></div></div>
+        <div class="step"><div class="step-head"><span class="step-number">4</span><div><h3>Add the QuickChat variable</h3><p>Add a variable named <code>QuickChat</code>. Set its type to <strong>Lite Rt Lm Quick Chat Object Reference</strong>. This reference is what preserves memory between questions.</p></div></div></div>
+        <div class="callout danger"><strong>Do not create Quick Chat inside every Send button click.</strong> That creates a fresh Agent each time, so every question starts with empty conversation memory.</div>
+      </section>
+
+      <section id="graph">
+        <h2>4. Build the complete BeginPlay graph</h2>
+        <div class="step"><div class="step-head"><span class="step-number">5</span><div><h3>Create and store the conversation</h3><p>From <code>Event BeginPlay</code>, add <code>Create Quick Chat</code>. Enter a short system prompt, such as “Answer concisely in the user’s language.” Connect the return value to <code>Set QuickChat</code>.</p></div></div></div>
+        <div class="step"><div class="step-head"><span class="step-number">6</span><div><h3>Bind the answer before the first Ask</h3><p>Drag from the stored QuickChat reference and add <code>Bind Event to On Answer</code> (or assign the On Answer dispatcher). Create the matching custom event. Break the <code>Lite Rt Lm Result</code>, then connect <code>Text</code> to <code>Print String</code>.</p></div></div></div>
+        <div class="step"><div class="step-head"><span class="step-number">7</span><div><h3>Queue a test question</h3><p>After the binding node, call <code>Ask Once</code> on the same QuickChat reference. Use a small first message, compile, save, and press Play.</p></div></div></div>
+        <figure><img src="assets/screenshots/ue5-quick-chat-complete-flow.png" alt="Complete Quick Chat Blueprint graph"><figcaption>Verified UE5 graph: BeginPlay → Create Quick Chat → store reference → bind On Answer → Ask Once; the answer event extracts Result.Text and prints it.</figcaption></figure>
+        <p>Model initialization can make the first request slower than later requests. Once <code>On Answer</code> fires, the same QuickChat object already contains the user message and assistant answer in its memory.</p>
+      </section>
+
+      <section id="ui">
+        <h2>5. Send later messages from your UI</h2>
+        <p>Keep the BeginPlay setup exactly as it is. In your UMG button handler:</p>
+        <ol>
+          <li>Read the text box value.</li>
+          <li>Check that <code>QuickChat</code> is valid and <code>Is Busy</code> is false.</li>
+          <li>Call <code>Ask Once</code> on the stored QuickChat reference.</li>
+          <li>Disable Send while busy; enable it again from <code>On Answer</code> or <code>On Error</code>.</li>
+          <li>Display <code>Result.Text</code> from <code>On Answer</code>.</li>
+        </ol>
+        <div class="callout good"><strong>Memory test:</strong> ask “My codename is Aurora.” Then ask “What is my codename?” through the same object. If it forgets, inspect whether your UI is creating or resetting QuickChat between the two calls.</div>
+      </section>
+
+      <section id="streaming">
+        <h2>6. Switch to streaming output</h2>
+        <p>Replace <code>Ask Once</code> with <code>Ask Streaming</code> and bind <code>On Text Chunk</code> during setup.</p>
+        <ul>
+          <li>Clear the answer label immediately before calling Ask Streaming.</li>
+          <li><strong>Append</strong> each Text Chunk to the label. Do not replace the full label with only the newest chunk.</li>
+          <li>Use <code>On Answer</code> for the final result, metrics, tool calls, and terminal UI state.</li>
+          <li>Use <code>On Error</code> to restore the Send button and show a useful error.</li>
+        </ul>
+      </section>
+
+      <section id="lifecycle">
+        <h2>Conversation lifecycle</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>You want to…</th><th>Use</th><th>What happens</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Ask another question with context</strong></td><td>The same QuickChat object</td><td>Existing memory is reused.</td></tr>
+            <tr><td><strong>Start over but keep the persona</strong></td><td><code>Reset Conversation(true)</code></td><td>Conversation messages are cleared; system prompt remains.</td></tr>
+            <tr><td><strong>Start over completely</strong></td><td><code>Reset Conversation(false)</code></td><td>Memory, including the system prompt, is cleared.</td></tr>
+            <tr><td><strong>Stop the active generation</strong></td><td><code>Cancel</code></td><td>The accepted request is cancelled.</td></tr>
+            <tr><td><strong>Retire this chat</strong></td><td><code>Close</code></td><td>The underlying Agent is closed. Create a new Quick Chat to continue.</td></tr>
+            <tr><td><strong>Use advanced memory/tools</strong></td><td><code>Get Conversation</code></td><td>Returns the underlying Agent without rebuilding the session.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>Troubleshooting by symptom</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Symptom</th><th>Check this first</th></tr></thead>
+          <tbody>
+            <tr><td><strong>No answer event</strong></td><td>Bind <code>On Answer</code> before Ask; keep the QuickChat reference alive; inspect <code>On Error</code> and runtime diagnostics.</td></tr>
+            <tr><td><strong>It forgets every previous turn</strong></td><td>Make sure <code>Create Quick Chat</code> runs once, not once per message. Confirm no Reset or Close is called.</td></tr>
+            <tr><td><strong>The returned string looks like an ID</strong></td><td>Correct: that is the request ID. Read the answer from <code>On Answer → Result.Text</code>.</td></tr>
+            <tr><td><strong>A second Ask is rejected</strong></td><td>Check <code>Is Busy</code>. One QuickChat should not have overlapping outstanding requests.</td></tr>
+            <tr><td><strong>Works in Editor, fails in a package</strong></td><td>Verify the model exists at the packaged runtime path and open the diagnostics path reported by the runtime.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <nav class="next-links" aria-label="Next tutorials">
+        <a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Next: create multiple independent conversations →</a>
+        <a href="GUIDE_CPP.html">Use the same API from C++ →</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="index.html">Overview</a> · <a href="GUIDE_QUICK_START_zh.html" lang="zh-CN">中文</a></span></div></footer>
+</body>
+</html>
