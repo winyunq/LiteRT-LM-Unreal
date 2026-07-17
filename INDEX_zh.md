@@ -7,21 +7,22 @@
 ## 📖 文档目录
 
 1.  **[快速开始 (Getting Started)](GETTING_STARTED_zh.md)**
-    - 环境搭建、模型准备、首次推理。
-2.  **[模型管理 (Model Management)](MODEL_MANAGEMENT_zh.md)**
-    - 存储规范、配置参数、VRAM 优化、LRU 机制。
-3.  **[API 参考 (API Reference)](API_REFERENCE_zh.md)**
+    - 安装、模型设置和第一次 Quick Chat。
+2.  **[单对话与多对话](CONVERSATIONS_zh.md)**
+    - UE5.8 已核对的 Blueprint/C++ 步骤、生命周期与记忆排错。
+3.  **[模型管理 (Model Management)](MODEL_MANAGEMENT_zh.md)**
+    - 存储规范、配置参数、规范历史与显存边界。
+4.  **[API 参考 (API Reference)](API_REFERENCE_zh.md)**
     - Subsystem 接口、采样参数、结果结构体详述。
-4.  **[核心理念 (Strategy & Pillars)](../README.md#🌟-our-logic--strategy)**
-    - 了解我们如何通过 Session ID 映射实现极速缓存命中的设计哲学。
+5.  **[GitHub 仓库](https://github.com/winyunq/LiteRT-LM-Unreal)**
+    - 公开的旧版源码基线与当前公开文档。
 
 ## 🚀 为什么选择 LiteRT-LM-Unreal？
 
-相比于市面上动辄 $49 且集成质量良莠不齐的方案，我们坚持：
-- **开源精神**：核心代码基于 Google LiteRT-LM，透明且可定制。
-- **极致优化**：针对 13900HX/RTX 4060 等现代硬件深度优化，支持 GPU/CPU 后端无缝切换。
-- **无感集成**：通过 `void* ctx` 会话管理，NPC 记忆切换耗时 < 1ms。
-- **诚意价格**：仅需 $19，提供同等甚至超越竞品的稳定性与功能。
+- **统一对象模型**：Quick Chat 是普通缺省 Agent 的兼容外观，不维护第二份状态。
+- **独立角色记忆**：多 NPC 每个角色一个 Agent，各自保留完整规范历史。
+- **共享 GPU 模型**：一个模型、一条串行队列，不为每个角色复制模型。
+- **C++ 优先**：Blueprint 签名保持唯一；C++ 提供常用重载与完整 native SDK 入口。
 
 ---
 *战略由人，战术由 AI。LiteRT-LM-Unreal 助力您的游戏开启 AIGC 时代。*

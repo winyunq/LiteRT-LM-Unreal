@@ -43,6 +43,9 @@
             <a href="QUICK_START.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
                 <span class="pillar-badge">02</span> Quick Start
             </a>
+            <a href="CONVERSATIONS.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
+                <span class="pillar-badge">GUIDE</span> Conversations
+            </a>
             <a href="APP_LAYER.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
                 <span class="pillar-badge">03</span> Learning to Use
             </a>
@@ -76,7 +79,7 @@
                     Bring the <span class="winyunq-gradient">Soul of Local AI</span> <br/>to Your Unreal Projects
                 </h1>
                 <p class="text-xl text-gray-500 leading-relaxed max-w-2xl font-medium">
-                    Transcending traditional source code comments, we delve deep into physical logic. LiteRT-LM Unreal is a high-performance local Agent inference solution designed for AAA-grade projects.
+                    A UE 5.8 local inference plugin with a default single-conversation facade, independent multi-Agent memory, and native C++ access to the official LiteRT-LM v0.14 API.
                 </p>
             </header>
 
@@ -87,15 +90,15 @@
                         <i data-lucide="shield" class="text-blue-500"></i> ABI Firewall: Zero-Deployment Integration
                     </h2>
                     <p class="text-gray-400 leading-relaxed mb-8 text-sm">
-                        We establish a physically isolated ABI firewall through <code>litert_lm_wrapper.dll</code>. This means that when integrating 70+ low-level dependencies (Bazel, Rust, TensorFlow, WebGPU), <b>you don't need to install any complex build environments on the host machine</b>. The plugin is plug-and-play.
+                        The current Win64 package separates the official <code>litert-lm.dll</code> from a small extension bridge, <code>litert_lm_wrapper.dll</code>. STL, Abseil, and Protobuf objects do not cross the C ABI boundary, while native C++ users can still access the complete official API through the shipped SDK surface.
                     </p>
                     <div class="bg-black/50 rounded-xl p-6 border border-white/5">
                         <p class="text-[10px] uppercase font-black text-gray-600 mb-4 tracking-[0.2em]">Tech Stack Glimpse</p>
                         <div class="flex flex-wrap gap-4 text-[9px] font-bold text-gray-400">
                             <span class="px-2 py-1 bg-blue-500/10 rounded">GOOGLE LITERT</span>
-                            <span class="px-2 py-1 bg-green-500/10 rounded">WEBGPU / VULKAN</span>
-                            <span class="px-2 py-1 bg-orange-500/10 rounded">RUST CRATES</span>
-                            <span class="px-2 py-1 bg-purple-500/10 rounded">LLGUIDANCE</span>
+                            <span class="px-2 py-1 bg-green-500/10 rounded">WIN64 / ANDROID GPU</span>
+                            <span class="px-2 py-1 bg-orange-500/10 rounded">STABLE C ABI 1.2</span>
+                            <span class="px-2 py-1 bg-purple-500/10 rounded">UE C++ / BLUEPRINT</span>
                         </div>
                     </div>
                 </section>
@@ -104,19 +107,28 @@
                 <div class="grid md:grid-cols-2 gap-8">
                     <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all"> 
                         <i data-lucide="zap" class="w-10 h-10 text-yellow-500 mb-6 group-hover:scale-110 transition-transform"></i>
-                        <h3 class="text-xl font-black text-white mb-3 italic">Physical KV Hits</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed">Based on low-level C-API Session pointer management, achieving instant Agent switching with KV Cache hit rates exceeding 98%.</p>
+                        <h3 class="text-xl font-black text-white mb-3 italic">One State Model</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Quick Chat is a compatibility facade over an ordinary default-configured Agent. You can move to memory, tools, or persistence through Get Conversation without losing context.</p>
                     </div>
                     <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all"> 
                         <i data-lucide="cpu" class="w-10 h-10 text-blue-500 mb-6 group-hover:scale-110 transition-transform"></i>
-                        <h3 class="text-xl font-black text-white mb-3 italic">Extreme VRAM Control</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed">Fully automated VRAM budget allocation. Supports hot-cold VRAM swapping, running 7B-level multi-Agent conversations smoothly even on 8GB VRAM.</p>
+                        <h3 class="text-xl font-black text-white mb-3 italic">Memory-Correct Multi-Agent</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Each Agent owns an independent canonical history. One shared model and serial queue avoid model copies; cross-Agent switches rebuild from complete history when required by the current GPU runtime.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Promotion Links -->
             <section class="mt-32 space-y-8">
+                <div class="content-card p-10 border border-teal-500/20 bg-teal-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div class="flex-1">
+                        <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Single & Multiple Conversations</h4>
+                        <p class="text-xs text-gray-500">Follow the UE 5.8-verified Blueprint and C++ guide. It explains why Quick Chat is the default Conversation facade and how to keep independent NPC memories.</p>
+                    </div>
+                    <a href="CONVERSATIONS.html" class="px-8 py-4 bg-teal-500 text-black text-xs font-black uppercase tracking-widest rounded-full hover:scale-105 transition-all flex items-center gap-2">
+                        <i data-lucide="messages-square" class="w-4 h-4"></i> Open Guide
+                    </a>
+                </div>
                 <div class="content-card p-10 border border-blue-500/20 bg-blue-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
                     <div class="flex-1">
                         <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Download Demo Project</h4>
@@ -130,10 +142,10 @@
                 <div class="content-card p-10 border border-orange-500/20 bg-orange-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
                     <div class="flex-1">
                         <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Buy from Fab</h4>
-                        <p class="text-xs text-gray-500 italic">Current phase: FREE (Price will increase to $19+ approximately before 2026.5.30). Get it now for lifetime free updates.</p>
+                        <p class="text-xs text-gray-500 italic">Use the Fab build for the current UE 5.8 plugin. This public repository remains the legacy source baseline plus current public documentation.</p>
                     </div>
-                    <a href="#" target="_blank" class="px-8 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-orange-500 transition-all flex items-center gap-2">
-                        <i data-lucide="shopping-cart" class="w-4 h-4"></i> Get it for Free
+                    <a href="https://github.com/winyunq/LiteRT-LM-Unreal/releases" target="_blank" class="px-8 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-orange-500 transition-all flex items-center gap-2">
+                        <i data-lucide="package-open" class="w-4 h-4"></i> View Releases
                     </a>
                 </div>
             </section>

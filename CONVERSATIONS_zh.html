@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LiteRT-LM Unreal 单对话与多对话 Blueprint/C++ 分步指南。">
+    <title>单对话与多对话 | LiteRT-LM Unreal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&family=Fira+Code:wght@400;500&display=swap');
+        :root { color-scheme: dark; }
+        html { scroll-behavior: smooth; }
+        body { background:#050506; color:#d4d4d8; font-family:'Inter','Noto Sans SC',sans-serif; }
+        .panel { background:#0c0c0f; border:1px solid #202024; border-radius:1rem; }
+        .step { background:linear-gradient(135deg,rgba(59,130,246,.09),rgba(12,12,15,.96) 45%); border:1px solid #202938; border-radius:1rem; }
+        .badge { color:#93c5fd; background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.25); }
+        code, pre { font-family:'Fira Code',monospace; }
+        code { color:#93c5fd; }
+        pre { background:#030304; border:1px solid #232329; border-radius:.75rem; padding:1rem; overflow:auto; color:#cbd5e1; font-size:.78rem; line-height:1.7; }
+        th { color:#fff; font-weight:700; }
+        td, th { border-bottom:1px solid #242429; padding:.8rem; text-align:left; vertical-align:top; }
+        .nav-link { color:#71717a; transition:.2s; }
+        .nav-link:hover { color:#60a5fa; }
+    </style>
+</head>
+<body>
+    <header class="border-b border-zinc-900 bg-black/70 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+            <a href="index_zh.html" class="flex items-center gap-3 font-black text-white tracking-tight">
+                <i data-lucide="cpu" class="w-5 h-5 text-blue-500"></i>
+                LiteRT-LM Unreal
+            </a>
+            <nav class="flex flex-wrap items-center gap-5 text-xs font-bold">
+                <a class="nav-link" href="#single">单对话</a>
+                <a class="nav-link" href="#multiple">多对话</a>
+                <a class="nav-link" href="#cpp">C++</a>
+                <a class="nav-link" href="#debug">排错</a>
+                <a class="nav-link" href="CONVERSATIONS.html">EN</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-5 py-14 md:py-20">
+        <section class="mb-16">
+            <div class="badge inline-flex rounded-full px-3 py-1 text-[10px] font-black tracking-widest uppercase mb-6">UE 5.8 EDITOR VERIFIED · ABI 1.2</div>
+            <h1 class="text-4xl md:text-6xl font-black text-white tracking-tighter leading-tight mb-6">单对话是缺省 Conversation，<br><span class="text-blue-500">多对话是多个独立 Agent</span></h1>
+            <p class="text-lg text-zinc-400 leading-8 max-w-3xl">从第一个聊天窗口到狼人杀多角色，本页给出可照着连接的 Blueprint 步骤和 C++ 入口。节点名称与主要引脚已经在当前 UE5.8 插件中核对。</p>
+            <div class="mt-8 flex flex-wrap gap-3">
+                <a href="#single" class="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold">开始单对话</a>
+                <a href="#multiple" class="px-5 py-3 panel hover:border-blue-500 text-white text-sm font-bold">搭建多对话</a>
+                <a href="CONVERSATIONS_zh.md" class="px-5 py-3 panel hover:border-blue-500 text-white text-sm font-bold">阅读 Markdown</a>
+            </div>
+        </section>
+
+        <section class="panel p-6 md:p-8 mb-16 border-l-4 border-l-blue-500">
+            <div class="flex items-start gap-4">
+                <i data-lucide="layers-3" class="w-7 h-7 text-blue-500 shrink-0"></i>
+                <div>
+                    <h2 class="text-2xl font-black text-white mb-3">先统一状态模型</h2>
+                    <p class="text-zinc-400 leading-7 mb-5"><code>ULiteRtLmQuickChat</code> 不是第二套状态机。它创建并包装一个普通、缺省配置的 <code>ULiteRtLmAgent</code>，只负责把常用事件和操作变得更直接。</p>
+                    <pre>Create Quick Chat ──&gt; default-configured Agent / Conversation ──&gt; canonical memory A
+
+Create Conversation (Advanced) ──&gt; Agent B ──&gt; canonical memory B
+                               └─&gt; Agent C ──&gt; canonical memory C
+
+All of them ──&gt; one shared model + one serial GPU request queue</pre>
+                    <p class="text-sm text-zinc-500 mt-4">每次 <code>Create Quick Chat</code> 都会得到一条独立 Conversation，并非进程级单例。需要高级能力时调用 <code>Get Conversation</code>，上下文不变。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="setup" class="mb-20 scroll-mt-24">
+            <p class="text-xs font-black text-blue-500 tracking-[.25em] uppercase mb-3">Step 0</p>
+            <h2 class="text-3xl font-black text-white mb-6">一次性项目准备</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="step p-6"><b class="text-white">1. 启用插件</b><p class="text-sm text-zinc-400 mt-2">在 <code>Edit &gt; Plugins</code> 启用 LiteRT-LM-Unreal 并重启。</p></div>
+                <div class="step p-6"><b class="text-white">2. 配置模型</b><p class="text-sm text-zinc-400 mt-2">在 <code>Project Settings &gt; Plugins &gt; LiteRT-LM</code> 设置 Model Path。</p></div>
+                <div class="step p-6"><b class="text-white">3. 不手动 Load</b><p class="text-sm text-zinc-400 mt-2">创建第一个对象会自动懒加载共享模型。</p></div>
+                <div class="step p-6"><b class="text-white">4. 持有对象引用</b><p class="text-sm text-zinc-400 mt-2">将返回值提升为变量；不要每条消息重新创建。</p></div>
+            </div>
+        </section>
+
+        <section id="single" class="mb-20 scroll-mt-24">
+            <p class="text-xs font-black text-blue-500 tracking-[.25em] uppercase mb-3">Quick Start</p>
+            <h2 class="text-3xl font-black text-white mb-3">快速单对话（Blueprint）</h2>
+            <p class="text-zinc-500 mb-8">适用于一个聊天窗口、一个助手或一名长期 NPC。</p>
+            <div class="space-y-4">
+                <article class="step p-6 md:p-8"><div class="flex gap-4"><span class="text-3xl font-black text-blue-500">01</span><div><h3 class="font-black text-white text-lg">创建并保存 QuickChat</h3><p class="text-sm text-zinc-400 mt-2 leading-6"><code>BeginPlay → Create Quick Chat</code>，填写可选 System Prompt，将 Return Value 提升为 <code>QuickChat</code> 变量。</p></div></div></article>
+                <article class="step p-6 md:p-8"><div class="flex gap-4"><span class="text-3xl font-black text-blue-500">02</span><div><h3 class="font-black text-white text-lg">绑定异步事件</h3><p class="text-sm text-zinc-400 mt-2 leading-6">至少绑定 <code>On Answer</code> 与 <code>On Error</code>；打字机 UI 再绑定 <code>On Text Chunk</code>。所有事件回到 Game Thread。</p></div></div></article>
+                <article class="step p-6 md:p-8"><div class="flex gap-4"><span class="text-3xl font-black text-blue-500">03</span><div><h3 class="font-black text-white text-lg">只选一种 Ask</h3><p class="text-sm text-zinc-400 mt-2 leading-6"><code>Ask Once</code> 只发最终答案；<code>Ask Streaming</code> 发文本块并在结尾发一次完整答案。节点返回的是 Request Id，不是答案。</p></div></div></article>
+                <article class="step p-6 md:p-8"><div class="flex gap-4"><span class="text-3xl font-black text-blue-500">04</span><div><h3 class="font-black text-white text-lg">一直复用同一个对象</h3><p class="text-sm text-zinc-400 mt-2 leading-6">下一条消息继续调用同一变量。新话题用 <code>Reset Conversation(true)</code>；离开用 <code>Close</code>；高级能力用 <code>Get Conversation</code>。</p></div></div></article>
+            </div>
+
+            <div class="panel p-5 mt-8 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead><tr><th>节点</th><th>主要输入</th><th>结果</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>Create Quick Chat</code></td><td>System Prompt</td><td>Quick Chat 对象</td></tr>
+                        <tr><td><code>Ask Once</code></td><td>Message, Options</td><td>Request Id；答案走 On Answer</td></tr>
+                        <tr><td><code>Ask Streaming</code></td><td>Message, Options</td><td>Request Id；块走 On Text Chunk</td></tr>
+                        <tr><td><code>Get Conversation</code></td><td>Quick Chat</td><td>同一个底层 Agent</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="multiple" class="mb-20 scroll-mt-24">
+            <p class="text-xs font-black text-teal-400 tracking-[.25em] uppercase mb-3">Multiple Conversations</p>
+            <h2 class="text-3xl font-black text-white mb-3">多对话（Blueprint）</h2>
+            <p class="text-zinc-500 mb-8">狼人杀的正确粒度是“一名 AI 玩家一个 Agent”。</p>
+            <div class="grid md:grid-cols-2 gap-4">
+                <article class="panel p-6"><span class="text-teal-400 font-black text-xs">01 · CONTAINER</span><h3 class="text-white font-black mt-2">创建 Agent 数组或 Map</h3><p class="text-sm text-zinc-400 mt-2">用稳定角色 Id 找到对应 Conversation。</p></article>
+                <article class="panel p-6"><span class="text-teal-400 font-black text-xs">02 · CREATE ONCE</span><h3 class="text-white font-black mt-2">每个角色创建一次</h3><p class="text-sm text-zinc-400 mt-2"><code>Make Agent Config → Create Conversation (Advanced) → Add</code>。</p></article>
+                <article class="panel p-6"><span class="text-teal-400 font-black text-xs">03 · EVENTS</span><h3 class="text-white font-black mt-2">绑定每个 Agent 的事件</h3><p class="text-sm text-zinc-400 mt-2">通过 Agent Id、owner 或 Request Id 映射把结果路由回角色。</p></article>
+                <article class="panel p-6"><span class="text-teal-400 font-black text-xs">04 · ASK</span><h3 class="text-white font-black mt-2">轮到谁就 Ask 谁</h3><p class="text-sm text-zinc-400 mt-2">Agent 忙时不重复提交；共享 GPU 队列会串行执行。</p></article>
+                <article class="panel p-6"><span class="text-teal-400 font-black text-xs">05 · MEMORY</span><h3 class="text-white font-black mt-2">同步事实，而不是提示词补丁</h3><p class="text-sm text-zinc-400 mt-2">记录 <code>3号玩家发言：“我是狼人。”</code>；由规则层决定哪些 Agent 收到。不要追加“该信息已公开……”模板。</p></article>
+                <article class="panel p-6"><span class="text-teal-400 font-black text-xs">06 · RETIRE</span><h3 class="text-white font-black mt-2">结束时关闭并清空</h3><p class="text-sm text-zinc-400 mt-2">使用 <code>Close and Clear Conversations</code>，阻止旧回调进入新对局。</p></article>
+            </div>
+
+            <div class="panel p-6 mt-8 border-l-4 border-l-amber-500">
+                <h3 class="text-white font-black flex items-center gap-2"><i data-lucide="shield-check" class="text-amber-500"></i> 工具动作仍由游戏规则裁决</h3>
+                <p class="text-sm text-zinc-400 mt-3 leading-6"><code>Result.ToolCalls</code> 只是模型提案。合法动作写入 Tool Result；非法回答准备重试时先调用 <code>Reject Last Response</code>，避免错误 assistant 动作留在记忆里。</p>
+            </div>
+        </section>
+
+        <section id="cpp" class="mb-20 scroll-mt-24">
+            <p class="text-xs font-black text-purple-400 tracking-[.25em] uppercase mb-3">Native UE API</p>
+            <h2 class="text-3xl font-black text-white mb-8">C++ 使用相同对象模型</h2>
+            <div class="grid lg:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-black text-white mb-3">缺省单对话</h3>
+                    <pre>#include "LiteRtLmBlueprintLibrary.h"
+#include "LiteRtLmQuickChat.h"
+
+UPROPERTY(Transient)
+TObjectPtr&lt;ULiteRtLmQuickChat&gt; QuickChat;
+
+QuickChat = ULiteRtLmBlueprintLibrary::CreateQuickChat(
+    this, TEXT("Remember this conversation."));
+
+const FString RequestId =
+    QuickChat-&gt;AskStreaming(TEXT("Hello"));</pre>
+                </div>
+                <div>
+                    <h3 class="font-black text-white mb-3">多个独立 Conversation</h3>
+                    <pre>#include "LiteRtLmSubsystem.h"
+
+UPROPERTY(Transient)
+TArray&lt;TObjectPtr&lt;ULiteRtLmAgent&gt;&gt; Conversations;
+
+auto* Runtime = GEngine-&gt;
+    GetEngineSubsystem&lt;ULiteRtLmSubsystem&gt;();
+
+auto* Agent = Runtime-&gt;CreateAgent(
+    TEXT("Seat 3"), TEXT("Follow your role."));
+
+Conversations.Add(Agent);
+Agent-&gt;Ask(TEXT("Give your analysis."));</pre>
+                </div>
+            </div>
+            <p class="text-sm text-zinc-500 mt-5">Blueprint 保持唯一、无歧义的反射签名；C++ 提供省略 Options 等常用参数的重载。它们最终调用同一实现。</p>
+        </section>
+
+        <section id="debug" class="mb-16 scroll-mt-24">
+            <p class="text-xs font-black text-red-400 tracking-[.25em] uppercase mb-3">Memory Debugging</p>
+            <h2 class="text-3xl font-black text-white mb-6">“AI 像没看上下文”检查表</h2>
+            <ol class="panel p-7 space-y-4 text-sm text-zinc-400 list-decimal list-inside">
+                <li>是否每条消息都重新创建了 QuickChat/Agent？</li>
+                <li>多个角色是否错误共用了同一个 Agent？</li>
+                <li>角色知道的真实事件是否写进其 Agent，而不是只显示在 UI？</li>
+                <li><code>Ask</code> 是否返回非空 Request Id？</li>
+                <li>是否在 Agent 忙碌时再次提交或修改记忆？</li>
+                <li>用 <code>Export Conversation Json</code> / <code>Export Memory Json</code> 查看下一次推理前的完整历史。</li>
+                <li>规则层拒绝答案后是否调用了 <code>Reject Last Response</code>？</li>
+            </ol>
+            <p class="text-sm text-zinc-500 mt-5 leading-6">当前 Win64 GPU 运行时下，同一 Agent 连续请求可复用当前常驻 KV；切换 Agent 时从目标 Agent 的完整规范历史重建。语义不会丢失，但跨 Agent 切换可能增加 prefill。</p>
+        </section>
+
+        <section class="panel p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div><h2 class="text-2xl font-black text-white">需要完整细节？</h2><p class="text-sm text-zinc-500 mt-2">Markdown 版本包含生命周期、工具校验和完整节点表。</p></div>
+            <div class="flex flex-wrap gap-3"><a href="CONVERSATIONS_zh.md" class="px-5 py-3 bg-blue-600 text-white rounded-lg text-sm font-bold">打开 Markdown</a><a href="index_zh.html" class="px-5 py-3 border border-zinc-700 text-white rounded-lg text-sm font-bold">返回首页</a></div>
+        </section>
+    </main>
+
+    <footer class="border-t border-zinc-900 py-8 text-center text-[10px] text-zinc-700 uppercase tracking-[.3em]">LiteRT-LM Unreal · UE 5.8 · Winyunq</footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

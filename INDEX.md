@@ -7,21 +7,22 @@ Welcome to the **LiteRT-LM-Unreal** plugin developed by **Winyunq**. This is a h
 ## 📖 Table of Contents
 
 1.  **[Getting Started](GETTING_STARTED.md)**
-    - Environment setup, model preparation, first inference.
-2.  **[Model Management](MODEL_MANAGEMENT.md)**
-    - Storage standards, configuration parameters, VRAM optimization, LRU mechanism.
-3.  **[API Reference](API_REFERENCE.md)**
+    - Installation, model settings, and the first Quick Chat.
+2.  **[Single and Multiple Conversations](CONVERSATIONS.md)**
+    - UE 5.8-verified Blueprint/C++ steps, lifetime, and memory debugging.
+3.  **[Model Management](MODEL_MANAGEMENT.md)**
+    - Storage, configuration, canonical history, and VRAM boundaries.
+4.  **[API Reference](API_REFERENCE.md)**
     - Subsystem interfaces, sampling parameters, result struct details.
-4.  **[Core Strategy & Pillars](../README.md#🌟-our-logic--strategy)**
-    - Learn about our design philosophy of achieving lightning-fast cache hits through Session ID mapping.
+5.  **[GitHub repository](https://github.com/winyunq/LiteRT-LM-Unreal)**
+    - The public legacy source baseline and current public documentation.
 
 ## 🚀 Why choose LiteRT-LM-Unreal?
 
-Compared to solutions on the market that often cost $49 with inconsistent integration quality, we insist on:
-- **Open Source Spirit**: Core code is based on Google LiteRT-LM, transparent and customizable.
-- **Extreme Optimization**: Deeply optimized for modern hardware such as 13900HX/RTX 4060, supporting seamless GPU/CPU backend switching.
-- **Zero-Friction Integration**: Through `void* ctx` session management, NPC memory switching takes < 1ms.
-- **Sincere Pricing**: Only $19, providing stability and functionality equal to or even exceeding competitors.
+- **One object model**: Quick Chat is a compatibility facade over an ordinary default Agent, not a second state implementation.
+- **Independent character memory**: use one Agent per NPC, each with complete canonical history.
+- **One shared GPU model**: one model and one serial queue, without a model copy per character.
+- **C++ first**: Blueprint signatures stay unambiguous while C++ gets convenience overloads and a full native SDK entry.
 
 ---
 *Strategy by Human, Tactics by AI. LiteRT-LM-Unreal empowers your game to enter the AIGC era.*

@@ -43,6 +43,9 @@
             <a href="QUICK_START_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
                 <span class="pillar-badge">02</span> 快速体验
             </a>
+            <a href="CONVERSATIONS_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
+                <span class="pillar-badge">指南</span> 单对话与多对话
+            </a>
             <a href="APP_LAYER_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
                 <span class="pillar-badge">03</span> 学习如何使用
             </a>
@@ -76,7 +79,7 @@
                     让您的虚幻项目具备 <br/><span class="winyunq-gradient">本地 AI 之魂</span>
                 </h1>
                 <p class="text-xl text-gray-500 leading-relaxed max-w-2xl font-medium">
-                    超脱传统的源码注释，深挖物理逻辑的深度。LiteRT-LM Unreal 是专为 AAA 级项目设计的本地高性能 Agent 推理方案。
+                    面向 UE 5.8 的本地推理插件：提供缺省单对话外观、独立多 Agent 记忆，以及通往 LiteRT-LM v0.14 官方完整 API 的原生 C++ 入口。
                 </p>
             </header>
 
@@ -87,15 +90,15 @@
                         <i data-lucide="shield" class="text-blue-500"></i> ABI 防火墙：零部署集成
                     </h2>
                     <p class="text-gray-400 leading-relaxed mb-8 text-sm">
-                        我们通过 <code>litert_lm_wrapper.dll</code> 建立了一道物理隔绝的 ABI 防火墙。这意味着您在集成 70+ 个底层依赖项（Bazel, Rust, TensorFlow, WebGPU）时，<b>无需在宿主机器上安装任何复杂的编译环境</b>。插件即插即用。
+                        当前 Win64 包将官方 <code>litert-lm.dll</code> 与小型扩展桥 <code>litert_lm_wrapper.dll</code> 分离。STL、Abseil 和 Protobuf 对象不会穿越 C ABI 边界；原生 C++ 开发者仍可通过随包 SDK 使用官方完整 API。
                     </p>
                     <div class="bg-black/50 rounded-xl p-6 border border-white/5">
                         <p class="text-[10px] uppercase font-black text-gray-600 mb-4 tracking-[0.2em]">底层技术栈一瞥</p>
                         <div class="flex flex-wrap gap-4 text-[9px] font-bold text-gray-400">
                             <span class="px-2 py-1 bg-blue-500/10 rounded">GOOGLE LITERT</span>
-                            <span class="px-2 py-1 bg-green-500/10 rounded">WEBGPU / VULKAN</span>
-                            <span class="px-2 py-1 bg-orange-500/10 rounded">RUST CRATES</span>
-                            <span class="px-2 py-1 bg-purple-500/10 rounded">LLGUIDANCE</span>
+                            <span class="px-2 py-1 bg-green-500/10 rounded">WIN64 / ANDROID GPU</span>
+                            <span class="px-2 py-1 bg-orange-500/10 rounded">STABLE C ABI 1.2</span>
+                            <span class="px-2 py-1 bg-purple-500/10 rounded">UE C++ / BLUEPRINT</span>
                         </div>
                     </div>
                 </section>
@@ -104,19 +107,28 @@
                 <div class="grid md:grid-cols-2 gap-8">
                     <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all"> 
                         <i data-lucide="zap" class="w-10 h-10 text-yellow-500 mb-6 group-hover:scale-110 transition-transform"></i>
-                        <h3 class="text-xl font-black text-white mb-3 italic">物理级 KV 命中</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed">基于底层 C-API 的 Session 指针管理，实现多 Agent 瞬间切换，KV Cache 命中率提升至 98% 以上。</p>
+                        <h3 class="text-xl font-black text-white mb-3 italic">统一的状态模型</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Quick Chat 是普通缺省 Agent 的兼容外观。通过 Get Conversation 可继续使用记忆、工具和存档能力，不会丢失上下文。</p>
                     </div>
                     <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all"> 
                         <i data-lucide="cpu" class="w-10 h-10 text-blue-500 mb-6 group-hover:scale-110 transition-transform"></i>
-                        <h3 class="text-xl font-black text-white mb-3 italic">极致显存管控</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed">全自动显存预算分配。支持热-冷显存换入换出，在 8G 显存下也能流畅运行 7B 级多 Agent 对话。</p>
+                        <h3 class="text-xl font-black text-white mb-3 italic">记忆正确的多 Agent</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">每个 Agent 保有独立规范历史；共享模型与串行队列避免复制模型。当前 GPU 运行时需要时会从目标 Agent 的完整历史重建。</p>
                     </div>
                 </div>
             </div>
 
             <!-- Promotion Links -->
             <section class="mt-32 space-y-8">
+                <div class="content-card p-10 border border-teal-500/20 bg-teal-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div class="flex-1">
+                        <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">单对话与多对话</h4>
+                        <p class="text-xs text-gray-500">按照 UE 5.8 已核对的 Blueprint 与 C++ 步骤操作，理解 Quick Chat 的缺省 Conversation 语义，并正确隔离多个 NPC 的记忆。</p>
+                    </div>
+                    <a href="CONVERSATIONS_zh.html" class="px-8 py-4 bg-teal-500 text-black text-xs font-black uppercase tracking-widest rounded-full hover:scale-105 transition-all flex items-center gap-2">
+                        <i data-lucide="messages-square" class="w-4 h-4"></i> 打开指南
+                    </a>
+                </div>
                 <div class="content-card p-10 border border-blue-500/20 bg-blue-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
                     <div class="flex-1">
                         <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Download Demo Project</h4>
@@ -130,10 +142,10 @@
                 <div class="content-card p-10 border border-orange-500/20 bg-orange-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
                     <div class="flex-1">
                         <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Buy from Fab</h4>
-                        <p class="text-xs text-gray-500 italic">当前阶段：免费 (大概在 2026.5.30 前会修改为 19 美元以上)。现在获取以享受永久免费更新。</p>
+                        <p class="text-xs text-gray-500 italic">当前 UE 5.8 插件请使用 Fab 版本。这个公开仓库保留旧版源码基线，并持续公开最新文档。</p>
                     </div>
-                    <a href="#" target="_blank" class="px-8 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-orange-500 transition-all flex items-center gap-2">
-                        <i data-lucide="shopping-cart" class="w-4 h-4"></i> Get it for Free
+                    <a href="https://github.com/winyunq/LiteRT-LM-Unreal/releases" target="_blank" class="px-8 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-orange-500 transition-all flex items-center gap-2">
+                        <i data-lucide="package-open" class="w-4 h-4"></i> 查看发布包
                     </a>
                 </div>
             </section>
