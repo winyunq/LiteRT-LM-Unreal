@@ -1,69 +1,39 @@
 **EN** | [中文](GETTING_STARTED_zh.md)
 
-# Getting Started Guide
+# LiteRT-LM Unreal Quick Start
 
-Welcome to **LiteRT-LM-Unreal**. This guide will help you set up the environment and achieve your first local LLM inference within 5 minutes.
+This page targets the current **UE 5.8 / LiteRT-LM v0.14 / Stable ABI 1.2** plugin. For complete single-conversation, multiple-conversation, and C++ examples, read [Single and Multiple Conversations](CONVERSATIONS.md).
 
-## 1. Installation Steps
+## 1. Install
 
-1.  **Extract Plugin**: Copy the `LiteRT-LM-Unreal` folder into your Unreal project's `Plugins` directory.
-2.  **Regenerate Project**: Right-click your `.uproject` file and select `Generate Visual Studio project files`.
-3.  **Compile Project**: Click compile in your IDE (VS/Rider) or within the Editor.
-4.  **Enable Plugin**: Ensure `LiteRT-LM-Unreal` is checked in the Editor under `Edit -> Plugins` and restart.
+1. Install the plugin under the Engine or project at `Plugins/LiteRT-LM-Unreal`.
+2. Enable **LiteRT-LM-Unreal** under `Edit > Plugins`, then restart the Editor.
+3. Set `Model Path`, context size, and default sampling under `Project Settings > Plugins > LiteRT-LM`.
+4. The first Conversation starts lazy model loading automatically. There is no Blueprint `Load Model` node.
 
-## 2. Prepare Model Files
+## 2. First Blueprint conversation
 
-This plugin is based on Google's **LiteRT-LM** engine.
-- Go to the [Google AI Edge Model Repository](https://github.com/google-ai-edge/LiteRT-LM) to download a compatible model (e.g., `Gemma-2B-IT`).
-- Place the downloaded `.bin` file in a location you remember (Recommended: `D:/Models/gemma.bin`).
+1. Call `Create Quick Chat` from `BeginPlay`.
+2. Promote Return Value to a `QuickChat` variable.
+3. Bind `On Answer` and `On Error`; bind `On Text Chunk` only for streaming UI.
+4. Call either `Ask Once` or `Ask Streaming`, not both.
+5. Keep using the same `QuickChat` variable so it retains conversation history.
 
-## 3. Implement Your First AI Conversation (C++)
+`Ask Once` / `Ask Streaming` returns a Request Id. The answer arrives through asynchronous events. Do not treat the return value as the answer, and do not create a new Quick Chat for each message.
 
-In your `Actor` or `Character`, use the following code to wake up the AI:
+## 3. Single-conversation compatibility semantics
 
-```cpp
-#include "LiteRtLmUnrealApi.h"
-#include "LiteRtLmSubsystem.h"
+Quick Chat automatically creates an ordinary, default-configured `ULiteRtLmAgent`. It is neither a global singleton nor a separate Session implementation. `Get Conversation` returns that same Agent so you can adopt memory, tools, import/export, and persistence APIs.
 
-// 1. Load Model
-FLiteRtLmConfig Config;
-Config.ModelPath = TEXT("D:/Models/gemma.bin");
-FLiteRtLmUnrealApi::LoadModel(Config);
+## 4. Multiple characters
 
-// 2. Initiate Conversation
-TArray<TSharedPtr<FJsonObject>> Messages;
-auto UserMsg = MakeShared<FJsonObject>();
-UserMsg->SetStringField("role", "user");
-UserMsg->SetStringField("content", "Hello, please introduce yourself.");
-Messages.Add(UserMsg);
+Create one `Create Conversation (Advanced)` object per NPC/player and retain each Agent in an array or map. Ask the Agent whose turn it is. At scene or match shutdown, call `Close and Clear Conversations`.
 
-// Use 'this' as the context pointer for automatic KV Cache session management
-FLiteRtLmUnrealApi::SendChatRequest(
-    this, 
-    Messages,
-    TEXT(""), // ToolsJson
-    FLiteRtLmChunkCallback::CreateLambda([](const FString& Chunk) {
-        // Handle streaming output in real-time (typewriter effect)
-        UE_LOG(LogTemp, Warning, TEXT("AI Typing: %s"), *Chunk);
-    }),
-    FLiteRtLmDoneCallback::CreateLambda([](const FLiteRtLmResult& Result) {
-        // Callback after inference completion
-        UE_LOG(LogTemp, Display, TEXT("Conversation ended. Full response: %s"), *Result.FullText);
-    })
-);
-```
+Complete multiple-conversation steps: [CONVERSATIONS.md](CONVERSATIONS.md)
 
-## 4. Blueprint Support
+## 5. Platforms
 
-Since the API involves complex asynchronous callbacks and C++ pointers, we currently strongly recommend using C++ for core integration.
-*Note: Blueprint-specific API nodes are under development and expected in v1.1.*
-
-## 5. FAQ
-
-- **Q: Why does the Editor freeze when loading the model?**
-  - A: Initial loading requires VRAM allocation and shader compilation (if `OptimizeShader` is enabled). We suggest calling `LoadModel` asynchronously during a Loading Screen.
-- **Q: Does it support mobile?**
-  - A: Windows (Vulkan/DirectX) is currently supported. Android/iOS support is in internal testing.
-
----
-*Winyunq Strategy: Peak Performance, Within Reach.*
+- Current scenario layer: text, strict GPU.
+- Targets: Win64 and Android arm64.
+- Blueprint events are delivered on the Game Thread.
+- One process shares one model and one serial inference queue.

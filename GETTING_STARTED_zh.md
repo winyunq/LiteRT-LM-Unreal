@@ -1,69 +1,39 @@
 [EN](GETTING_STARTED.md) | **中文**
 
-# 快速开始指南 (Getting Started)
+# LiteRT-LM Unreal 快速开始
 
-欢迎使用 **LiteRT-LM-Unreal**。本指南将帮助您在 5 分钟内完成环境搭建并实现第一次本地大模型推理。
+本页针对当前 **UE 5.8 / LiteRT-LM v0.14 / Stable ABI 1.2** 插件。完整的单对话、多对话和 C++ 示例见[《单对话与多对话分步指南》](CONVERSATIONS_zh.md)。
 
-## 1. 安装步骤
+## 1. 安装
 
-1.  **解压插件**：将 `LiteRT-LM-Unreal` 文件夹拷贝到您虚幻项目的 `Plugins` 目录下。
-2.  **重新生成项目**：右键点击您的 `.uproject` 文件，选择 `Generate Visual Studio project files`。
-3.  **编译项目**：在 IDE（VS/Rider）或编辑器中点击编译。
-4.  **启用插件**：在编辑器 `Edit -> Plugins` 中确保 `LiteRT-LM-Unreal` 已勾选并重启。
+1. 将插件安装到 Engine 或项目的 `Plugins/LiteRT-LM-Unreal`。
+2. 在 `Edit > Plugins` 启用 **LiteRT-LM-Unreal** 并重启编辑器。
+3. 在 `Project Settings > Plugins > LiteRT-LM` 设置 `Model Path`、上下文长度和缺省采样参数。
+4. 模型由第一个 Conversation 自动懒加载，不需要 `Load Model` 蓝图节点。
 
-## 2. 准备模型文件
+## 2. 第一次 Blueprint 对话
 
-本插件基于 Google 的 **LiteRT-LM** 引擎。
-- 前往 [Google AI Edge 模型库](https://github.com/google-ai-edge/LiteRT-LM) 下载适配的模型（如 `Gemma-2B-IT`）。
-- 将下载好的 `.bin` 文件放在您记得住的位置（推荐：`D:/Models/gemma.bin`）。
+1. 在 `BeginPlay` 调用 `Create Quick Chat`。
+2. 将 Return Value 提升为 `QuickChat` 变量。
+3. 绑定 `On Answer` 和 `On Error`；需要流式 UI 时再绑定 `On Text Chunk`。
+4. 只调用 `Ask Once` 或 `Ask Streaming` 其中一个。
+5. 继续复用同一个 `QuickChat` 变量，它会保留对话历史。
 
-## 3. 实现第一次 AI 对话 (C++)
+`Ask Once` / `Ask Streaming` 返回 Request Id；答案通过异步事件抵达。不要把返回值当作答案，也不要每条消息创建新 Quick Chat。
 
-在您的 `Actor` 或 `Character` 中，使用以下代码唤醒 AI：
+## 3. 单对话的兼容语义
 
-```cpp
-#include "LiteRtLmUnrealApi.h"
-#include "LiteRtLmSubsystem.h"
+Quick Chat 自动创建一个普通、缺省配置的 `ULiteRtLmAgent`。它不是全局单例，也不是另一套 Session 实现。调用 `Get Conversation` 可以获得同一个底层 Agent，并继续使用记忆、工具、导入导出和存档 API。
 
-// 1. 加载模型
-FLiteRtLmConfig Config;
-Config.ModelPath = TEXT("D:/Models/gemma.bin");
-FLiteRtLmUnrealApi::LoadModel(Config);
+## 4. 多角色
 
-// 2. 发起对话
-TArray<TSharedPtr<FJsonObject>> Messages;
-auto UserMsg = MakeShared<FJsonObject>();
-UserMsg->SetStringField("role", "user");
-UserMsg->SetStringField("content", "你好，请介绍一下你自己。");
-Messages.Add(UserMsg);
+每个 NPC/玩家创建一次 `Create Conversation (Advanced)`，把返回的 Agent 保存在数组或 Map 中。轮到谁就对谁调用 `Ask`。一局结束时调用 `Close and Clear Conversations`。
 
-// 使用 'this' 作为上下文指针，自动管理 KV Cache 会话
-FLiteRtLmUnrealApi::SendChatRequest(
-    this, 
-    Messages,
-    TEXT(""), // ToolsJson
-    FLiteRtLmChunkCallback::CreateLambda([](const FString& Chunk) {
-        // 实时处理流式输出（打字机效果）
-        UE_LOG(LogTemp, Warning, TEXT("AI 正在输入: %s"), *Chunk);
-    }),
-    FLiteRtLmDoneCallback::CreateLambda([](const FLiteRtLmResult& Result) {
-        // 推理完成后的回调
-        UE_LOG(LogTemp, Display, TEXT("对话结束，完整回复: %s"), *Result.FullText);
-    })
-);
-```
+多对话完整步骤：[CONVERSATIONS_zh.md](CONVERSATIONS_zh.md)
 
-## 4. 蓝图支持 (Blueprints)
+## 5. 平台
 
-由于 API 涉及复杂的异步回调和 C++ 指针，我们目前强烈推荐使用 C++ 进行核心集成。
-*注：蓝图专用的 API 节点正在开发中，预计在 v1.1 版本上线。*
-
-## 5. 常见问题 (FAQ)
-
-- **Q: 为什么加载模型时编辑器卡顿？**
-  - A: 首次加载模型需要分配 VRAM 并编译着色器（如开启了 `OptimizeShader`）。建议在 Loading Screen 期间异步调用 `LoadModel`。
-- **Q: 是否支持移动端？**
-  - A: 目前已支持 Windows (Vulkan/DirectX)。Android/iOS 支持正在内部测试中。
-
----
-*Winyunq Strategy: 极致性能，触手可及。*
+- 当前场景层：文本，严格 GPU。
+- 目标平台：Win64、Android arm64。
+- 所有 Blueprint 事件在 Game Thread 广播。
+- 一个进程共享一个模型和一条串行推理队列。
