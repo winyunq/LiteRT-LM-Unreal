@@ -1,169 +1,155 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LiteRT-LM Unreal | Documentation by Winyunq</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
-        body { background-color: #050505; color: #D1D5DB; font-family: 'Inter', sans-serif; }
-        .sidebar { background-color: #080808; border-right: 1px solid #111; }
-        .nav-item { transition: all 0.2s; border-left: 2px solid transparent; }
-        .nav-item:hover { background-color: #0F0F0F; color: #3B82F6; }
-        .nav-item.active { background-color: #0F0F0F; color: #3B82F6; border-left-color: #3B82F6; }
-        .content-card { background-color: #0C0C0E; border: 1px solid #1A1A1A; border-radius: 1rem; }
-        .winyunq-gradient { background: linear-gradient(90deg, #3B82F6 0%, #2DD4BF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        code { font-family: 'Fira Code', monospace; font-size: 0.85em; color: #60A5FA; }
-        .pillar-badge { font-size: 0.6rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: #111; border: 1px solid #222; color: #666; margin-right: 8px; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LiteRT-LM Unreal — 按使用场景学习</title>
+  <meta name="description" content="LiteRT-LM Unreal 实用教程：快速单对话、多对话、记忆、工具、MCP、C++、诊断与打包。">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="index_zh.html">
+  <link rel="alternate" hreflang="en" href="index.html">
 </head>
-<body class="flex min-h-screen">
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+  <header class="site-header">
+    <nav class="nav" aria-label="主导航">
+      <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+      <div class="nav-links">
+        <a aria-current="page" href="index_zh.html">插件总览</a>
+        <a href="GUIDE_QUICK_START_zh.html">快速单对话</a>
+        <a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">多对话</a>
+        <a href="SYSTEMS_zh.html">全部体系</a>
+        <a href="GUIDE_CPP_zh.html">C++</a>
+        <a class="lang-switch" href="index.html" lang="en">English</a>
+      </div>
+    </nav>
+  </header>
 
-    <!-- Sidebar -->
-    <aside class="sidebar w-72 fixed h-full hidden md:flex flex-col p-8 overflow-y-auto">
-        <div class="flex items-center gap-3 mb-12">
-            <i data-lucide="cpu" class="text-blue-500 w-6 h-6"></i>
-            <span class="text-xl font-black tracking-tighter text-white uppercase">LiteRT-LM <span class="text-blue-600">UE</span></span>
+  <main id="main">
+    <section class="hero">
+      <div class="container">
+        <p class="eyebrow">本地大模型 · 蓝图 + C++ · Win64 + Android</p>
+        <h1>先让一个对话跑起来，再扩展成拥有独立记忆的 AI 世界。</h1>
+        <p class="hero-copy">LiteRT-LM Unreal 是一个按使用场景组织的本地 AI 插件。你可以从自动管理的单对话开始，再进入多 Agent、记忆、工具、MCP、原生 C++、诊断和打包；底层运行时无需反复删除和重做。</p>
+        <div class="hero-actions">
+          <a class="button primary" href="GUIDE_QUICK_START_zh.html">做出第一个对话</a>
+          <a class="button" href="#choose">先选正确的 API</a>
         </div>
+      </div>
+    </section>
 
-        <div class="flex gap-4 mb-6 px-3">
-            <a href="index.html" class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all">EN</a>
-            <span class="text-[10px] font-black uppercase tracking-widest text-blue-500">中文</span>
+    <section class="section compact">
+      <div class="container">
+        <div class="callout good">
+          <strong>先记住这个模型：</strong>插件在进程内维护一个共享的 GPU 模型和串行推理队列；每个 <code>Quick Chat</code> 或 <code>Agent</code> 都有独立对话和记忆。“单对话”只是易用的兼容外观，并不是全局唯一会话。
         </div>
+      </div>
+    </section>
 
-        <nav class="space-y-1">
-            <p class="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 px-3">开发者路线图</p>
-
-            <a href="index_zh.html" class="nav-item active flex items-center px-3 py-2 rounded-lg text-xs font-bold transition-all">
-                <span class="pillar-badge">01</span> 项目概览与背景
-            </a>
-            <a href="QUICK_START_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">02</span> 快速体验
-            </a>
-            <a href="CONVERSATIONS_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">指南</span> 单对话与多对话
-            </a>
-            <a href="APP_LAYER_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">03</span> 学习如何使用
-            </a>
-            <a href="SERVICE_LAYER_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">04</span> 插件工作流
-            </a>
-            <a href="Wrapper/index_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all hover:text-blue-500">
-                <span class="pillar-badge">05</span> 底层核心原理
-            </a>
-            <a href="DEMO_CASES_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">06</span> 实战演示
-            </a>
-            <a href="SHIPPING_zh.html" class="nav-item flex items-center px-3 py-2 rounded-lg text-xs font-bold text-gray-500 transition-all">
-                <span class="pillar-badge">07</span> 打包与发布
-            </a>
-        </nav>
-
-        <div class="mt-auto pt-10 text-[10px] text-gray-800 font-black uppercase tracking-[3px] italic">        
-            Winyunq Engineering
+    <section class="section" id="choose">
+      <div class="container">
+        <p class="eyebrow">按你正在做的东西选择</p>
+        <h2>开始之前，不需要先读完全部 API</h2>
+        <p class="section-lead">让 AI 对象的生命周期与游戏对象一致。教程先给出最小可用接口；复杂能力仍然完整保留在底层。</p>
+        <div class="grid three" style="margin-top:28px">
+          <a class="card-link" href="GUIDE_QUICK_START_zh.html"><article class="card choice-card"><div class="number">1</div><h3>一个聊天框或助手</h3><p class="answer">使用 Quick Chat</p><p>它会自动创建并持有一个普通 Agent。只绑定一次回答事件，然后调用 <code>Ask Once</code> 或 <code>Ask Streaming</code>。</p></article></a>
+          <a class="card-link" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html"><article class="card choice-card"><div class="number">N</div><h3>多个 NPC、玩家或身份</h3><p class="answer">每个身份一个 Agent</p><p>提示词、工具和记忆彼此独立；运行时与模型共享，因此不会为每个角色各加载一份模型。</p></article></a>
+          <a class="card-link" href="SYSTEMS_zh.html#actor-component"><article class="card choice-card"><div class="number">A</div><h3>AI 就属于某个 Actor</h3><p class="answer">使用 LiteRT-LM Component</p><p>组件在 BeginPlay 创建一个 Agent，并把对话、记忆和工具事件直接暴露给所属 Actor。</p></article></a>
+          <a class="card-link" href="SYSTEMS_zh.html#mcp"><article class="card choice-card"><div class="number">M</div><h3>外部工具或 MCP 路由</h3><p class="answer">使用 MCP Gateway</p><p>固定工具结构，把调用路由到外部系统，提交结果后在同一段对话中继续推理。</p></article></a>
+          <a class="card-link" href="GUIDE_CPP_zh.html"><article class="card choice-card"><div class="number">C++</div><h3>玩法代码或其他插件</h3><p class="answer">优先使用 UObject API</p><p>C++ 同样可以使用 Quick Chat、Agent、Runtime 和 Gateway；只有确实需要更低层 ABI 时才进入 Native SDK。</p></article></a>
+          <a class="card-link" href="SYSTEMS_zh.html#shipping"><article class="card choice-card"><div class="number">→</div><h3>发布到 Win64 或 Android</h3><p class="answer">模型交付 + 诊断 + 打包</p><p>先决定模型如何到达设备，验证模型路径，再在目标设备检查运行时状态和诊断日志。</p></article></a>
         </div>
-    </aside>
+      </div>
+    </section>
 
-    <!-- Main Content -->
-    <main class="flex-1 md:ml-72 p-12 md:p-16 lg:p-24">
-        <div class="max-w-4xl mx-auto">
-            <header class="mb-20">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/5 border border-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-widest mb-8">
-                    Strategy by Winyunq Core
-                </div>
-                <h1 class="text-6xl font-black text-white mb-8 tracking-tighter leading-none italic">
-                    让您的虚幻项目具备 <br/><span class="winyunq-gradient">本地 AI 之魂</span>
-                </h1>
-                <p class="text-xl text-gray-500 leading-relaxed max-w-2xl font-medium">
-                    面向 UE 5.8 的本地推理插件：提供缺省单对话外观、独立多 Agent 记忆，以及通往 LiteRT-LM v0.14 官方完整 API 的原生 C++ 入口。
-                </p>
-            </header>
+    <section class="section">
+      <div class="container">
+        <p class="eyebrow">插件结构树</p>
+        <h2>一个插件，可以拆成多条学习路线</h2>
+        <p class="section-lead">按纵向场景学习：先完成一个真实功能，再只打开下一项所需体系。</p>
+        <pre class="tree" aria-label="文档结构树">LiteRT-LM Unreal
+├── 5 分钟快速开始
+│   └── 缺省单对话（Quick Chat）
+├── Conversation 对话体系
+│   ├── 单对话
+│   ├── 多个独立 Agent
+│   ├── 记忆、存档、纠错
+│   └── 工具调用与结构化决策
+├── MCP Gateway 体系
+├── Actor Component 体系
+├── C++ 开发
+│   ├── Unreal UObject API
+│   └── Native SDK / 稳定 C ABI
+├── 项目设置、模型交付、运行时状态与诊断
+├── 打包：Win64 / Android
+└── Demo：多对话狼人杀</pre>
+      </div>
+    </section>
 
-            <div class="space-y-16">
-                <!-- ABI Firewall Section -->
-                <section class="content-card p-10 border-l-4 border-l-blue-500">
-                    <h2 class="text-2xl font-black text-white mb-6 italic tracking-tight flex items-center gap-3">
-                        <i data-lucide="shield" class="text-blue-500"></i> ABI 防火墙：零部署集成
-                    </h2>
-                    <p class="text-gray-400 leading-relaxed mb-8 text-sm">
-                        当前 Win64 包将官方 <code>litert-lm.dll</code> 与小型扩展桥 <code>litert_lm_wrapper.dll</code> 分离。STL、Abseil 和 Protobuf 对象不会穿越 C ABI 边界；原生 C++ 开发者仍可通过随包 SDK 使用官方完整 API。
-                    </p>
-                    <div class="bg-black/50 rounded-xl p-6 border border-white/5">
-                        <p class="text-[10px] uppercase font-black text-gray-600 mb-4 tracking-[0.2em]">底层技术栈一瞥</p>
-                        <div class="flex flex-wrap gap-4 text-[9px] font-bold text-gray-400">
-                            <span class="px-2 py-1 bg-blue-500/10 rounded">GOOGLE LITERT</span>
-                            <span class="px-2 py-1 bg-green-500/10 rounded">WIN64 / ANDROID GPU</span>
-                            <span class="px-2 py-1 bg-orange-500/10 rounded">STABLE C ABI 1.2</span>
-                            <span class="px-2 py-1 bg-purple-500/10 rounded">UE C++ / BLUEPRINT</span>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Core Pillars Grid -->
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all"> 
-                        <i data-lucide="zap" class="w-10 h-10 text-yellow-500 mb-6 group-hover:scale-110 transition-transform"></i>
-                        <h3 class="text-xl font-black text-white mb-3 italic">统一的状态模型</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed">Quick Chat 是普通缺省 Agent 的兼容外观。通过 Get Conversation 可继续使用记忆、工具和存档能力，不会丢失上下文。</p>
-                    </div>
-                    <div class="content-card p-8 group cursor-pointer hover:border-blue-500/50 transition-all"> 
-                        <i data-lucide="cpu" class="w-10 h-10 text-blue-500 mb-6 group-hover:scale-110 transition-transform"></i>
-                        <h3 class="text-xl font-black text-white mb-3 italic">记忆正确的多 Agent</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed">每个 Agent 保有独立规范历史；共享模型与串行队列避免复制模型。当前 GPU 运行时需要时会从目标 Agent 的完整历史重建。</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Promotion Links -->
-            <section class="mt-32 space-y-8">
-                <div class="content-card p-10 border border-teal-500/20 bg-teal-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div class="flex-1">
-                        <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">单对话与多对话</h4>
-                        <p class="text-xs text-gray-500">按照 UE 5.8 已核对的 Blueprint 与 C++ 步骤操作，理解 Quick Chat 的缺省 Conversation 语义，并正确隔离多个 NPC 的记忆。</p>
-                    </div>
-                    <a href="CONVERSATIONS_zh.html" class="px-8 py-4 bg-teal-500 text-black text-xs font-black uppercase tracking-widest rounded-full hover:scale-105 transition-all flex items-center gap-2">
-                        <i data-lucide="messages-square" class="w-4 h-4"></i> 打开指南
-                    </a>
-                </div>
-                <div class="content-card p-10 border border-blue-500/20 bg-blue-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div class="flex-1">
-                        <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Download Demo Project</h4>
-                        <p class="text-xs text-gray-500">想要直接看到效果？从 GitHub 获取完整的开源 Demo，包含所有交互逻辑与示例资产。</p>
-                    </div>
-                    <a href="https://github.com/winyunq/LiteRTDemo" target="_blank" class="px-8 py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-full hover:scale-105 transition-all flex items-center gap-2">
-                        <i data-lucide="github" class="w-4 h-4"></i> Download from GitHub
-                    </a>
-                </div>
-
-                <div class="content-card p-10 border border-orange-500/20 bg-orange-500/5 flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div class="flex-1">
-                        <h4 class="text-xl font-black text-white mb-2 uppercase italic tracking-tighter">Buy from Fab</h4>
-                        <p class="text-xs text-gray-500 italic">当前 UE 5.8 插件请使用 Fab 版本。这个公开仓库保留旧版源码基线，并持续公开最新文档。</p>
-                    </div>
-                    <a href="https://github.com/winyunq/LiteRT-LM-Unreal/releases" target="_blank" class="px-8 py-4 bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-orange-500 transition-all flex items-center gap-2">
-                        <i data-lucide="package-open" class="w-4 h-4"></i> 查看发布包
-                    </a>
-                </div>
-            </section>
-
-            <!-- Footer -->
-            <footer class="mt-32 pt-12 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-8">
-                <div class="text-[10px] text-gray-800 font-black uppercase tracking-[0.3em]">
-                    战略由人 · 战术由 AI
-                </div>
-                <div class="flex gap-4">
-                    <a href="Wrapper/index_zh.html" class="px-8 py-3 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">
-                        探索底层原理 (Part 5)
-                    </a>
-                </div>
-            </footer>
+    <section class="section">
+      <div class="container">
+        <p class="eyebrow">推荐顺序</p>
+        <h2>符合人类习惯的学习路径</h2>
+        <div class="grid four" style="margin-top:28px">
+          <article class="card"><span class="pill">15 分钟</span><h3 style="margin-top:15px">1. 先看到一条回答</h3><p>设置模型路径，只创建一次 Quick Chat，绑定 <code>On Answer</code>，把最终文本打印出来。</p></article>
+          <article class="card"><span class="pill">下一步</span><h3 style="margin-top:15px">2. 接入自己的 UI</h3><p>按钮发送消息，保存对象引用，选择流式或整段输出，并处理忙碌与错误状态。</p></article>
+          <article class="card"><span class="pill">玩法</span><h3 style="margin-top:15px">3. 拆成多个角色</h3><p>每个身份创建一个 Agent；私密信息只发给对应角色，真实公共事件写入所有相关记忆。</p></article>
+          <article class="card"><span class="pill">发布</span><h3 style="margin-top:15px">4. 增加工具并打包</h3><p>加入结构化工具调用，按需接入 MCP，开启诊断，完成模型交付与真机打包测试。</p></article>
         </div>
-    </main>
+      </div>
+    </section>
 
-    <script>lucide.createIcons();</script>
+    <section class="section">
+      <div class="container">
+        <p class="eyebrow">来自 UE5 的真实截图</p>
+        <h2>教程步骤与编辑器状态一一对应</h2>
+        <p class="section-lead">以下截图来自 LiteRTDemo 项目。Quick Chat 节点链使用插件公开节点实际搭建，并在截图前完成了编译和保存。</p>
+        <div class="grid two" style="margin-top:28px">
+          <figure>
+            <img src="assets/screenshots/ue5-project-settings-model-path.png" alt="UE5 项目设置中的 LiteRT-LM 模型路径" loading="lazy">
+            <figcaption>项目设置 → 插件 → LiteRT-LM → Model Path。</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/screenshots/ue5-quick-chat-complete-flow.png" alt="Create Quick Chat、绑定回答、Ask Once 与 Print String 的完整蓝图节点链" loading="lazy">
+            <figcaption>完整入门流程：创建一次、保存引用、先绑定回答事件、再提问。</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <p class="eyebrow">API 导航</p>
+        <h2>每一组接口到底负责什么</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>体系</th><th>主要对象 / 节点</th><th>用来做什么</th><th>下一页</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Quick Start</strong></td><td><code>Create Quick Chat</code></td><td>自动管理的一段单对话</td><td><a href="GUIDE_QUICK_START_zh.html">教程</a></td></tr>
+              <tr><td><strong>Conversations</strong></td><td><code>ULiteRtLmAgent</code></td><td>独立角色、记忆、工具与生命周期</td><td><a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">教程</a></td></tr>
+              <tr><td><strong>Runtime</strong></td><td><code>ULiteRtLmSubsystem</code></td><td>共享模型状态、就绪状态、队列与诊断</td><td><a href="SYSTEMS_zh.html#runtime">体系说明</a></td></tr>
+              <tr><td><strong>MCP</strong></td><td><code>ULiteRtLmMcpGateway</code></td><td>工具结构与外部路由</td><td><a href="SYSTEMS_zh.html#mcp">体系说明</a></td></tr>
+              <tr><td><strong>Actor Component</strong></td><td><code>ULiteRtLmComponent</code></td><td>附着在 Actor 上的一段对话</td><td><a href="SYSTEMS_zh.html#actor-component">体系说明</a></td></tr>
+              <tr><td><strong>C++ / Native</strong></td><td>公开头文件 + <code>LiteRtLmNativeSdk.h</code></td><td>玩法 C++、其他插件与更低层 ABI</td><td><a href="GUIDE_CPP_zh.html">C++ 指南</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="card">
+          <p class="eyebrow">参考文档仍然保留</p>
+          <h2>先按教程做功能，需要查字段时再看参考</h2>
+          <p class="section-lead">旧的分层与封装说明仍可从<a href="SYSTEMS_zh.html#reference">参考资料区</a>进入，但它们不再作为第一入口。第一次使用插件的人，应当先完成一个能发送、能回答、能保持记忆的实际场景。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index.html" lang="en">English</a> · <a href="SYSTEMS_zh.html">完整体系图</a></span></div>
+  </footer>
 </body>
 </html>

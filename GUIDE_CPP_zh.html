@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C++ 接入指南 — LiteRT-LM Unreal</title>
+  <meta name="description" content="在玩法 C++、其他 Unreal 插件或完整 Native SDK 中使用 LiteRT-LM Unreal，避免重复实现对话能力。">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="GUIDE_CPP_zh.html">
+  <link rel="alternate" hreflang="en" href="GUIDE_CPP.html">
+</head>
+<body>
+  <a class="skip-link" href="#article">跳到 C++ 指南</a>
+  <header class="site-header"><nav class="nav" aria-label="主导航">
+    <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <div class="nav-links"><a href="index_zh.html">插件总览</a><a href="GUIDE_QUICK_START_zh.html">快速单对话</a><a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">多对话</a><a href="SYSTEMS_zh.html">全部体系</a><a aria-current="page" href="GUIDE_CPP_zh.html">C++</a><a class="lang-switch" href="GUIDE_CPP.html" lang="en">English</a></div>
+  </nav></header>
+
+  <main class="docs-layout">
+    <aside class="toc" aria-label="本页目录">
+      <p class="toc-title">C++ 路线</p>
+      <a href="#choose">选择接口层</a>
+      <a href="#build">1. 添加模块依赖</a>
+      <a href="#quickchat">2. 一段单对话</a>
+      <a href="#agents">3. 多个 Agent</a>
+      <a href="#ownership">所有权与异步规则</a>
+      <a href="#native">Native SDK / C ABI</a>
+      <a href="#shipping">发布检查表</a>
+    </aside>
+
+    <article class="article" id="article">
+      <header class="article-header">
+        <p class="eyebrow">Unreal C++ · 插件开发 · Native ABI</p>
+        <h1>在 C++ 中复用完整插件能力</h1>
+        <p class="hero-copy">蓝图层建立在导出的 UObject 类之上，并不是另一套实现。玩法 C++ 可以创建相同对话、绑定相同事件、使用记忆/工具/MCP；只有确实需要更低层控制时，才显式进入完整 Native SDK。</p>
+      </header>
+
+      <section id="choose">
+        <h2>始终选择能够满足需求的最高层接口</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>代码需要什么</th><th>使用</th><th>原因</th></tr></thead>
+          <tbody>
+            <tr><td><strong>自动设置的一段聊天</strong></td><td><code>ULiteRtLmQuickChat</code></td><td>最小所有权与事件接口。</td></tr>
+            <tr><td><strong>多身份、记忆与工具</strong></td><td><code>ULiteRtLmAgent</code></td><td>完整的产品级对话对象。</td></tr>
+            <tr><td><strong>模型状态或 Agent 工厂重载</strong></td><td><code>ULiteRtLmSubsystem</code></td><td>共享 Engine Subsystem 与 C++ 便利接口。</td></tr>
+            <tr><td><strong>MCP 路由与 Schema 生命周期</strong></td><td><code>ULiteRtLmMcpGateway</code></td><td>负责路由、Pending Call 与历史回放。</td></tr>
+            <tr><td><strong>直接使用上游句柄/函数</strong></td><td><code>LiteRtLmNativeSdk.h</code></td><td>完整官方 C API + 仅头文件 C++ 所有权/重载层。</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout good"><strong>不要因为某项功能也暴露给蓝图，就在 C++ 中重新实现。</strong>Quick Chat、Agent 记忆、工具、MCP、诊断与生命周期都是公开 C++ API。只有上层确实无法表达需求时才下沉。</div>
+      </section>
+
+      <section id="build">
+        <h2>1. 添加 Unreal 模块依赖</h2>
+        <p>在玩法模块或你的插件模块 <code>.Build.cs</code> 中：</p>
+        <pre><code>PrivateDependencyModuleNames.AddRange(new[]
+{
+    "Core",
+    "CoreUObject",
+    "Engine",
+    "LiteRTLMUnreal"
+});</code></pre>
+        <p>如果你自己的 Public 头文件直接暴露 LiteRT-LM 类型，则改放到 <code>PublicDependencyModuleNames</code>。该模块会发布场景层头文件与 Native SDK Include Path。</p>
+      </section>
+
+      <section id="quickchat">
+        <h2>2. 在 Actor 中创建一段单对话</h2>
+        <p>在 Actor 头文件中声明被持有的 Quick Chat 与动态事件处理器：</p>
+        <pre><code>#include "LiteRtLmQuickChat.h"
+#include "LiteRtLmUnrealApi.h"
+
+UPROPERTY(Transient)
+TObjectPtr&lt;ULiteRtLmQuickChat&gt; QuickChat;
+
+UFUNCTION()
+void HandleAnswer(const FLiteRtLmResult&amp; Result);
+
+UFUNCTION()
+void HandleChatError(const FLiteRtLmError&amp; Error);</code></pre>
+        <p>通常在 BeginPlay 只创建一次，Ask 之前先绑定事件，之后一直复用同一个对象：</p>
+        <pre><code>#include "LiteRtLmBlueprintLibrary.h"
+
+void ALocalChatActor::BeginPlay()
+{
+    Super::BeginPlay();
+
+    QuickChat = ULiteRtLmBlueprintLibrary::CreateQuickChat(
+        this,
+        TEXT("Answer concisely in the user's language."));
+
+    if (!IsValid(QuickChat))
+    {
+        return;
+    }
+
+    QuickChat-&gt;OnAnswer.AddDynamic(this, &amp;ALocalChatActor::HandleAnswer);
+    QuickChat-&gt;OnError.AddDynamic(this, &amp;ALocalChatActor::HandleChatError);
+    QuickChat-&gt;AskOnce(TEXT("Hello from Unreal C++."));
+}
+
+void ALocalChatActor::HandleAnswer(const FLiteRtLmResult&amp; Result)
+{
+    UE_LOG(LogTemp, Display, TEXT("AI: %s"), *Result.Text);
+}</code></pre>
+        <p>单参数 <code>AskOnce</code> 与 <code>AskStreaming</code> 重载使用默认请求选项。某一次请求需要自定义 <code>FLiteRtLmAskOptions</code> 时，使用双参数重载。</p>
+      </section>
+
+      <section id="agents">
+        <h2>3. 创建多个独立 Agent</h2>
+        <p>取得共享 Engine Subsystem，并使用它的 C++ 重载：</p>
+        <pre><code>#include "LiteRtLmAgent.h"
+#include "LiteRtLmSubsystem.h"
+
+ULiteRtLmSubsystem* Runtime =
+    GEngine-&gt;GetEngineSubsystem&lt;ULiteRtLmSubsystem&gt;();
+
+ULiteRtLmAgent* Judge = Runtime
+    ? Runtime-&gt;CreateAgent(
+        TEXT("Judge"),
+        TEXT("Apply the game rules and return structured decisions."))
+    : nullptr;
+
+if (IsValid(Judge))
+{
+    Judge-&gt;OnCompleted.AddDynamic(this, &amp;AMatchDirector::HandleJudgeResult);
+    Judge-&gt;Ask(TEXT("Evaluate the current round."));
+}</code></pre>
+        <p><code>CreateAgent</code> 提供“显示名”“显示名 + System Prompt”“显示名 + System Prompt + Tool Declaration JSON”三组便利重载。<code>Ask</code>、<code>AskMessagesJson</code> 和 <code>SubmitToolResult</code> 同样提供默认 Options 重载。</p>
+        <p>所有 Agent 都应存入由对局或玩法系统持有的 <code>UPROPERTY</code> 数组/Map。公共事件把真实事件追加到所有相关 Agent 的记忆；私密事件只调用指定收件人。</p>
+      </section>
+
+      <section id="ownership">
+        <h2>所有权与异步规则</h2>
+        <ul>
+          <li><strong>反射持有 UObject：</strong>使用 <code>UPROPERTY</code>/<code>TObjectPtr</code> 字段；临时局部裸指针不是完整的所有权方案。</li>
+          <li><strong>Ask 前绑定：</strong>完成和错误都通过异步事件送达。</li>
+          <li><strong>使用 Request ID：</strong>Ask 立即返回身份，事件稍后带回最终结果。</li>
+          <li><strong>同一个 Agent 不重叠请求：</strong>先检查 <code>IsBusy()</code>，或正确处理拒绝错误。</li>
+          <li><strong>一份模型，多段对话：</strong>Agent 共享 Runtime 和串行推理队列；只有你的代码复制消息时，它们才会共享记忆。</li>
+          <li><strong>玩法边界显式 Close：</strong>尤其是带着未完成请求替换整局/整场景时。</li>
+        </ul>
+      </section>
+
+      <section id="native">
+        <h2>确实需要时使用完整 Native SDK</h2>
+        <p>包含统一入口头文件：</p>
+        <pre><code>#include "LiteRtLmNativeSdk.h"</code></pre>
+        <p>它会包含来自 <code>c/engine.h</code> 的完整上游 C 声明；在 C++ 中还会包含无异常、仅头文件的 <code>litert_lm_native.hpp</code> 所有权和重载层。每个 Owner 都暴露 <code>get()</code> 与 <code>release()</code>，因此上游新增函数仍可直接使用，不必等待便利包装再增加同名方法。</p>
+        <div class="callout warn"><strong>Native SDK 链接是显式选择。</strong>场景模块本身不链接 <code>LiteRtLm_Native.lib</code>。Win64 消费模块直接调用 Native 符号时，必须添加 <code>Source/ThirdParty/LiteRtLm/Binaries/Win64</code> 下的 Import Library，并部署旁边的官方 Runtime Bundle。</div>
+        <p>以下示例适用于 <code>ModuleDirectory</code> 位于 <code>Project/Source/YourModule</code> 的项目模块：</p>
+        <pre><code>if (Target.Platform == UnrealTargetPlatform.Win64)
+{
+    string ProjectRoot = Path.GetFullPath(
+        Path.Combine(ModuleDirectory, "..", ".."));
+    string LiteRtLmBin = Path.Combine(
+        ProjectRoot,
+        "Plugins", "LiteRT-LM-Unreal", "Source", "ThirdParty",
+        "LiteRtLm", "Binaries", "Win64");
+
+    PublicAdditionalLibraries.Add(
+        Path.Combine(LiteRtLmBin, "LiteRtLm_Native.lib"));
+}</code></pre>
+        <p>如果消费模块位于另一个插件，需要调整路径发现方式。除非需求就是直接 Native 控制，否则 Unreal 生命周期、委托、记忆、MCP 与打包仍应优先使用上层 UObject API。</p>
+      </section>
+
+      <section id="shipping">
+        <h2>C++ 发布检查表</h2>
+        <ul class="checklist">
+          <li>消费模块已经依赖 <code>LiteRTLMUnreal</code>。</li>
+          <li>UObject 引用经过反射持有，不会被垃圾回收。</li>
+          <li>动态事件处理器是签名完全匹配的 <code>UFUNCTION</code>。</li>
+          <li>Win64/Android 目标二进制和模型都存在于 Staged Build。</li>
+          <li>直接 Native 调用者在受支持目标上显式链接 Import Library。</li>
+          <li>打包烟雾测试至少创建一段对话、收到一次完成事件，再通过同一个对象发送第二条消息。</li>
+        </ul>
+      </section>
+
+      <nav class="next-links" aria-label="下一页"><a href="SYSTEMS_zh.html#headers">浏览全部公开头文件 →</a><a href="dll_reference_zh.html">打开 DLL 参考 →</a></nav>
+    </article>
+  </main>
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index_zh.html">插件总览</a> · <a href="GUIDE_CPP.html" lang="en">English</a></span></div></footer>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>快速单对话教程 — LiteRT-LM Unreal</title>
+  <meta name="description" content="使用 LiteRT-LM Unreal 缺省单对话 Quick Chat API 的逐步蓝图教程。">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="GUIDE_QUICK_START_zh.html">
+  <link rel="alternate" hreflang="en" href="GUIDE_QUICK_START.html">
+</head>
+<body>
+  <a class="skip-link" href="#article">跳到教程</a>
+  <header class="site-header"><nav class="nav" aria-label="主导航">
+    <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <div class="nav-links"><a href="index_zh.html">插件总览</a><a aria-current="page" href="GUIDE_QUICK_START_zh.html">快速单对话</a><a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">多对话</a><a href="SYSTEMS_zh.html">全部体系</a><a href="GUIDE_CPP_zh.html">C++</a><a class="lang-switch" href="GUIDE_QUICK_START.html" lang="en">English</a></div>
+  </nav></header>
+
+  <main class="docs-layout">
+    <aside class="toc" aria-label="本页目录">
+      <p class="toc-title">本页目录</p>
+      <a href="#result">最终会做出什么</a>
+      <a href="#output-mode">选择输出方式</a>
+      <a href="#enable">1. 启用插件</a>
+      <a href="#model">2. 设置模型路径</a>
+      <a href="#blueprint">3. 创建蓝图</a>
+      <a href="#graph">4. 搭完整节点链</a>
+      <a href="#ui">5. 从 UI 发送</a>
+      <a href="#streaming">6. 改成流式输出</a>
+      <a href="#lifecycle">对话生命周期</a>
+      <a href="#troubleshooting">按现象排错</a>
+    </aside>
+
+    <article class="article" id="article">
+      <header class="article-header">
+        <p class="eyebrow">蓝图 · 入门 · 10–15 分钟</p>
+        <h1>做出第一段本地 AI 对话</h1>
+        <p class="hero-copy">本教程只创建一次 Quick Chat，保存对象引用，通过事件拿到最终回答，并让后续问题继续使用同一段对话记忆。</p>
+      </header>
+
+      <section id="result">
+        <h2>最终会做出什么</h2>
+        <p>完成后，按下 Play 会创建一段对话，发送一条测试消息，并把回答打印出来。随后你只需把测试消息替换成 UMG 输入框内容，不必重做对话初始化。</p>
+        <div class="callout good"><strong>Quick Chat 就是缺省单对话接口。</strong>它内部包装了一个普通 <code>ULiteRtLmAgent</code>。每次调用 <code>Create Quick Chat</code> 都会创建一段新的独立对话，所以每个需要保留的聊天对象只创建一次。</div>
+        <ul class="checklist">
+          <li>已经准备好可用的 <code>.litertlm</code> 模型。</li>
+          <li>插件已经为当前项目启用。</li>
+          <li>可以创建 Actor 蓝图，或已有一个长期存在的玩法蓝图。</li>
+        </ul>
+      </section>
+
+      <section id="output-mode">
+        <h2>先决定用户应该怎样看到回答</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>想要的效果</th><th>调用</th><th>从哪里读取输出</th></tr></thead>
+          <tbody>
+            <tr><td><strong>整段回答完成后一次显示</strong></td><td><code>Ask Once</code></td><td><code>On Answer → Result.Text</code></td></tr>
+            <tr><td><strong>边生成边显示</strong></td><td><code>Ask Streaming</code></td><td>累加 <code>On Text Chunk</code>；以 <code>On Answer</code> 作为最终完成事件</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout warn"><strong>Ask 的返回值是 Request ID，不是模型回答。</strong>推理是异步的，真正的回答必须从事件读取。</div>
+      </section>
+
+      <section id="enable">
+        <h2>1. 启用 LiteRT-LM</h2>
+        <div class="step"><div class="step-head"><span class="step-number">1</span><div><h3>打开插件窗口</h3><p>在 Unreal Editor 中打开<strong>编辑 → 插件</strong>，搜索 <strong>LiteRT-LM</strong>，启用插件；编辑器要求时完成重启。</p></div></div></div>
+        <p>如果搜索不到插件，检查它是否位于项目的 <code>Plugins</code> 目录，或是否已通过 Fab 安装到当前引擎版本。</p>
+      </section>
+
+      <section id="model">
+        <h2>2. 让插件找到模型</h2>
+        <div class="step"><div class="step-head"><span class="step-number">2</span><div><h3>填写 Model Path</h3><p>打开<strong>编辑 → 项目设置</strong>，搜索 <strong>LiteRT-LM</strong>，把 <strong>Model Path</strong> 指向运行时确实能够访问的 <code>.litertlm</code> 模型。</p></div></div></div>
+        <figure><img src="assets/screenshots/ue5-project-settings-model-path.png" alt="UE5 项目设置中的 LiteRT-LM Model Path"><figcaption>LiteRTDemo 的真实设置页面。你的模型文件名可以不同，关键是打包后的最终路径仍能解析到真实文件。</figcaption></figure>
+        <div class="callout"><strong>不需要 Load Model 节点。</strong>创建第一段对话时会自动触发延迟初始化。如果加载界面需要显示就绪状态、错误或诊断路径，使用 <code>Get LiteRT-LM Runtime</code>。</div>
+      </section>
+
+      <section id="blueprint">
+        <h2>3. 创建一个负责持有对话的蓝图</h2>
+        <div class="step"><div class="step-head"><span class="step-number">3</span><div><h3>创建或打开 Actor 蓝图</h3><p>第一次测试可以创建名为 <code>BP_LocalChat</code> 的 Actor 蓝图，并在关卡里放置一个实例。之后同样的结构也可以放在 Player Controller、你的 Game Instance 封装、Widget 的持有者或其他长期存在对象中。</p></div></div></div>
+        <div class="step"><div class="step-head"><span class="step-number">4</span><div><h3>增加 QuickChat 变量</h3><p>创建名为 <code>QuickChat</code> 的变量，类型选择 <strong>Lite Rt Lm Quick Chat Object Reference</strong>。这个引用就是多轮问题之间能够保留记忆的关键。</p></div></div></div>
+        <div class="callout danger"><strong>不要在每次点击“发送”时 Create Quick Chat。</strong>那会每次都创建新的 Agent，问题自然会像没有上下文一样从空记忆开始。</div>
+      </section>
+
+      <section id="graph">
+        <h2>4. 搭出完整的 BeginPlay 节点链</h2>
+        <div class="step"><div class="step-head"><span class="step-number">5</span><div><h3>创建并保存对话</h3><p>从 <code>Event BeginPlay</code> 添加 <code>Create Quick Chat</code>。填写一句简短的 System Prompt，例如“使用用户的语言简洁回答”。把 Return Value 接到 <code>Set QuickChat</code>。</p></div></div></div>
+        <div class="step"><div class="step-head"><span class="step-number">6</span><div><h3>第一次 Ask 之前先绑定回答</h3><p>从保存后的 QuickChat 引用拉出 <code>Bind Event to On Answer</code>（或对 On Answer 分发器使用 Assign）。创建对应自定义事件，Break <code>Lite Rt Lm Result</code>，再把 <code>Text</code> 接到 <code>Print String</code>。</p></div></div></div>
+        <div class="step"><div class="step-head"><span class="step-number">7</span><div><h3>发送一条测试问题</h3><p>在绑定节点之后，对同一个 QuickChat 调用 <code>Ask Once</code>。先写一条短消息，编译、保存，然后按 Play。</p></div></div></div>
+        <figure><img src="assets/screenshots/ue5-quick-chat-complete-flow.png" alt="Quick Chat 完整蓝图节点链"><figcaption>已经在 UE5 中验证的完整流程：BeginPlay → Create Quick Chat → 保存引用 → 绑定 On Answer → Ask Once；回答事件提取 Result.Text 并打印。</figcaption></figure>
+        <p>第一次请求还要初始化模型，通常会比后续请求慢。<code>On Answer</code> 触发后，同一个 QuickChat 的记忆中已经包含这条用户消息和 AI 回答。</p>
+      </section>
+
+      <section id="ui">
+        <h2>5. 让自己的 UI 发送后续消息</h2>
+        <p>BeginPlay 的初始化保持不动。在 UMG 的发送按钮事件里：</p>
+        <ol>
+          <li>读取输入框文字。</li>
+          <li>确认 <code>QuickChat</code> 有效，并且 <code>Is Busy</code> 为 false。</li>
+          <li>对已保存的 QuickChat 调用 <code>Ask Once</code>。</li>
+          <li>忙碌期间禁用发送按钮；在 <code>On Answer</code> 或 <code>On Error</code> 中恢复。</li>
+          <li>把 <code>On Answer → Result.Text</code> 写入聊天 UI。</li>
+        </ol>
+        <div class="callout good"><strong>记忆验证：</strong>先问“我的代号是极光”，再通过同一个对象问“我的代号是什么”。如果忘了，优先检查 UI 是否在两次调用之间重新创建、Reset 或 Close 了 QuickChat。</div>
+      </section>
+
+      <section id="streaming">
+        <h2>6. 改成流式输出</h2>
+        <p>把 <code>Ask Once</code> 换成 <code>Ask Streaming</code>，并在初始化时绑定 <code>On Text Chunk</code>。</p>
+        <ul>
+          <li>调用 Ask Streaming 前清空“本次回答”的显示文本。</li>
+          <li>把每个 Text Chunk <strong>追加</strong>到现有文本；不要只用最新 Chunk 覆盖整段回答。</li>
+          <li><code>On Answer</code> 仍然负责最终结果、指标、工具调用以及结束时的 UI 状态。</li>
+          <li><code>On Error</code> 中恢复发送按钮，并把可读错误显示出来。</li>
+        </ul>
+      </section>
+
+      <section id="lifecycle">
+        <h2>如何控制对话生命周期</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>你想做什么</th><th>使用</th><th>实际结果</th></tr></thead>
+          <tbody>
+            <tr><td><strong>带着上下文继续问</strong></td><td>同一个 QuickChat</td><td>继续使用现有记忆。</td></tr>
+            <tr><td><strong>清空聊天但保留人格</strong></td><td><code>Reset Conversation(true)</code></td><td>清除普通消息，保留 System Prompt。</td></tr>
+            <tr><td><strong>彻底重新开始</strong></td><td><code>Reset Conversation(false)</code></td><td>包括 System Prompt 在内的记忆都被清除。</td></tr>
+            <tr><td><strong>停止当前生成</strong></td><td><code>Cancel</code></td><td>取消已经接受的请求。</td></tr>
+            <tr><td><strong>销毁这段聊天</strong></td><td><code>Close</code></td><td>底层 Agent 关闭；继续聊天需要新建 Quick Chat。</td></tr>
+            <tr><td><strong>使用高级记忆或工具</strong></td><td><code>Get Conversation</code></td><td>直接取得底层 Agent，不需要重建会话。</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>按现象排错</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>现象</th><th>首先检查</th></tr></thead>
+          <tbody>
+            <tr><td><strong>没有回答事件</strong></td><td>是否在 Ask 前绑定 <code>On Answer</code>；QuickChat 引用是否仍存活；同时查看 <code>On Error</code> 与运行时诊断。</td></tr>
+            <tr><td><strong>每一轮都忘记前文</strong></td><td><code>Create Quick Chat</code> 应只执行一次，不应每条消息执行一次；确认没有调用 Reset 或 Close。</td></tr>
+            <tr><td><strong>返回字符串像一串 ID</strong></td><td>这是正确的 Request ID；回答在 <code>On Answer → Result.Text</code>。</td></tr>
+            <tr><td><strong>第二次 Ask 被拒绝</strong></td><td>检查 <code>Is Busy</code>。同一个 QuickChat 不应重叠存在多个未完成请求。</td></tr>
+            <tr><td><strong>编辑器可用，打包后失败</strong></td><td>确认模型存在于打包运行时实际路径，并打开 Runtime 返回的诊断目录。</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <nav class="next-links" aria-label="下一篇教程">
+        <a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">下一步：创建多个独立对话 →</a>
+        <a href="GUIDE_CPP_zh.html">在 C++ 中使用同一套 API →</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index_zh.html">插件总览</a> · <a href="GUIDE_QUICK_START.html" lang="en">English</a></span></div></footer>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>插件体系与 API 地图 — LiteRT-LM Unreal</title>
+  <meta name="description" content="LiteRT-LM Unreal 完整体系图：蓝图目录、公开 C++ 头文件、运行时、记忆、工具、MCP、诊断与打包。">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="SYSTEMS_zh.html">
+  <link rel="alternate" hreflang="en" href="SYSTEMS.html">
+</head>
+<body>
+  <a class="skip-link" href="#article">跳到体系图</a>
+  <header class="site-header"><nav class="nav" aria-label="主导航">
+    <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <div class="nav-links"><a href="index_zh.html">插件总览</a><a href="GUIDE_QUICK_START_zh.html">快速单对话</a><a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">多对话</a><a aria-current="page" href="SYSTEMS_zh.html">全部体系</a><a href="GUIDE_CPP_zh.html">C++</a><a class="lang-switch" href="SYSTEMS.html" lang="en">English</a></div>
+  </nav></header>
+
+  <main class="docs-layout">
+    <aside class="toc" aria-label="本页目录">
+      <p class="toc-title">体系地图</p>
+      <a href="#tree">完整结构树</a>
+      <a href="#conversation">对话体系</a>
+      <a href="#memory">记忆与工具</a>
+      <a href="#mcp">MCP Gateway</a>
+      <a href="#actor-component">Actor Component</a>
+      <a href="#runtime">Runtime 与设置</a>
+      <a href="#model-delivery">模型交付</a>
+      <a href="#shipping">打包发布</a>
+      <a href="#headers">公开 C++ 头文件</a>
+      <a href="#reference">参考资料库</a>
+    </aside>
+
+    <article class="article" id="article">
+      <header class="article-header">
+        <p class="eyebrow">架构 · 目录 · 下一步去哪里</p>
+        <h1>从职责出发，梳理整个插件</h1>
+        <p class="hero-copy">这一页回答“某项功能到底属于哪里”。它是地图，不是必读清单。先完成一篇教程，再从这里打开下一项真正需要的体系。</p>
+      </header>
+
+      <section id="tree">
+        <h2>完整结构树</h2>
+        <pre class="tree">LiteRT-LM Unreal
+├── 场景 API
+│   ├── Quick Start / Single Conversation
+│   ├── Conversations / Multiple
+│   ├── Conversations / Memory
+│   ├── Conversations / Tools
+│   ├── Conversations / Actor Component
+│   └── MCP / Gateway + Routing + Schema
+├── Runtime 服务
+│   ├── 进程共享的纯 GPU 模型
+│   ├── 串行推理队列
+│   ├── 运行时状态与就绪状态
+│   └── 完整上下文 JSONL 诊断
+├── 模型生命周期
+│   ├── Project Settings 模型路径
+│   ├── 第一段对话触发延迟初始化
+│   └── 异步模型下载辅助节点
+├── 开发接口
+│   ├── 蓝图节点与 UObject 事件
+│   ├── Unreal C++ UObject API
+│   └── Native SDK：C ABI + C++ 便利/RAII
+├── 平台
+│   ├── Win64
+│   └── Android
+└── 示例场景
+    └── 多对话狼人杀</pre>
+      </section>
+
+      <section id="conversation">
+        <h2>Conversation 对话体系</h2>
+        <div class="grid two">
+          <article class="card"><p class="kicker">入门外观</p><h3>Quick Chat</h3><p><code>Create Quick Chat</code> 自动创建一个底层 Agent。使用 <code>Ask Once</code> 或 <code>Ask Streaming</code>，绑定 <code>On Answer</code>，并让对象保持存活。以后可通过 <code>Get Conversation</code> 取得 Agent。</p><p><a href="GUIDE_QUICK_START_zh.html">按照单对话教程操作 →</a></p></article>
+          <article class="card"><p class="kicker">完整场景对象</p><h3>Agent</h3><p><code>Create Conversation (Advanced)</code> 或 Runtime 的 <code>Create Agent</code> 会创建拥有独立 Prompt、工具、记忆和请求状态的对话。每个需要独立记忆的身份使用一个 Agent。</p><p><a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">按照多对话教程操作 →</a></p></article>
+        </div>
+        <div class="table-wrap" style="margin-top:24px"><table>
+          <thead><tr><th>能力</th><th>Quick Chat</th><th>Agent</th></tr></thead>
+          <tbody>
+            <tr><td><strong>创建</strong></td><td>System Prompt 或配置后的 Agent</td><td>完整 Agent Config</td></tr>
+            <tr><td><strong>只要最终回答</strong></td><td><code>Ask Once</code></td><td><code>Ask</code>，忽略 Chunk</td></tr>
+            <tr><td><strong>流式输出</strong></td><td><code>Ask Streaming</code></td><td><code>On Text Chunk</code></td></tr>
+            <tr><td><strong>高级记忆/工具</strong></td><td>通过 <code>Get Conversation</code></td><td>直接提供</td></tr>
+            <tr><td><strong>推荐生命周期</strong></td><td>每个聊天界面一个</td><td>每个独立身份一个</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="memory">
+        <h2>记忆、纠错与工具</h2>
+        <h3>Memory API</h3>
+        <p>Agent 保存规范化 JSON 消息记忆，支持追加、替换、删除、清空、导入/导出、消息数量、命名存档/读取，以及 <code>Reject Last Response</code>。当记忆修改会与未完成请求冲突时，操作会被拒绝。</p>
+        <h3>Tools API</h3>
+        <p>在 <code>ToolDeclarationsJson</code> 中声明 OpenAI 兼容工具。模型在最终 Result 中返回结构化 Tool Calls；游戏代码负责校验和执行。模型需要看到执行结果并继续时使用 <code>Submit Tool Result</code>；玩法代码立即消费动作、不需要继续推理时使用 <code>Append Tool Result to Memory</code>。</p>
+        <h3>小型辅助接口</h3>
+        <p><code>Try Get Tool String Argument</code> 与 <code>Try Get Tool Integer Argument</code> 从工具调用 Arguments JSON 中读取校验后的字段。Precise 与 Reasoned Decision 选项工厂可以避免反复手工配置采样参数。</p>
+      </section>
+
+      <section id="mcp">
+        <h2>MCP Gateway 体系</h2>
+        <p>当模型可见工具需要被路由到外部 MCP 时，使用 <code>Create MCP Gateway</code>。Gateway 持有一个底层 Agent，通过 <code>On Tool Call</code> 发布调用，再由你的网络/玩法子系统执行传输并调用 <code>Submit MCP Result</code>。</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>变化</th><th>API</th><th>对对话的影响</th></tr></thead>
+          <tbody>
+            <tr><td><strong>把工具改路由到其他服务器</strong></td><td><code>Set Tool Route</code>、<code>Set Default Server Route</code></td><td>路由可热切换；模型历史/KV 保留。</td></tr>
+            <tr><td><strong>移除路由</strong></td><td><code>Remove Tool Route</code></td><td>只改变路由注册表。</td></tr>
+            <tr><td><strong>改变模型可见工具结构</strong></td><td><code>Rebuild Tool Schema</code></td><td>重建 Native Conversation 并回放规范化历史；仍有 Pending Call 时拒绝。</td></tr>
+            <tr><td><strong>传输层已经取消外部工作</strong></td><td><code>Discard Pending Tool Calls</code></td><td>只忘记待处理派发，不会替你取消远端服务器。</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="actor-component">
+        <h2>Actor Component 体系</h2>
+        <p>当对话天然属于某个 Actor 时，添加 <code>LiteRT-LM Component</code>。在 Details 中配置 <code>AgentConfig</code>；BeginPlay 创建一个 Agent，组件事件转发 Agent 事件，EndPlay 关闭对话。</p>
+        <div class="callout"><strong>适合：</strong>会说话的 NPC Actor、伙伴、可交互终端，或需要携带自己 Prompt 和记忆的可复用 Actor 类。如果角色只是数据且不对应 Actor，则更适合“管理器 + Agent 数组”。</div>
+      </section>
+
+      <section id="runtime">
+        <h2>Runtime、项目设置与诊断</h2>
+        <p><code>ULiteRtLmSubsystem</code> 是 Engine Subsystem，负责进程共享模型、队列、所有活动 Agent 和 Runtime Status。蓝图通过 <code>Get LiteRT-LM Runtime</code> 取得它。</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>区域</th><th>控制/读取内容</th><th>什么时候关注</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Model</strong></td><td>Model Path、Native Conversation Options、可选 Preload</td><td>第一次运行与打包之前</td></tr>
+            <tr><td><strong>Context</strong></td><td>Max Context Tokens</td><td>需要限制记忆/上下文大小时</td></tr>
+            <tr><td><strong>Sampling</strong></td><td>Temperature、Top P、Top K、随机/固定 Seed</td><td>普通 Ask 的项目默认行为</td></tr>
+            <tr><td><strong>Observability</strong></td><td>Metrics、Runtime State、Ready、Diagnostics Path</td><td>加载 UI、性能或错误排查</td></tr>
+            <tr><td><strong>Detailed Diagnostics</strong></td><td>项目默认或运行时开关</td><td>临时检查完整上下文 JSONL；不需要时关闭</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="model-delivery">
+        <h2>模型如何到达用户设备</h2>
+        <p>模型必须真实存在于最终 Runtime 解析到的路径。产品应明确选择一种策略：</p>
+        <ul>
+          <li><strong>随产品交付：</strong>把模型加入 Staged Non-Asset 目录，并配置打包后仍能解析的路径。</li>
+          <li><strong>首次运行下载：</strong>使用异步 <code>Download LiteRT-LM Model</code> 节点（或 Gemma 4 E2B 便利节点），有哈希时完成校验，再持久化结果路径。</li>
+          <li><strong>仅开发机本地模型：</strong>适合编辑器迭代，但不能假定另一台电脑或 Android 设备存在同样的绝对路径。</li>
+        </ul>
+      </section>
+
+      <section id="shipping">
+        <h2>发布到 Win64 与 Android</h2>
+        <p>插件声明支持 Win64 与 Android。编辑器测试成功不等于目标设备测试成功。发布前：</p>
+        <ol>
+          <li>确认平台二进制与模型都进入 Staged Build。</li>
+          <li>记录最终 Model Path 和 Runtime Status。</li>
+          <li>在打开大型玩法关卡前先运行一次最小 Quick Chat 请求。</li>
+          <li>Android 启动闪退时同时采集 Logcat 和插件 Diagnostics Path；没有设备日志前不要直接判断成“爆显存”。</li>
+          <li>测试首次加载内存、Cancel、切后台/恢复，以及同一对话中的第二次请求。</li>
+        </ol>
+        <p><a href="SHIPPING_zh.html">打开现有打包参考 →</a></p>
+      </section>
+
+      <section id="headers">
+        <h2>公开 C++ 头文件目录</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>头文件</th><th>主要职责</th></tr></thead>
+          <tbody>
+            <tr><td><code>LiteRtLmUnrealApi.h</code></td><td>共享枚举、结构体、请求/结果类型、委托与配置。</td></tr>
+            <tr><td><code>LiteRtLmBlueprintLibrary.h</code></td><td>场景工厂、Runtime 查询、批量对话与 JSON 辅助接口。</td></tr>
+            <tr><td><code>LiteRtLmQuickChat.h</code></td><td>入门单对话外观。</td></tr>
+            <tr><td><code>LiteRtLmAgent.h</code></td><td>完整对话、记忆、工具、状态、事件和生命周期。</td></tr>
+            <tr><td><code>LiteRtLmSubsystem.h</code></td><td>共享引擎 Runtime、C++ CreateAgent 重载、状态与诊断。</td></tr>
+            <tr><td><code>LiteRtLmMcpGateway.h</code></td><td>MCP 对话、路由、Pending Call 和 Schema 重建。</td></tr>
+            <tr><td><code>LiteRtLmComponent.h</code></td><td>Actor 持有 Agent 的便利组件。</td></tr>
+            <tr><td><code>LiteRtLmModelDownloader.h</code></td><td>异步模型下载蓝图 Action。</td></tr>
+            <tr><td><code>LiteRtLmProjectSettings.h</code></td><td>基于 Config 的项目默认设置。</td></tr>
+            <tr><td><code>LiteRtLmNativeSdk.h</code></td><td>稳定 Native C ABI，以及 C++ 便利/RAII 接口。</td></tr>
+          </tbody>
+        </table></div>
+        <p><a href="GUIDE_CPP_zh.html">打开 C++ 接入指南 →</a></p>
+      </section>
+
+      <section id="reference">
+        <h2>参考资料库</h2>
+        <p>在一个场景已经跑通之后再查这些页面：</p>
+        <div class="grid two">
+          <article class="card"><h3>API 与 DLL</h3><p><a href="api_reference_zh.html">Unreal API 参考</a><br><a href="dll_reference_zh.html">DLL 参考</a><br><a href="API_LAYER_zh.html">API Layer</a></p></article>
+          <article class="card"><h3>旧架构说明</h3><p><a href="APP_LAYER_zh.html">App Layer</a><br><a href="SERVICE_LAYER_zh.html">Service Layer</a><br><a href="INITIALIZATION_CONFIG_zh.html">初始化/配置</a></p></article>
+        </div>
+        <div class="callout warn"><strong>参考页面描述实现分层与历史接口。</strong>新蓝图应该以场景教程和当前 Public 头文件作为选择入口节点的依据。</div>
+      </section>
+
+      <nav class="next-links" aria-label="下一页"><a href="GUIDE_QUICK_START_zh.html">开始 Quick Chat 教程 →</a><a href="GUIDE_CPP_zh.html">继续学习 C++ →</a></nav>
+    </article>
+  </main>
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index_zh.html">插件总览</a> · <a href="SYSTEMS.html" lang="en">English</a></span></div></footer>
+</body>
+</html>

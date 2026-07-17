@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plugin Systems and API Map — LiteRT-LM Unreal</title>
+  <meta name="description" content="Complete map of LiteRT-LM Unreal systems, Blueprint categories, public C++ headers, runtime, memory, tools, MCP, diagnostics, and shipping.">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="SYSTEMS_zh.html">
+  <link rel="alternate" hreflang="en" href="SYSTEMS.html">
+</head>
+<body>
+  <a class="skip-link" href="#article">Skip to system map</a>
+  <header class="site-header"><nav class="nav" aria-label="Primary navigation">
+    <a class="brand" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <div class="nav-links"><a href="index.html">Overview</a><a href="GUIDE_QUICK_START.html">Quick chat</a><a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Multiple conversations</a><a aria-current="page" href="SYSTEMS.html">All systems</a><a href="GUIDE_CPP.html">C++</a><a class="lang-switch" href="SYSTEMS_zh.html" lang="zh-CN">中文</a></div>
+  </nav></header>
+
+  <main class="docs-layout">
+    <aside class="toc" aria-label="On this page">
+      <p class="toc-title">System map</p>
+      <a href="#tree">Complete tree</a>
+      <a href="#conversation">Conversation system</a>
+      <a href="#memory">Memory + tools</a>
+      <a href="#mcp">MCP gateway</a>
+      <a href="#actor-component">Actor Component</a>
+      <a href="#runtime">Runtime + settings</a>
+      <a href="#model-delivery">Model delivery</a>
+      <a href="#shipping">Shipping</a>
+      <a href="#headers">Public C++ headers</a>
+      <a href="#reference">Reference library</a>
+    </aside>
+
+    <article class="article" id="article">
+      <header class="article-header">
+        <p class="eyebrow">Architecture · Directory · Where to go next</p>
+        <h1>The whole plugin, organized by responsibility</h1>
+        <p class="hero-copy">This page answers “where does this feature belong?” It is a map, not a required reading list. Start with a tutorial, then use this page to open the exact system you need.</p>
+      </header>
+
+      <section id="tree">
+        <h2>Complete structure tree</h2>
+        <pre class="tree">LiteRT-LM Unreal
+├── Scenario APIs
+│   ├── Quick Start / Single Conversation
+│   ├── Conversations / Multiple
+│   ├── Conversations / Memory
+│   ├── Conversations / Tools
+│   ├── Conversations / Actor Component
+│   └── MCP / Gateway + Routing + Schema
+├── Runtime services
+│   ├── Shared strict-GPU model
+│   ├── Serial inference queue
+│   ├── Runtime status and readiness
+│   └── Detailed JSONL diagnostics
+├── Model lifecycle
+│   ├── Project Settings model path
+│   ├── Lazy initialization on first conversation
+│   └── Async model download helpers
+├── Development surfaces
+│   ├── Blueprint nodes and UObject events
+│   ├── Unreal C++ UObject API
+│   └── Native SDK: C ABI + C++ convenience/RAII
+├── Platforms
+│   ├── Win64
+│   └── Android
+└── Demo scenarios
+    └── Multi-conversation Werewolf game</pre>
+      </section>
+
+      <section id="conversation">
+        <h2>Conversation system</h2>
+        <div class="grid two">
+          <article class="card"><p class="kicker">Beginner facade</p><h3>Quick Chat</h3><p><code>Create Quick Chat</code> creates one underlying Agent automatically. Use <code>Ask Once</code> or <code>Ask Streaming</code>, bind <code>On Answer</code>, and keep the object alive. Escape to the Agent later with <code>Get Conversation</code>.</p><p><a href="GUIDE_QUICK_START.html">Follow the Quick Chat tutorial →</a></p></article>
+          <article class="card"><p class="kicker">Full scenario object</p><h3>Agent</h3><p><code>Create Conversation (Advanced)</code> or Runtime <code>Create Agent</code> creates an independent conversation with its own prompt, tools, memory, and request state. Use one Agent for each role that must remember independently.</p><p><a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Follow the multi-conversation tutorial →</a></p></article>
+        </div>
+        <div class="table-wrap" style="margin-top:24px"><table>
+          <thead><tr><th>Capability</th><th>Quick Chat</th><th>Agent</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Creation</strong></td><td>System prompt or configured Agent</td><td>Full Agent config</td></tr>
+            <tr><td><strong>Final-only answer</strong></td><td><code>Ask Once</code></td><td><code>Ask</code> and ignore chunks</td></tr>
+            <tr><td><strong>Streaming</strong></td><td><code>Ask Streaming</code></td><td><code>On Text Chunk</code></td></tr>
+            <tr><td><strong>Advanced memory/tools</strong></td><td>Via <code>Get Conversation</code></td><td>Directly available</td></tr>
+            <tr><td><strong>Recommended lifetime</strong></td><td>One per chat surface</td><td>One per independent role</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="memory">
+        <h2>Memory, correction, and tools</h2>
+        <h3>Memory API</h3>
+        <p>An Agent stores canonical JSON message memory. It supports append, replace, delete, clear, import/export, message count, named save/load snapshots, and <code>Reject Last Response</code>. Memory changes are rejected while mutation would conflict with an outstanding request.</p>
+        <h3>Tool API</h3>
+        <p>Declare OpenAI-compatible tools in <code>ToolDeclarationsJson</code>. The model returns structured Tool Calls in the final result; game code validates and executes them. Use <code>Submit Tool Result</code> when the model must continue after seeing the result, or <code>Append Tool Result to Memory</code> when game code consumes the action immediately.</p>
+        <h3>Small helpers</h3>
+        <p><code>Try Get Tool String Argument</code> and <code>Try Get Tool Integer Argument</code> read validated fields from a tool call’s Arguments JSON. Precise and reasoned decision option factories reduce repeated sampling setup.</p>
+      </section>
+
+      <section id="mcp">
+        <h2>MCP Gateway</h2>
+        <p>Use <code>Create MCP Gateway</code> when the model-visible tools need external MCP routing. The Gateway owns one underlying Agent, emits <code>On Tool Call</code>, and waits for your transport/game subsystem to call <code>Submit MCP Result</code>.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Change</th><th>API</th><th>Conversation impact</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Route a tool to another server</strong></td><td><code>Set Tool Route</code>, <code>Set Default Server Route</code></td><td>Hot routing change; model history/KV is preserved.</td></tr>
+            <tr><td><strong>Remove a route</strong></td><td><code>Remove Tool Route</code></td><td>Routing registry changes only.</td></tr>
+            <tr><td><strong>Change model-visible tool schema</strong></td><td><code>Rebuild Tool Schema</code></td><td>Recreates the native conversation and replays canonical history; rejected while calls are pending.</td></tr>
+            <tr><td><strong>Transport cancelled outstanding work</strong></td><td><code>Discard Pending Tool Calls</code></td><td>Forgets dispatches; it does not cancel a remote server for you.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="actor-component">
+        <h2>Actor Component workflow</h2>
+        <p>Add <code>LiteRT-LM Component</code> when the conversation naturally belongs to an Actor. Configure <code>AgentConfig</code> in Details. BeginPlay creates one Agent, component events forward Agent events, and EndPlay retires the conversation.</p>
+        <div class="callout"><strong>Use it for:</strong> talkative NPC Actors, companions, interactable terminals, or any reusable Actor class that should carry its own prompt and memory. Use a manager + Agent array when roles are data-driven and not represented by Actors.</div>
+      </section>
+
+      <section id="runtime">
+        <h2>Runtime, project settings, and diagnostics</h2>
+        <p><code>ULiteRtLmSubsystem</code> is an Engine Subsystem. It owns the process-wide model, queue, all active Agents, and runtime status. Blueprint can obtain it with <code>Get LiteRT-LM Runtime</code>.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Area</th><th>Controls / reads</th><th>When users care</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Model</strong></td><td>Model Path, native conversation options, optional preload</td><td>Before first run and during packaging</td></tr>
+            <tr><td><strong>Context</strong></td><td>Max context tokens</td><td>When memory/context size must be bounded</td></tr>
+            <tr><td><strong>Sampling</strong></td><td>Temperature, Top P, Top K, random/fixed seed</td><td>Default behavior for normal asks</td></tr>
+            <tr><td><strong>Observability</strong></td><td>Metrics, runtime state, readiness, diagnostics path</td><td>Loading UI and performance/error investigation</td></tr>
+            <tr><td><strong>Detailed diagnostics</strong></td><td>Project default or runtime enable/disable</td><td>Temporarily inspect complete-context JSONL; disable when not needed</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="model-delivery">
+        <h2>Model delivery</h2>
+        <p>The model must exist at the resolved runtime path. Choose one product strategy:</p>
+        <ul>
+          <li><strong>Ship the model with your product:</strong> include it in a staged non-asset directory and configure a path that resolves in the package.</li>
+          <li><strong>Download on first run:</strong> use the async <code>Download LiteRT-LM Model</code> node (or the Gemma 4 E2B convenience node), verify hash when provided, then persist the resulting path.</li>
+          <li><strong>Developer-local model:</strong> useful for Editor iteration, but do not assume the same absolute path exists on another machine or Android device.</li>
+        </ul>
+      </section>
+
+      <section id="shipping">
+        <h2>Shipping: Win64 and Android</h2>
+        <p>The plugin declares Win64 and Android runtime support. A successful Editor test is not a target-device test. Before release:</p>
+        <ol>
+          <li>Confirm the platform binaries and model are present in the staged build.</li>
+          <li>Log the final model path and runtime status.</li>
+          <li>Run one minimal Quick Chat request before opening a large gameplay scene.</li>
+          <li>On Android, capture Logcat and the plugin diagnostics path for startup crashes; do not classify a crash as “out of VRAM” without the device log.</li>
+          <li>Test first-load memory usage, cancellation, background/resume, and a second request in the same conversation.</li>
+        </ol>
+        <p><a href="SHIPPING.html">Open the existing shipping reference →</a></p>
+      </section>
+
+      <section id="headers">
+        <h2>Public C++ header directory</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Header</th><th>Primary responsibility</th></tr></thead>
+          <tbody>
+            <tr><td><code>LiteRtLmUnrealApi.h</code></td><td>Shared enums, structs, request/result types, delegates, config.</td></tr>
+            <tr><td><code>LiteRtLmBlueprintLibrary.h</code></td><td>Scenario factories, runtime lookup, bulk conversation and JSON helpers.</td></tr>
+            <tr><td><code>LiteRtLmQuickChat.h</code></td><td>Beginner single-conversation facade.</td></tr>
+            <tr><td><code>LiteRtLmAgent.h</code></td><td>Full conversation, memory, tools, state, events, lifecycle.</td></tr>
+            <tr><td><code>LiteRtLmSubsystem.h</code></td><td>Shared engine runtime, C++ CreateAgent overloads, status, diagnostics.</td></tr>
+            <tr><td><code>LiteRtLmMcpGateway.h</code></td><td>MCP conversation, routes, pending calls, schema rebuild.</td></tr>
+            <tr><td><code>LiteRtLmComponent.h</code></td><td>Actor-owned Agent convenience component.</td></tr>
+            <tr><td><code>LiteRtLmModelDownloader.h</code></td><td>Async model download Blueprint actions.</td></tr>
+            <tr><td><code>LiteRtLmProjectSettings.h</code></td><td>Config-backed project defaults.</td></tr>
+            <tr><td><code>LiteRtLmNativeSdk.h</code></td><td>Stable native C ABI plus C++ convenience/RAII surface.</td></tr>
+          </tbody>
+        </table></div>
+        <p><a href="GUIDE_CPP.html">Open the C++ integration guide →</a></p>
+      </section>
+
+      <section id="reference">
+        <h2>Reference library</h2>
+        <p>Use these after a scenario is working:</p>
+        <div class="grid two">
+          <article class="card"><h3>API and DLL</h3><p><a href="api_reference.html">Unreal API reference</a><br><a href="dll_reference.html">DLL reference</a><br><a href="API_LAYER.html">API layer</a></p></article>
+          <article class="card"><h3>Legacy architecture pages</h3><p><a href="APP_LAYER.html">App layer</a><br><a href="SERVICE_LAYER.html">Service layer</a><br><a href="INITIALIZATION_CONFIG.html">Initialization/config</a></p></article>
+        </div>
+        <div class="callout warn"><strong>Reference pages describe implementation layers and historical surfaces.</strong> For new Blueprint work, the scenario tutorials and the current public headers are authoritative for choosing entry nodes.</div>
+      </section>
+
+      <nav class="next-links" aria-label="Next pages"><a href="GUIDE_QUICK_START.html">Start the Quick Chat tutorial →</a><a href="GUIDE_CPP.html">Continue with C++ →</a></nav>
+    </article>
+  </main>
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="index.html">Overview</a> · <a href="SYSTEMS_zh.html" lang="zh-CN">中文</a></span></div></footer>
+</body>
+</html>

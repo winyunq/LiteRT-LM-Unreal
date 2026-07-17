@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Multiple Conversations Tutorial — LiteRT-LM Unreal</title>
+  <meta name="description" content="Create independent LiteRT-LM Agents for NPCs and game roles, route memory correctly, and test a multi-conversation Werewolf game.">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">
+  <link rel="alternate" hreflang="en" href="GUIDE_MULTIPLE_CONVERSATIONS.html">
+</head>
+<body>
+  <a class="skip-link" href="#article">Skip to tutorial</a>
+  <header class="site-header"><nav class="nav" aria-label="Primary navigation">
+    <a class="brand" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <div class="nav-links"><a href="index.html">Overview</a><a href="GUIDE_QUICK_START.html">Quick chat</a><a aria-current="page" href="GUIDE_MULTIPLE_CONVERSATIONS.html">Multiple conversations</a><a href="SYSTEMS.html">All systems</a><a href="GUIDE_CPP.html">C++</a><a class="lang-switch" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html" lang="zh-CN">中文</a></div>
+  </nav></header>
+
+  <main class="docs-layout">
+    <aside class="toc" aria-label="On this page">
+      <p class="toc-title">On this page</p>
+      <a href="#model">The multi-Agent model</a>
+      <a href="#data">1. Prepare your data</a>
+      <a href="#create">2. Create one Agent per role</a>
+      <a href="#events">3. Bind and identify results</a>
+      <a href="#ask">4. Ask the correct Agent</a>
+      <a href="#memory">5. Route public/private memory</a>
+      <a href="#decisions">6. Make game decisions</a>
+      <a href="#werewolf">Werewolf self-reveal test</a>
+      <a href="#debug">Debug missing context</a>
+      <a href="#cleanup">End the match safely</a>
+    </aside>
+
+    <article class="article" id="article">
+      <header class="article-header">
+        <p class="eyebrow">Blueprint · Gameplay · Independent memory</p>
+        <h1>Give every character its own conversation</h1>
+        <p class="hero-copy">This tutorial creates one Agent per game role, routes knowledge to the Agents that should know it, and verifies memory instead of trying to repair missing state with prompt wording.</p>
+      </header>
+
+      <section id="model">
+        <h2>The multi-Agent model</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Shared once per process</th><th>Independent for every Agent</th></tr></thead>
+          <tbody><tr><td>GPU model, runtime status, serial inference queue, project sampling defaults</td><td>Display name, system prompt, tool declarations, canonical memory, active request, lifecycle</td></tr></tbody>
+        </table></div>
+        <div class="callout good"><strong>Creating six Agents does not load six models.</strong> It creates six logical conversations on one runtime. Requests can be queued, but GPU inference is serialized by design.</div>
+        <p>Use an Agent when an object needs its own memory. Examples include NPCs, party members, judges, game roles, multiple chat tabs, and simulations such as Werewolf.</p>
+      </section>
+
+      <section id="data">
+        <h2>1. Prepare the Blueprint data</h2>
+        <div class="step"><div class="step-head"><span class="step-number">1</span><div><h3>Create an Agents container</h3><p>Add an array named <code>Conversations</code> with type <strong>Lite Rt Lm Agent Object Reference</strong>. If you frequently select by role ID, also keep a Map from your role/player ID to Agent.</p></div></div></div>
+        <div class="step"><div class="step-head"><span class="step-number">2</span><div><h3>Define role records</h3><p>Each role should provide a stable ID, display name, system prompt, and optional tool declaration JSON. Keep secret role knowledge in the role’s own prompt or selected memory—not in a shared prompt.</p></div></div></div>
+      </section>
+
+      <section id="create">
+        <h2>2. Create one Agent per role</h2>
+        <ol>
+          <li>Loop over your role/player records.</li>
+          <li>Create a <code>Lite Rt Lm Agent Config</code>.</li>
+          <li>Set <code>Display Name</code>, <code>System Prompt</code>, and optional <code>Tool Declarations Json</code>.</li>
+          <li>Call <code>Create Conversation (Advanced)</code>.</li>
+          <li>Add the returned Agent to the array or ID map.</li>
+        </ol>
+        <div class="callout"><strong>Existing subsystem code is still valid.</strong> <code>Get LiteRT-LM Runtime → Create Agent</code> creates the same kind of Agent. The scenario factory <code>Create Conversation (Advanced)</code> is simply easier to discover in new Blueprint graphs.</div>
+        <figure><img src="assets/screenshots/ue5-werewolf-multi-agent-create.png" alt="Werewolf GameCore Blueprint creating LiteRT-LM Agents and adding them to an array"><figcaption>The existing Werewolf GameCore creates each Agent through the runtime subsystem and stores the result in <code>LiteRtLmAgents</code>. New Blueprints may use the equivalent scenario factory.</figcaption></figure>
+      </section>
+
+      <section id="events">
+        <h2>3. Bind events and keep result identity</h2>
+        <p>Bind each Agent’s events immediately after creation:</p>
+        <ul>
+          <li><code>On Completed</code>: final text, tool calls, memory snapshot, metrics, and error fields.</li>
+          <li><code>On Text Chunk</code>: streaming UI.</li>
+          <li><code>On Error</code>: configuration or rejected-request errors.</li>
+          <li><code>On State Changed</code>: Created, loading, ready, running, or terminal UI state.</li>
+          <li><code>On Memory Changed</code>: optional save/UI observation.</li>
+        </ul>
+        <p>The result delegate does not add your gameplay role ID. Use a dedicated handler per role, a small owner object/component per Agent, or a Request ID → role mapping created when you call Ask. Do not rely on “the last loop index” after asynchronous completion.</p>
+      </section>
+
+      <section id="ask">
+        <h2>4. Ask the correct Agent</h2>
+        <div class="step"><div class="step-head"><span class="step-number">3</span><div><h3>Select by stable gameplay identity</h3><p>Resolve the current speaker/player ID to its Agent, check validity and <code>Is Busy</code>, then call <code>Ask</code>. Store the returned Request ID with that role until the completion event arrives.</p></div></div></div>
+        <div class="callout warn"><strong>Do not broadcast Ask to every Agent just to share an event.</strong> Ask performs inference and adds an assistant response. Use memory APIs to distribute known game state without making every role speak.</div>
+      </section>
+
+      <section id="memory">
+        <h2>5. Route public and private information</h2>
+        <h3>A public game event</h3>
+        <p>Call <code>Append Memory Message to Conversations</code> with the relevant Agent array. Store the actual event, for example:</p>
+        <pre><code>Role: user
+Content: [Game Event] During day 2, Player 3 openly claimed to be a werewolf.</code></pre>
+        <p>This changes memory without running inference. Every valid unique Agent receives the same canonical message.</p>
+        <h3>A private game event</h3>
+        <p>Resolve only the Agents that should know it and call <code>Append Memory Message</code> on those Agents. Examples: wolf teammates, the seer’s inspection result, a private quest, or an NPC-only fact.</p>
+        <div class="callout danger"><strong>Do not solve routing with prompt boilerplate such as “this information is now public, remember it later.”</strong> Record the real event in the correct Agents’ memory. Visibility is a game-state routing decision, not a phrase the model should infer.</div>
+      </section>
+
+      <section id="decisions">
+        <h2>6. Use lower-entropy options for game decisions</h2>
+        <p>For votes, tool selection, or other structured decisions, make request options with:</p>
+        <ul>
+          <li><code>Make Precise Decision Ask Options</code> for low-entropy decisions without thinking.</li>
+          <li><code>Make Reasoned Decision Ask Options</code> for a fixed-seed, thought-enabled structured decision.</li>
+        </ul>
+        <p>Prefer a tool declaration such as <code>vote_player</code> with a required integer player ID. Game code executes and validates the action; the model should not directly mutate match state.</p>
+        <p>If a response fails validation, call <code>Reject Last Response</code> before retrying. This removes the terminal assistant message while retaining the input that produced it, so a bad decision is not reinforced in canonical memory.</p>
+      </section>
+
+      <section id="werewolf">
+        <h2>Werewolf test: a player openly reveals as a wolf</h2>
+        <p>This is a useful end-to-end context test because the expected next vote is easy to inspect.</p>
+        <ol>
+          <li>Start a match and create one Agent for every AI player.</li>
+          <li>When the human says “I am a wolf; my teammate is Player 4,” treat the spoken sentence as a real public game event.</li>
+          <li>Append that event to every living player conversation. Do not append secret engine truth that was never spoken.</li>
+          <li>Before voting, export each relevant Agent’s memory and verify the exact event is present.</li>
+          <li>Ask each living AI Agent to vote using the decision/tool schema.</li>
+          <li>Validate that its target is alive and eligible. Log Request ID, Agent ID, target, and validation result.</li>
+        </ol>
+        <div class="callout good"><strong>Interpret the result correctly:</strong> if the reveal exists in an Agent’s exported memory but the Agent still votes elsewhere, investigate decision instructions, tool schema, sampling, and validation. If the reveal is missing, the bug is lifecycle or memory routing—not “AI logic.”</div>
+      </section>
+
+      <section id="debug">
+        <h2>Debug “the AI ignored the conversation”</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Check in this order</th><th>What it proves</th></tr></thead>
+          <tbody>
+            <tr><td><strong>1. Agent identity</strong><br>Log <code>Get Agent Id</code> and Display Name at create/ask/complete.</td><td>You asked the same object whose memory you inspected.</td></tr>
+            <tr><td><strong>2. Lifetime</strong><br>Confirm the array/map still owns the Agent and no new Agent replaced it.</td><td>The conversation was not silently recreated.</td></tr>
+            <tr><td><strong>3. Canonical memory</strong><br>Use <code>Export Memory Json</code> immediately before Ask.</td><td>The model input contains the game event.</td></tr>
+            <tr><td><strong>4. Request identity</strong><br>Match completion to the Request ID returned by Ask.</td><td>An older queued result was not applied to the current turn.</td></tr>
+            <tr><td><strong>5. Decision contract</strong><br>Inspect tool call arguments and validation output.</td><td>Parsing or game validation did not discard the model’s actual choice.</td></tr>
+            <tr><td><strong>6. Diagnostics</strong><br>Temporarily enable detailed diagnostics.</td><td>The complete context and runtime result can be correlated on disk.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="cleanup">
+        <h2>End or replace the match safely</h2>
+        <p>Call <code>Close and Clear Conversations</code> on your array. Keep <code>Unbind Events Before Close</code> enabled when replacing a whole match or scene, so cancelled callbacks from old requests cannot enter the new state machine. Then clear any Request ID mappings and gameplay owners.</p>
+      </section>
+
+      <nav class="next-links" aria-label="Next pages">
+        <a href="SYSTEMS.html#mcp">Next: tools and MCP gateway →</a>
+        <a href="GUIDE_CPP.html">Implement the same ownership model in C++ →</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="index.html">Overview</a> · <a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html" lang="zh-CN">中文</a></span></div></footer>
+</body>
+</html>

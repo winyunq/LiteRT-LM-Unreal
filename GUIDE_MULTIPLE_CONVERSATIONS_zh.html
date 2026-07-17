@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>多对话教程 — LiteRT-LM Unreal</title>
+  <meta name="description" content="为 NPC 和游戏身份创建独立 LiteRT-LM Agent，正确分发记忆，并用多对话狼人杀验证上下文。">
+  <link rel="stylesheet" href="assets/docs.css">
+  <link rel="alternate" hreflang="zh-CN" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">
+  <link rel="alternate" hreflang="en" href="GUIDE_MULTIPLE_CONVERSATIONS.html">
+</head>
+<body>
+  <a class="skip-link" href="#article">跳到教程</a>
+  <header class="site-header"><nav class="nav" aria-label="主导航">
+    <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <div class="nav-links"><a href="index_zh.html">插件总览</a><a href="GUIDE_QUICK_START_zh.html">快速单对话</a><a aria-current="page" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">多对话</a><a href="SYSTEMS_zh.html">全部体系</a><a href="GUIDE_CPP_zh.html">C++</a><a class="lang-switch" href="GUIDE_MULTIPLE_CONVERSATIONS.html" lang="en">English</a></div>
+  </nav></header>
+
+  <main class="docs-layout">
+    <aside class="toc" aria-label="本页目录">
+      <p class="toc-title">本页目录</p>
+      <a href="#model">多 Agent 的真实模型</a>
+      <a href="#data">1. 准备数据</a>
+      <a href="#create">2. 每个身份创建一个 Agent</a>
+      <a href="#events">3. 绑定并识别结果</a>
+      <a href="#ask">4. 问正确的 Agent</a>
+      <a href="#memory">5. 分发公开/私密记忆</a>
+      <a href="#decisions">6. 进行游戏决策</a>
+      <a href="#werewolf">狼人自爆测试</a>
+      <a href="#debug">排查“没看上下文”</a>
+      <a href="#cleanup">安全结束对局</a>
+    </aside>
+
+    <article class="article" id="article">
+      <header class="article-header">
+        <p class="eyebrow">蓝图 · 玩法 · 独立记忆</p>
+        <h1>让每个角色拥有自己的对话</h1>
+        <p class="hero-copy">本教程为每个游戏身份创建独立 Agent，把信息路由给真正应该知道它的角色，并通过检查记忆判断问题，而不是依靠修改提示词掩盖状态丢失。</p>
+      </header>
+
+      <section id="model">
+        <h2>多 Agent 的真实模型</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>整个进程共享一份</th><th>每个 Agent 独立一份</th></tr></thead>
+          <tbody><tr><td>GPU 模型、运行时状态、串行推理队列、项目默认采样参数</td><td>显示名、System Prompt、工具声明、规范化记忆、当前请求与生命周期</td></tr></tbody>
+        </table></div>
+        <div class="callout good"><strong>创建 6 个 Agent 不会加载 6 份模型。</strong>它只是在同一个 Runtime 上创建 6 段逻辑对话。请求可以排队，但 GPU 推理由插件按设计串行执行。</div>
+        <p>凡是对象需要独立记忆，就应该使用 Agent，例如 NPC、队友、裁判、游戏身份、多个聊天标签页，以及狼人杀这类多角色模拟。</p>
+      </section>
+
+      <section id="data">
+        <h2>1. 先准备蓝图数据</h2>
+        <div class="step"><div class="step-head"><span class="step-number">1</span><div><h3>创建 Agent 容器</h3><p>增加名为 <code>Conversations</code> 的数组，类型为 <strong>Lite Rt Lm Agent Object Reference</strong>。如果经常按身份 ID 查找，再维护一个“角色/玩家 ID → Agent”的 Map。</p></div></div></div>
+        <div class="step"><div class="step-head"><span class="step-number">2</span><div><h3>定义身份记录</h3><p>每个身份至少提供稳定 ID、显示名、System Prompt，以及可选的 Tool Declarations JSON。秘密身份信息放在对应身份自己的 Prompt 或选定记忆里，不要放进所有人共享的 Prompt。</p></div></div></div>
+      </section>
+
+      <section id="create">
+        <h2>2. 每个身份创建一个 Agent</h2>
+        <ol>
+          <li>循环身份/玩家记录。</li>
+          <li>创建 <code>Lite Rt Lm Agent Config</code>。</li>
+          <li>设置 <code>Display Name</code>、<code>System Prompt</code> 和可选的 <code>Tool Declarations Json</code>。</li>
+          <li>调用 <code>Create Conversation (Advanced)</code>。</li>
+          <li>把返回的 Agent 加入数组或 ID Map。</li>
+        </ol>
+        <div class="callout"><strong>已有 Subsystem 写法仍然正确。</strong><code>Get LiteRT-LM Runtime → Create Agent</code> 创建的是同一种 Agent。新的蓝图建议使用 <code>Create Conversation (Advanced)</code> 场景工厂，只是因为搜索和理解更直接。</div>
+        <figure><img src="assets/screenshots/ue5-werewolf-multi-agent-create.png" alt="狼人杀 GameCore 蓝图创建多个 LiteRT-LM Agent 并加入数组"><figcaption>现有狼人杀 GameCore 通过 Runtime Subsystem 创建每个 Agent，并把结果存入 <code>LiteRtLmAgents</code>。新蓝图可使用等价的场景工厂。</figcaption></figure>
+      </section>
+
+      <section id="events">
+        <h2>3. 创建后立即绑定事件，并保留结果身份</h2>
+        <p>每个 Agent 创建后立即绑定：</p>
+        <ul>
+          <li><code>On Completed</code>：最终文本、工具调用、记忆快照、指标与错误字段。</li>
+          <li><code>On Text Chunk</code>：流式 UI。</li>
+          <li><code>On Error</code>：配置错误或请求未被接受。</li>
+          <li><code>On State Changed</code>：创建、加载、就绪、运行和结束状态。</li>
+          <li><code>On Memory Changed</code>：可选的保存或 UI 观察。</li>
+        </ul>
+        <p>完成委托不会额外携带你的玩法身份 ID。可以为不同身份绑定专用处理器、给每个 Agent 配一个小型持有对象/组件，或者在 Ask 时建立“Request ID → 身份”的 Map。异步完成后不要依赖“循环最后一次的 Index”。</p>
+      </section>
+
+      <section id="ask">
+        <h2>4. 一定要问到正确的 Agent</h2>
+        <div class="step"><div class="step-head"><span class="step-number">3</span><div><h3>按稳定的玩法身份选择</h3><p>把当前发言者/玩家 ID 解析为对应 Agent，检查引用有效且 <code>Is Busy</code> 为 false，再调用 <code>Ask</code>。保存返回的 Request ID，直到完成事件抵达。</p></div></div></div>
+        <div class="callout warn"><strong>不要为了“让大家知道某件事”而对所有 Agent 调用 Ask。</strong>Ask 会执行推理并新增 AI 回答。共享既定游戏状态应使用记忆接口，而不是让所有角色都发言。</div>
+      </section>
+
+      <section id="memory">
+        <h2>5. 正确分发公开信息和私密信息</h2>
+        <h3>真实公开事件</h3>
+        <p>对相关 Agent 数组调用 <code>Append Memory Message to Conversations</code>，写入事件本身，例如：</p>
+        <pre><code>Role: user
+Content: [游戏事件] 第 2 天发言阶段，3 号玩家公开声称自己是狼人。</code></pre>
+        <p>这个调用只改变记忆，不执行推理。数组中每个有效且不重复的 Agent 都会得到同一条规范化消息。</p>
+        <h3>真实私密事件</h3>
+        <p>只取得应该知道它的 Agent，并逐个调用 <code>Append Memory Message</code>。例如狼队友信息、预言家的查验结果、私密任务、只有某个 NPC 知道的事实。</p>
+        <div class="callout danger"><strong>不要用“该信息已公开，请你后续记住”这类提示词补丁解决路由。</strong>应把真实事件写入正确角色的记忆。可见性是游戏状态层的收件人选择，不是交给模型猜测的一句话。</div>
+      </section>
+
+      <section id="decisions">
+        <h2>6. 游戏决策使用低随机性的选项</h2>
+        <p>投票、选工具或其他结构化决策，可以生成以下请求选项：</p>
+        <ul>
+          <li><code>Make Precise Decision Ask Options</code>：低随机性，不启用 Thinking。</li>
+          <li><code>Make Reasoned Decision Ask Options</code>：固定 Seed，启用 Thinking，适合结构化推理决策。</li>
+        </ul>
+        <p>建议声明类似 <code>vote_player</code> 的工具，并要求整数玩家 ID。游戏代码负责执行和校验动作；模型不应直接修改对局状态。</p>
+        <p>如果回答未通过校验，在重试前调用 <code>Reject Last Response</code>。它会移除最后一条终止态 AI 回答，同时保留产生这次回答的输入，避免错误决定被继续强化到规范化记忆里。</p>
+      </section>
+
+      <section id="werewolf">
+        <h2>狼人杀测试：玩家公开自爆狼人身份</h2>
+        <p>这是很好的端到端上下文测试，因为下一轮投票是否合理非常容易观察。</p>
+        <ol>
+          <li>开始一局，为每个 AI 玩家创建独立 Agent。</li>
+          <li>当真人说“我是狼人，我的狼队友是 4 号”时，把这句已经说出口的话视为真实公开游戏事件。</li>
+          <li>把该事件追加到所有存活玩家的对话记忆；不要写入玩家从未公开的引擎内部真相。</li>
+          <li>投票前导出每个相关 Agent 的记忆，确认精确事件确实存在。</li>
+          <li>对每个存活 AI Agent 使用决策/工具结构发起投票请求。</li>
+          <li>校验投票目标仍存活且具备资格，并记录 Request ID、Agent ID、目标与校验结果。</li>
+        </ol>
+        <div class="callout good"><strong>正确解释测试结果：</strong>如果自爆事件已经存在于 Agent 的导出记忆中，但它仍投给别人，应继续检查决策说明、工具结构、采样参数与校验逻辑；如果事件根本不在记忆中，问题是生命周期或记忆路由，不是“AI 逻辑”。</div>
+      </section>
+
+      <section id="debug">
+        <h2>按顺序排查“AI 完全没看对话”</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>检查顺序</th><th>能够证明什么</th></tr></thead>
+          <tbody>
+            <tr><td><strong>1. Agent 身份</strong><br>创建、Ask、完成时记录 <code>Get Agent Id</code> 和 Display Name。</td><td>你提问的就是你检查记忆的那个对象。</td></tr>
+            <tr><td><strong>2. 生命周期</strong><br>确认数组/Map 仍持有 Agent，没有被新的 Agent 替换。</td><td>对话没有被静默重建。</td></tr>
+            <tr><td><strong>3. 规范化记忆</strong><br>Ask 前立即调用 <code>Export Memory Json</code>。</td><td>模型输入中确实包含该游戏事件。</td></tr>
+            <tr><td><strong>4. 请求身份</strong><br>完成结果与 Ask 返回的 Request ID 对应。</td><td>旧队列结果没有被错误应用到当前回合。</td></tr>
+            <tr><td><strong>5. 决策协议</strong><br>检查 Tool Call 参数和校验结果。</td><td>解析或游戏校验没有丢弃模型真正给出的选择。</td></tr>
+            <tr><td><strong>6. 诊断</strong><br>临时启用 Detailed Diagnostics。</td><td>可以在磁盘上关联完整上下文与运行时结果。</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="cleanup">
+        <h2>安全结束或替换一局游戏</h2>
+        <p>对数组调用 <code>Close and Clear Conversations</code>。整局或整场景替换时保持 <code>Unbind Events Before Close</code> 开启，避免旧请求取消后的回调进入新状态机。随后清理 Request ID Map 与玩法持有对象。</p>
+      </section>
+
+      <nav class="next-links" aria-label="下一页">
+        <a href="SYSTEMS_zh.html#mcp">下一步：工具与 MCP Gateway →</a>
+        <a href="GUIDE_CPP_zh.html">用 C++ 实现同样的所有权模型 →</a>
+      </nav>
+    </article>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index_zh.html">插件总览</a> · <a href="GUIDE_MULTIPLE_CONVERSATIONS.html" lang="en">English</a></span></div></footer>
+</body>
+</html>
