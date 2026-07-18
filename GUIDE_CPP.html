@@ -25,7 +25,7 @@
       <a href="#agents">3. Multiple Agents</a>
       <a href="#ownership">Ownership and async rules</a>
       <a href="#native">Native SDK / C ABI</a>
-      <a href="#shipping">Shipping checklist</a>
+      <a href="#shipping">Download, tune, and ship</a>
     </aside>
 
     <article class="article" id="article">
@@ -164,7 +164,43 @@ if (IsValid(Judge))
       </section>
 
       <section id="shipping">
-        <h2>C++ shipping checklist</h2>
+        <h2>Ship to Windows 11 and Android</h2>
+        <p>You do not need to compile the UE5 project just to run the complete demo. Open the <a href="https://github.com/winyunq/LiteRTDemo/releases/tag/v5.1.0">LiteRTDemo v5.1.0 release</a> and download the assembly script. It downloads every part, verifies the SHA-256 of each part and of the final artifact, and only then produces the runnable file.</p>
+
+        <h3>1. Download and assemble a package</h3>
+        <p>Put <code>Assemble-LiteRTDemo-v5.1.0.ps1</code> in an empty directory, open PowerShell there, and run one of these commands:</p>
+        <pre><code># Android ARM64: produces LiteRTDemo-Android-Shipping-arm64.apk
+powershell -ExecutionPolicy Bypass -File .\Assemble-LiteRTDemo-v5.1.0.ps1 -Target Android -Download
+
+# Windows 11: produces LiteRTDemo-Windows-v5.1.0.zip
+powershell -ExecutionPolicy Bypass -File .\Assemble-LiteRTDemo-v5.1.0.ps1 -Target Windows -Download</code></pre>
+        <p>The Android package targets ARM64 only. Extract the Windows package and run <code>LiteRTDemo.exe</code>. The release also includes manifests and <code>SHA256SUMS.txt</code>, so there is no manual joining or guesswork about file integrity.</p>
+
+        <h3>2. Read real available memory on the phone</h3>
+        <p>Before creating the native model, v5.1.0 queries total physical memory, currently available memory, and physical memory used by the process. It then conservatively caps the configured context limit to a 4K, 8K, 16K, or 32K tier. Multiple Agents still share one runtime and model; multiple conversations do not load multiple model copies.</p>
+        <pre><code>#include "LiteRtLmSubsystem.h"
+
+ULiteRtLmSubsystem* Runtime =
+    GetGameInstance()-&gt;GetSubsystem&lt;ULiteRtLmSubsystem&gt;();
+const FLiteRtLmMemoryPlan Plan = Runtime-&gt;GetMemoryPlan();
+
+UE_LOG(LogTemp, Display,
+    TEXT("LiteRT-LM RAM: total=%lld MB available=%lld MB process=%lld MB, context=%d/%d, %s"),
+    Plan.TotalPhysicalMB,
+    Plan.AvailablePhysicalMB,
+    Plan.ProcessUsedPhysicalMB,
+    Plan.EffectiveMaxContextTokens,
+    Plan.ConfiguredMaxContextTokens,
+    *Plan.PolicySummary);</code></pre>
+        <p><code>Auto Tune Context for Device Memory</code> is enabled by default in Project Settings; its config key is <code>bAutoTuneAndroidContext=True</code>. Disable it only after stress-testing the exact target devices. The memory plan reduces context-cache pressure, but it cannot hide a driver, GPU delegate, or native ABI crash; collect the system crash evidence as well.</p>
+
+        <h3>3. Export evidence after an Android inference crash</h3>
+        <p>The release includes <code>Collect-LiteRTDemoAndroidCrash.ps1</code>. It uses ADB to collect app metadata, device memory, GPU/driver information, Logcat, and Android process-exit reasons. Connect the phone, allow USB debugging, then run:</p>
+        <pre><code>powershell -ExecutionPolicy Bypass -File .\Collect-LiteRTDemoAndroidCrash.ps1</code></pre>
+        <p>Reproduce the crash once, finish collection as instructed, and share the resulting directory as an archive. The logs can contain the device model, Android version, process metadata, and application output; review or redact anything you do not want to share.</p>
+        <div class="callout warn"><strong>The current GitHub Android package is an ARM64 v2-signed demo and diagnostic build.</strong> It uses the Android debug certificate and is not a store-ready Distribution/AAB package. This release passed UE Shipping build, native dependency-closure, and signing-structure checks, but no physical ARM64 phone was connected at publication time. Treat your device log as authoritative for real GPU inference.</div>
+
+        <h3>4. Package your own plugin project</h3>
         <ul class="checklist">
           <li>The consuming module depends on <code>LiteRTLMUnreal</code>.</li>
           <li>UObject references are reflected and survive garbage collection.</li>
