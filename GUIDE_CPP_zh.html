@@ -25,7 +25,7 @@
       <a href="#agents">3. 多个 Agent</a>
       <a href="#ownership">所有权与异步规则</a>
       <a href="#native">Native SDK / C ABI</a>
-      <a href="#shipping">发布检查表</a>
+      <a href="#shipping">下载、调参与发布</a>
     </aside>
 
     <article class="article" id="article">
@@ -164,7 +164,43 @@ if (IsValid(Judge))
       </section>
 
       <section id="shipping">
-        <h2>C++ 发布检查表</h2>
+        <h2>发布到 Win11 与 Android</h2>
+        <p>如果你只想先运行完整 Demo，不需要自己编译 UE5 项目。打开 <a href="https://github.com/winyunq/LiteRTDemo/releases/tag/v5.1.0">LiteRTDemo v5.1.0 Release</a>，下载本页所示的重组脚本；脚本会自动下载全部分卷、检查每个分卷及最终文件的 SHA-256，再生成可运行文件。</p>
+
+        <h3>1. 下载并重组发布包</h3>
+        <p>把 <code>Assemble-LiteRTDemo-v5.1.0.ps1</code> 放进一个空目录，在该目录打开 PowerShell，然后二选一运行：</p>
+        <pre><code># Android ARM64：生成 LiteRTDemo-Android-Shipping-arm64.apk
+powershell -ExecutionPolicy Bypass -File .\Assemble-LiteRTDemo-v5.1.0.ps1 -Target Android -Download
+
+# Windows 11：生成 LiteRTDemo-Windows-v5.1.0.zip
+powershell -ExecutionPolicy Bypass -File .\Assemble-LiteRTDemo-v5.1.0.ps1 -Target Windows -Download</code></pre>
+        <p>Android 包只面向 ARM64。Windows 包解压后运行 <code>LiteRTDemo.exe</code>。Release 同时提供清单和 <code>SHA256SUMS.txt</code>，因此不需要手工拼接或猜测文件是否完整。</p>
+
+        <h3>2. 在手机上先读取真实可用内存</h3>
+        <p>v5.1.0 会在创建 Native 模型之前查询设备的总物理内存、当前可用内存和本进程已用内存，再把项目配置的上下文上限保守地限制到 4K、8K、16K 或 32K 档位。多个 Agent 仍共享同一份 Runtime 和模型；创建多段对话不会加载多份模型。</p>
+        <pre><code>#include "LiteRtLmSubsystem.h"
+
+ULiteRtLmSubsystem* Runtime =
+    GetGameInstance()-&gt;GetSubsystem&lt;ULiteRtLmSubsystem&gt;();
+const FLiteRtLmMemoryPlan Plan = Runtime-&gt;GetMemoryPlan();
+
+UE_LOG(LogTemp, Display,
+    TEXT("LiteRT-LM RAM: total=%lld MB available=%lld MB process=%lld MB, context=%d/%d, %s"),
+    Plan.TotalPhysicalMB,
+    Plan.AvailablePhysicalMB,
+    Plan.ProcessUsedPhysicalMB,
+    Plan.EffectiveMaxContextTokens,
+    Plan.ConfiguredMaxContextTokens,
+    *Plan.PolicySummary);</code></pre>
+        <p>项目设置中的 <code>Auto Tune Context for Device Memory</code> 默认开启；对应配置是 <code>bAutoTuneAndroidContext=True</code>。只有你已经在目标机型上做过压力测试时才建议关闭。内存规划会减少上下文缓存压力，但无法掩盖驱动、GPU Delegate 或 Native ABI 崩溃，仍需查看系统崩溃日志。</p>
+
+        <h3>3. Android 推理闪退时导出日志</h3>
+        <p>Release 中的 <code>Collect-LiteRTDemoAndroidCrash.ps1</code> 会通过 ADB 收集应用信息、设备内存、GPU/驱动信息、Logcat 和 Android 崩溃退出原因。连接手机并允许 USB 调试后运行：</p>
+        <pre><code>powershell -ExecutionPolicy Bypass -File .\Collect-LiteRTDemoAndroidCrash.ps1</code></pre>
+        <p>复现一次闪退后按脚本提示结束采集，把生成目录压缩后提供即可。日志可能包含设备型号、Android 版本、进程信息和应用输出；分享前可以先检查或删除不希望公开的字段。</p>
+        <div class="callout warn"><strong>当前 GitHub Android 包是用于 Demo 与故障定位的 ARM64 v2 签名包。</strong>它使用 Android debug 证书，不是商店 Distribution/AAB 成品。本次发布已完成 UE Shipping 构建、Native 依赖闭包和签名结构检查，但发布时没有连接物理 ARM64 手机，因此真机 GPU 推理结果必须以你的设备日志为准。</div>
+
+        <h3>4. 自己打包插件项目</h3>
         <ul class="checklist">
           <li>消费模块已经依赖 <code>LiteRTLMUnreal</code>。</li>
           <li>UObject 引用经过反射持有，不会被垃圾回收。</li>
