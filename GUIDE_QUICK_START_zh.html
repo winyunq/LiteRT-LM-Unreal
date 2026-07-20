@@ -3,153 +3,427 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>快速单对话教程 — LiteRT-LM Unreal</title>
-  <meta name="description" content="使用 LiteRT-LM Unreal 缺省单对话 Quick Chat API 的逐步蓝图教程。">
+  <title>逐帧快速入门 — LiteRT-LM Unreal</title>
+  <meta name="description" content="按照 UE5 英文实机截图逐帧操作：创建 Actor Blueprint、保存 Quick Chat、逐节点连线并完成第一段本地 AI 对话。">
   <link rel="stylesheet" href="assets/docs.css">
   <link rel="alternate" hreflang="zh-CN" href="GUIDE_QUICK_START_zh.html">
   <link rel="alternate" hreflang="en" href="GUIDE_QUICK_START.html">
 </head>
 <body>
   <a class="skip-link" href="#article">跳到教程</a>
-  <header class="site-header"><nav class="nav" aria-label="主导航">
-    <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
-    <div class="nav-links"><a href="index_zh.html">插件总览</a><a aria-current="page" href="GUIDE_QUICK_START_zh.html">快速单对话</a><a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">多对话</a><a href="SYSTEMS_zh.html">全部体系</a><a href="GUIDE_CPP_zh.html">C++</a><a class="lang-switch" href="GUIDE_QUICK_START.html" lang="en">English</a></div>
-  </nav></header>
+  <header class="site-header">
+    <nav class="nav" aria-label="主导航">
+      <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+      <div class="nav-links">
+        <a aria-current="page" href="GUIDE_QUICK_START_zh.html">快速入门</a>
+        <a href="SYSTEMS_zh.html">文档索引</a>
+        <a class="lang-switch" href="GUIDE_QUICK_START.html" lang="en">English</a>
+      </div>
+    </nav>
+  </header>
 
   <main class="docs-layout">
-    <aside class="toc" aria-label="本页目录">
-      <p class="toc-title">本页目录</p>
-      <a href="#result">最终会做出什么</a>
-      <a href="#output-mode">选择输出方式</a>
-      <a href="#enable">1. 启用插件</a>
-      <a href="#model">2. 设置模型路径</a>
-      <a href="#blueprint">3. 创建蓝图</a>
-      <a href="#graph">4. 搭完整节点链</a>
-      <a href="#ui">5. 从 UI 发送</a>
-      <a href="#streaming">6. 改成流式输出</a>
-      <a href="#lifecycle">对话生命周期</a>
-      <a href="#troubleshooting">按现象排错</a>
+    <aside class="toc" aria-label="本页步骤">
+      <p class="toc-title">从上到下依次完成</p>
+      <a href="#prepare">0. 插件与模型</a>
+      <a href="#actor">1. 创建 Actor 蓝图</a>
+      <a href="#variable">2. 创建 QuickChat 变量</a>
+      <a href="#request">3. 创建并发送请求</a>
+      <a href="#answer">4. 接收并显示回答</a>
+      <a href="#run">5. 放入关卡并运行</a>
+      <a href="#werewolf">6. 继续到狼人杀 Demo</a>
+      <a href="#done">完成检查</a>
     </aside>
 
     <article class="article" id="article">
       <header class="article-header">
-        <p class="eyebrow">蓝图 · 入门 · 10–15 分钟</p>
-        <h1>做出第一段本地 AI 对话</h1>
-        <p class="hero-copy">本教程只创建一次 Quick Chat，保存对象引用，通过事件拿到最终回答，并让后续问题继续使用同一段对话记忆。</p>
+        <p class="eyebrow">Blueprint · 38 个原子画面 · 40 张英文实机图</p>
+        <h1>画面变化一次，就跟一张图</h1>
+        <p class="hero-copy">本页只做一件事：从空白 Actor Blueprint 走到第一段真实的本地 AI 回答。每个卡片只包含一个可见动作；看到的画面与图片一致后，再继续下一张。</p>
       </header>
 
-      <section id="result">
-        <h2>最终会做出什么</h2>
-        <p>完成后，按下 Play 会创建一段对话，发送一条测试消息，并把回答打印出来。随后你只需把测试消息替换成 UMG 输入框内容，不必重做对话初始化。</p>
-        <div class="callout good"><strong>Quick Chat 就是缺省单对话接口。</strong>它内部包装了一个普通 <code>ULiteRtLmAgent</code>。每次调用 <code>Create Quick Chat</code> 都会创建一段新的独立对话，所以每个需要保留的聊天对象只创建一次。</div>
-        <ul class="checklist">
-          <li>已经准备好可用的 <code>.litertlm</code> 模型。</li>
-          <li>插件已经为当前项目启用。</li>
-          <li>可以创建 Actor 蓝图，或已有一个长期存在的玩法蓝图。</li>
-        </ul>
+      <div class="callout good"><strong>这是一条线性教程。</strong>不要跳到后面的最终连线图照抄；按顺序完成每个画面。需要查询节点、系统、C++ 或打包时，改去独立的 <a href="SYSTEMS_zh.html">文档索引</a>。</div>
+      <div class="callout"><strong>Demo 与插件已经解耦。</strong>Demo 仓库不再附带插件源码或插件子模块；请先单独安装 LiteRT-LM 插件。项目总文档入口始终是 <a href="https://winyunq.github.io/LiteRT-LM-Unreal">winyunq.github.io/LiteRT-LM-Unreal</a>。</div>
+
+      <section class="phase" id="prepare">
+        <p class="phase-kicker">准备</p>
+        <h2>0. 先让插件和模型可用</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">0A</span><div><h3>在 Edit → Plugins 中搜索 LiteRT，并启用 LiteRT-LM。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/ue5-plugins-enabled.png"><img src="assets/screenshots/ue5-plugins-enabled.png" alt="UE5 英文 Plugins 窗口中已经启用 LiteRT-LM"></a>
+            <figcaption>如果编辑器要求重启，先完成重启，再进入下一步。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">0B</span><div><h3>在 Project Settings 中填写相对 Content 的 Model Path。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/ue5-project-settings-model-path.png"><img src="assets/screenshots/ue5-project-settings-model-path.png" alt="UE5 英文 Project Settings 中的 LiteRT-LM Model Path"></a>
+            <figcaption>示例为 <code>Models/gemma-4-E2B-it.litertlm</code>；文件名可以不同，但文件必须存在。</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="output-mode">
-        <h2>先决定用户应该怎样看到回答</h2>
-        <div class="table-wrap"><table>
-          <thead><tr><th>想要的效果</th><th>调用</th><th>从哪里读取输出</th></tr></thead>
-          <tbody>
-            <tr><td><strong>整段回答完成后一次显示</strong></td><td><code>Ask Once</code></td><td><code>On Answer → Result.Text</code></td></tr>
-            <tr><td><strong>边生成边显示</strong></td><td><code>Ask Streaming</code></td><td>累加 <code>On Text Chunk</code>；以 <code>On Answer</code> 作为最终完成事件</td></tr>
-          </tbody>
-        </table></div>
-        <div class="callout warn"><strong>Ask 的返回值是 Request ID，不是模型回答。</strong>推理是异步的，真正的回答必须从事件读取。</div>
+      <section class="phase" id="actor">
+        <p class="phase-kicker">Actor</p>
+        <h2>1. 创建一个长期存在的 Actor Blueprint</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">01</span><div><h3>打开 Content Drawer，并进入要保存教学资产的文件夹。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/01-open-content-drawer.png"><img src="assets/screenshots/quickstart/01-open-content-drawer.png" alt="UE5 Content Drawer 已打开并显示内容文件夹"></a>
+            <figcaption>本例使用 <code>/Content/LiteRTLM_Tutorials</code>；你也可以使用自己的文件夹。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">02</span><div><h3>点击 Add，然后选择 Blueprint Class。</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/02-click-add-menu.png"><img src="assets/screenshots/quickstart/02-click-add-menu.png" alt="Content Browser 的 Add 菜单"></a>
+            <figcaption>只点击 <strong>Blueprint Class</strong>，暂时不要创建其他资产。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">03</span><div><h3>在 Pick Parent Class 窗口中选择 Actor。</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/03-pick-parent-class.png"><img src="assets/screenshots/quickstart/03-pick-parent-class.png" alt="Pick Parent Class 窗口中的 Actor 选项"></a>
+            <figcaption>这里需要普通 <strong>Actor</strong>，不是 Pawn、Character 或 Widget。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">04</span><div><h3>把新蓝图命名为 BP_LiteRtLm_QuickStart_StepByStep。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/04-name-blueprint.png"><img src="assets/screenshots/quickstart/04-name-blueprint.png" alt="Content Browser 中命名后的教学 Actor Blueprint"></a>
+            <figcaption>蓝图会长期保存 Quick Chat 引用，所以不要使用 Level Blueprint 代替。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">05</span><div><h3>双击新资产，打开 Blueprint Editor。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/05-open-blueprint.png"><img src="assets/screenshots/quickstart/05-open-blueprint.png" alt="新建 Actor Blueprint 的 Blueprint Editor"></a>
+            <figcaption>确认右上角显示 <strong>Parent class: Actor</strong>。</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="enable">
-        <h2>1. 启用 LiteRT-LM</h2>
-        <div class="step"><div class="step-head"><span class="step-number">1</span><div><h3>打开插件窗口</h3><p>在 Unreal Editor 中打开<strong>编辑 → 插件</strong>，搜索 <strong>LiteRT-LM</strong>，启用插件；编辑器要求时完成重启。</p></div></div></div>
-        <p>如果搜索不到插件，检查它是否位于项目的 <code>Plugins</code> 目录，或是否已通过 Fab 安装到当前引擎版本。</p>
+      <section class="phase" id="variable">
+        <p class="phase-kicker">Variable</p>
+        <h2>2. 一步一步创建 QuickChat 对象引用</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">06</span><div><h3>在 My Blueprint 中点击 Add，再点击 Variable。</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/06-add-variable-menu.png"><img src="assets/screenshots/quickstart/06-add-variable-menu.png" alt="My Blueprint 的 Add 菜单中选择 Variable"></a>
+            <figcaption>此时只新增一个成员变量。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">07</span><div><h3>看到 NewVar 出现后，先不要改变类型。</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/07-variable-created.png"><img src="assets/screenshots/quickstart/07-variable-created.png" alt="My Blueprint 中刚创建的 NewVar Boolean 变量"></a>
+            <figcaption>UE 默认创建 Boolean；下一张图先完成改名。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">08</span><div><h3>把 NewVar 改名为 QuickChat，并按 Enter。</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/08-rename-quickchat.png"><img src="assets/screenshots/quickstart/08-rename-quickchat.png" alt="变量已重命名为 QuickChat"></a>
+            <figcaption>变量名必须是 <code>QuickChat</code>；此时它仍然是 Boolean，这是正常的。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">09</span><div><h3>在 Details 中点击 Variable Type 下拉框。</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/09-open-variable-type-menu.png"><img src="assets/screenshots/quickstart/09-open-variable-type-menu.png" alt="Variable Type 类型选择菜单"></a>
+            <figcaption>类型列表打开后，光标会自动进入顶部搜索框。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">10</span><div><h3>搜索 Lite Rt Lm Quick Chat。</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/10-search-quick-chat-type.png"><img src="assets/screenshots/quickstart/10-search-quick-chat-type.png" alt="类型菜单搜索 Lite Rt Lm Quick Chat"></a>
+            <figcaption>结果应只剩 <strong>Lite Rt Lm Quick Chat</strong>。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">11</span><div><h3>选择 Lite Rt Lm Quick Chat Object Reference。</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/11-quickchat-object-reference.png"><img src="assets/screenshots/quickstart/11-quickchat-object-reference.png" alt="QuickChat 已设置为 Lite Rt Lm Quick Chat 对象引用"></a>
+            <figcaption>类型变成蓝色对象引用，并出现 On Text Chunk、On Answer、On Error 等事件，说明选对了。</figcaption>
+          </figure>
+        </div>
+
+        <div class="callout danger"><strong>不要在每次提问时重新 Create Quick Chat。</strong>这个成员变量要保存同一个对象，才能保留对话记忆。</div>
       </section>
 
-      <section id="model">
-        <h2>2. 让插件找到模型</h2>
-        <div class="step"><div class="step-head"><span class="step-number">2</span><div><h3>填写 Model Path</h3><p>打开<strong>编辑 → 项目设置</strong>，搜索 <strong>LiteRT-LM</strong>，把 <strong>Model Path</strong> 指向运行时确实能够访问的 <code>.litertlm</code> 模型。</p></div></div></div>
-        <figure><img src="assets/screenshots/ue5-project-settings-model-path.png" alt="UE5 项目设置中的 LiteRT-LM Model Path"><figcaption>LiteRTDemo 的真实设置页面。你的模型文件名可以不同，关键是打包后的最终路径仍能解析到真实文件。</figcaption></figure>
-        <div class="callout"><strong>不需要 Load Model 节点。</strong>创建第一段对话时会自动触发延迟初始化。如果加载界面需要显示就绪状态、错误或诊断路径，使用 <code>Get LiteRT-LM Runtime</code>。</div>
+      <section class="phase" id="request">
+        <p class="phase-kicker">BeginPlay chain</p>
+        <h2>3. 逐节点创建并发送第一条请求</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">12</span><div><h3>双击 EventGraph，进入事件图。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/12-open-event-graph.png"><img src="assets/screenshots/quickstart/12-open-event-graph.png" alt="新 Actor Blueprint 的默认 EventGraph"></a>
+            <figcaption>默认会看到 BeginPlay、ActorBeginOverlap 与 Tick。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">13</span><div><h3>删除 ActorBeginOverlap 和 Tick，只保留 Event BeginPlay。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/13-delete-unused-events.png"><img src="assets/screenshots/quickstart/13-delete-unused-events.png" alt="EventGraph 中只保留 Event BeginPlay"></a>
+            <figcaption>这两个事件本教程不使用，删掉后画布更容易核对。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">14</span><div><h3>右键空白处，搜索并添加 Create Quick Chat。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/14-add-create-quick-chat.png"><img src="assets/screenshots/quickstart/14-add-create-quick-chat.png" alt="EventGraph 中新增 Create Quick Chat 节点"></a>
+            <figcaption>先让节点出现在画布上，这一步还不连线。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">15</span><div><h3>把 BeginPlay 的白色执行引脚连接到 Create Quick Chat。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/15-connect-begin-play.png"><img src="assets/screenshots/quickstart/15-connect-begin-play.png" alt="BeginPlay 已连接到 Create Quick Chat"></a>
+            <figcaption>白线只表示执行顺序。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">16</span><div><h3>在 System Prompt 填写 Answer concisely in the user's language.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/16-set-system-prompt.png"><img src="assets/screenshots/quickstart/16-set-system-prompt.png" alt="Create Quick Chat 的 System Prompt 已填写"></a>
+            <figcaption>先使用短提示词，确认基础链路成功后再扩写。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">17</span><div><h3>把 QuickChat 变量拖入图中，并选择 Set。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/17-add-set-quickchat.png"><img src="assets/screenshots/quickstart/17-add-set-quickchat.png" alt="EventGraph 中新增 Set QuickChat 节点"></a>
+            <figcaption>这一步新增 <strong>SET Quick Chat</strong>，先保持未连接。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">18</span><div><h3>连接 Create Quick Chat 与 SET Quick Chat 的白色执行引脚。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/18-connect-set-exec.png"><img src="assets/screenshots/quickstart/18-connect-set-exec.png" alt="Create Quick Chat 执行输出已连接到 Set QuickChat"></a>
+            <figcaption>现在 BeginPlay 会先创建对象，再执行赋值。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">19</span><div><h3>把 Return Value 的蓝色引脚连接到 Quick Chat 输入。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/19-connect-quickchat-object.png"><img src="assets/screenshots/quickstart/19-connect-quickchat-object.png" alt="Create Quick Chat 返回对象已保存到 QuickChat 变量"></a>
+            <figcaption>蓝线保存真实的 Quick Chat 对象引用；不要漏掉。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">20</span><div><h3>从 QuickChat 引用添加 Bind Event to On Answer。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/20-add-assign-on-answer.png"><img src="assets/screenshots/quickstart/20-add-assign-on-answer.png" alt="新增 Bind Event to On Answer 和自动生成的 OnAnswer Event"></a>
+            <figcaption>UE 会同时生成匹配的 <strong>OnAnswer_Event</strong>；红色委托线已经自动连接。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">21</span><div><h3>把 SET Quick Chat 的白色执行输出连接到 Bind Event to On Answer。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/21-connect-bind-exec.png"><img src="assets/screenshots/quickstart/21-connect-bind-exec.png" alt="Set QuickChat 执行输出已连接到 Bind Event to On Answer"></a>
+            <figcaption>回答事件必须在第一次 Ask 之前完成绑定。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">22</span><div><h3>把 SET 节点右侧的蓝色对象输出连接到 Bind 的 Target。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/22-connect-bind-target.png"><img src="assets/screenshots/quickstart/22-connect-bind-target.png" alt="QuickChat 对象输出已连接到 Bind Target"></a>
+            <figcaption>Target 必须是刚才保存的同一个 QuickChat 对象。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">23</span><div><h3>从同一个 QuickChat 引用添加 Ask Once。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/23-add-ask-once.png"><img src="assets/screenshots/quickstart/23-add-ask-once.png" alt="EventGraph 中新增 Ask Once 节点"></a>
+            <figcaption>先新增节点，不要误把 Return Value 当成模型回答。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">24</span><div><h3>把 Bind Event to On Answer 的白色执行输出连接到 Ask Once。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/24-connect-ask-exec.png"><img src="assets/screenshots/quickstart/24-connect-ask-exec.png" alt="Bind Event to On Answer 执行输出已连接到 Ask Once"></a>
+            <figcaption>顺序现在是：创建 → 保存 → 绑定 → 提问。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">25</span><div><h3>把蓝色 QuickChat 对象输出连接到 Ask Once 的 Target。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/25-connect-ask-target.png"><img src="assets/screenshots/quickstart/25-connect-ask-target.png" alt="QuickChat 对象已连接到 Ask Once Target"></a>
+            <figcaption>Bind 与 Ask 必须使用同一个 Target。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">26</span><div><h3>在 Message 中填写 Hello from Unreal Engine.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/26-set-first-message.png"><img src="assets/screenshots/quickstart/26-set-first-message.png" alt="Ask Once 的 Message 已填写测试问题"></a>
+            <figcaption>第一条消息保持简短，方便判断是否真正收到本地模型回答。</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="blueprint">
-        <h2>3. 创建一个负责持有对话的蓝图</h2>
-        <div class="step"><div class="step-head"><span class="step-number">3</span><div><h3>创建或打开 Actor 蓝图</h3><p>第一次测试可以创建名为 <code>BP_LocalChat</code> 的 Actor 蓝图，并在关卡里放置一个实例。之后同样的结构也可以放在 Player Controller、你的 Game Instance 封装、Widget 的持有者或其他长期存在对象中。</p></div></div></div>
-        <div class="step"><div class="step-head"><span class="step-number">4</span><div><h3>增加 QuickChat 变量</h3><p>创建名为 <code>QuickChat</code> 的变量，类型选择 <strong>Lite Rt Lm Quick Chat Object Reference</strong>。这个引用就是多轮问题之间能够保留记忆的关键。</p></div></div></div>
-        <div class="callout danger"><strong>不要在每次点击“发送”时 Create Quick Chat。</strong>那会每次都创建新的 Agent，问题自然会像没有上下文一样从空记忆开始。</div>
+      <section class="phase" id="answer">
+        <p class="phase-kicker">On Answer chain</p>
+        <h2>4. 逐节点读取并显示异步回答</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">27</span><div><h3>在 OnAnswer_Event 附近添加 Break Lite Rt Lm Result。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/27-add-break-result.png"><img src="assets/screenshots/quickstart/27-add-break-result.png" alt="OnAnswer Event 附近新增 Break Lite Rt Lm Result"></a>
+            <figcaption>回答正文在 Result 结构体里，因此需要先拆分。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">28</span><div><h3>把 OnAnswer_Event 的 Result 连接到 Break 节点输入。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/28-connect-result-struct.png"><img src="assets/screenshots/quickstart/28-connect-result-struct.png" alt="OnAnswer Result 已连接到 Break Lite Rt Lm Result"></a>
+            <figcaption>蓝色结构线传递完整结果，包括 Text、Error 和 Metrics。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">29</span><div><h3>在右侧添加 Print String。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/29-add-print-string.png"><img src="assets/screenshots/quickstart/29-add-print-string.png" alt="回答链中新增 Print String 节点"></a>
+            <figcaption>先保留默认选项；它会同时打印到屏幕和 Output Log。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">30</span><div><h3>把 OnAnswer_Event 的白色执行输出连接到 Print String。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/30-connect-answer-exec.png"><img src="assets/screenshots/quickstart/30-connect-answer-exec.png" alt="OnAnswer Event 执行输出已连接到 Print String"></a>
+            <figcaption>只有 On Answer 真正触发时，Print String 才会执行。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">31</span><div><h3>把 Break 节点的 Text 连接到 Print String 的 In String。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/31-connect-answer-text.png"><img src="assets/screenshots/quickstart/31-connect-answer-text.png" alt="Break Result 的 Text 已连接到 Print String"></a>
+            <figcaption>这条紫色线才是模型回答正文。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">32</span><div><h3>按两行整理节点，并按 Home 查看完整流程。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/32-arrange-final-graph.png"><img src="assets/screenshots/quickstart/32-arrange-final-graph.png" alt="整理后的完整 Quick Chat EventGraph"></a>
+            <figcaption>上排负责创建、绑定与提问；下排负责接收、拆分与显示回答。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">33</span><div><h3>点击 Compile，确认没有红色编译错误，再点击 Save。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/33-compile-success.png"><img src="assets/screenshots/quickstart/33-compile-success.png" alt="Quick Chat Blueprint 已成功编译"></a>
+            <figcaption>如果编译失败，先回到上一张完整图逐根核对白线、蓝线与紫线。</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="graph">
-        <h2>4. 搭出完整的 BeginPlay 节点链</h2>
-        <div class="step"><div class="step-head"><span class="step-number">5</span><div><h3>创建并保存对话</h3><p>从 <code>Event BeginPlay</code> 添加 <code>Create Quick Chat</code>。填写一句简短的 System Prompt，例如“使用用户的语言简洁回答”。把 Return Value 接到 <code>Set QuickChat</code>。</p></div></div></div>
-        <div class="step"><div class="step-head"><span class="step-number">6</span><div><h3>第一次 Ask 之前先绑定回答</h3><p>从保存后的 QuickChat 引用拉出 <code>Bind Event to On Answer</code>（或对 On Answer 分发器使用 Assign）。创建对应自定义事件，Break <code>Lite Rt Lm Result</code>，再把 <code>Text</code> 接到 <code>Print String</code>。</p></div></div></div>
-        <div class="step"><div class="step-head"><span class="step-number">7</span><div><h3>发送一条测试问题</h3><p>在绑定节点之后，对同一个 QuickChat 调用 <code>Ask Once</code>。先写一条短消息，编译、保存，然后按 Play。</p></div></div></div>
-        <figure><img src="assets/screenshots/ue5-quick-chat-complete-flow.png" alt="Quick Chat 完整蓝图节点链"><figcaption>已经在 UE5 中验证的完整流程：BeginPlay → Create Quick Chat → 保存引用 → 绑定 On Answer → Ask Once；回答事件提取 Result.Text 并打印。</figcaption></figure>
-        <p>第一次请求还要初始化模型，通常会比后续请求慢。<code>On Answer</code> 触发后，同一个 QuickChat 的记忆中已经包含这条用户消息和 AI 回答。</p>
+      <section class="phase" id="run">
+        <p class="phase-kicker">Level and PIE</p>
+        <h2>5. 把 Actor 放进关卡并看到真实回答</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">34</span><div><h3>把 BP_LiteRtLm_QuickStart_StepByStep 从 Content Browser 拖进关卡。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/34-actor-instance-in-level.png"><img src="assets/screenshots/quickstart/34-actor-instance-in-level.png" alt="Outliner 中已经出现 Quick Start Actor 实例"></a>
+            <figcaption>松开鼠标后，Outliner 中必须出现一个 Actor 实例；只创建资产而不放进关卡，BeginPlay 不会运行。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">35</span><div><h3>点击 Play，并等待第一次本地模型初始化完成。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/35-click-play.png"><img src="assets/screenshots/quickstart/35-click-play.png" alt="UE5 已进入 Play In Editor"></a>
+            <figcaption>第一次运行需要先加载 GPU 模型，通常比后续提问慢；不要连续点击 Play。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">36</span><div><h3>打开 Output Log，搜索 BlueprintUserMessages，确认出现模型回答。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/36-local-answer-visible.png"><img src="assets/screenshots/quickstart/36-local-answer-visible.png" alt="Output Log 中显示本地模型回答"></a>
+            <figcaption>实测回答：<code>Hello! How can I help you today with Unreal Engine?</code>；这证明 Create、Bind、Ask 与 On Answer 已全部跑通。</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="ui">
-        <h2>5. 让自己的 UI 发送后续消息</h2>
-        <p>BeginPlay 的初始化保持不动。在 UMG 的发送按钮事件里：</p>
-        <ol>
-          <li>读取输入框文字。</li>
-          <li>确认 <code>QuickChat</code> 有效，并且 <code>Is Busy</code> 为 false。</li>
-          <li>对已保存的 QuickChat 调用 <code>Ask Once</code>。</li>
-          <li>忙碌期间禁用发送按钮；在 <code>On Answer</code> 或 <code>On Error</code> 中恢复。</li>
-          <li>把 <code>On Answer → Result.Text</code> 写入聊天 UI。</li>
-        </ol>
-        <div class="callout good"><strong>记忆验证：</strong>先问“我的代号是极光”，再通过同一个对象问“我的代号是什么”。如果忘了，优先检查 UI 是否在两次调用之间重新创建、Reset 或 Close 了 QuickChat。</div>
+      <section class="phase" id="werewolf">
+        <p class="phase-kicker">Complete demo</p>
+        <h2>6. 基础链路成功后，继续到完整狼人杀 Demo</h2>
+        <p>快速入门到此结束。下面两张图只负责把你带到真正的多 Agent 示例；角色记忆、轮次、暂停与恢复等细节放在独立的多会话教程中。</p>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">37</span><div><h3>打开 L_WerewolfShowcase，点击 Play，并在配置页确认人数与身份偏好。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/37-werewolf-config-screen.png"><img src="assets/screenshots/quickstart/37-werewolf-config-screen.png" alt="完整狼人杀 Demo 的对局配置页"></a>
+            <figcaption>Demo 会让每个 AI 角色持有独立会话；默认配置为 10 名玩家和严格 GPU 模型。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">38</span><div><h3>点击 START，确认 10 名玩家进入夜晚行动界面。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/38-werewolf-game-started.png"><img src="assets/screenshots/quickstart/38-werewolf-game-started.png" alt="狼人杀 Demo 已创建 10 名玩家并进入夜晚行动"></a>
+            <figcaption>这就是多会话的实际运行结果：玩家名册、当前阶段、现场发言和每名 Agent 的独立状态同时存在。</figcaption>
+          </figure>
+        </div>
+
+        <nav class="next-links three" aria-label="后续文档">
+          <a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">按狼人杀 Demo 学多会话 →</a>
+          <a href="SYSTEMS_zh.html">查询运行时、MCP 与打包 →</a>
+          <a href="GUIDE_CPP_zh.html">C++ 接入指南 →</a>
+        </nav>
       </section>
 
-      <section id="streaming">
-        <h2>6. 改成流式输出</h2>
-        <p>把 <code>Ask Once</code> 换成 <code>Ask Streaming</code>，并在初始化时绑定 <code>On Text Chunk</code>。</p>
-        <ul>
-          <li>调用 Ask Streaming 前清空“本次回答”的显示文本。</li>
-          <li>把每个 Text Chunk <strong>追加</strong>到现有文本；不要只用最新 Chunk 覆盖整段回答。</li>
-          <li><code>On Answer</code> 仍然负责最终结果、指标、工具调用以及结束时的 UI 状态。</li>
-          <li><code>On Error</code> 中恢复发送按钮，并把可读错误显示出来。</li>
-        </ul>
+      <section id="done">
+        <div class="completion-card">
+          <p class="eyebrow">完成标准</p>
+          <h3>下面四项同时成立，第一段本地 AI 对话才算完成</h3>
+          <ul class="checklist">
+            <li>QuickChat 是 <strong>Lite Rt Lm Quick Chat Object Reference</strong>。</li>
+            <li>Quick Chat 只在 BeginPlay 创建一次，并保存到成员变量。</li>
+            <li>On Answer 在 Ask Once 之前完成绑定。</li>
+            <li>Output Log 能看到来自 <code>Result.Text</code> 的真实模型回答。</li>
+          </ul>
+        </div>
       </section>
-
-      <section id="lifecycle">
-        <h2>如何控制对话生命周期</h2>
-        <div class="table-wrap"><table>
-          <thead><tr><th>你想做什么</th><th>使用</th><th>实际结果</th></tr></thead>
-          <tbody>
-            <tr><td><strong>带着上下文继续问</strong></td><td>同一个 QuickChat</td><td>继续使用现有记忆。</td></tr>
-            <tr><td><strong>清空聊天但保留人格</strong></td><td><code>Reset Conversation(true)</code></td><td>清除普通消息，保留 System Prompt。</td></tr>
-            <tr><td><strong>彻底重新开始</strong></td><td><code>Reset Conversation(false)</code></td><td>包括 System Prompt 在内的记忆都被清除。</td></tr>
-            <tr><td><strong>停止当前生成</strong></td><td><code>Cancel</code></td><td>取消已经接受的请求。</td></tr>
-            <tr><td><strong>销毁这段聊天</strong></td><td><code>Close</code></td><td>底层 Agent 关闭；继续聊天需要新建 Quick Chat。</td></tr>
-            <tr><td><strong>使用高级记忆或工具</strong></td><td><code>Get Conversation</code></td><td>直接取得底层 Agent，不需要重建会话。</td></tr>
-          </tbody>
-        </table></div>
-      </section>
-
-      <section id="troubleshooting">
-        <h2>按现象排错</h2>
-        <div class="table-wrap"><table>
-          <thead><tr><th>现象</th><th>首先检查</th></tr></thead>
-          <tbody>
-            <tr><td><strong>没有回答事件</strong></td><td>是否在 Ask 前绑定 <code>On Answer</code>；QuickChat 引用是否仍存活；同时查看 <code>On Error</code> 与运行时诊断。</td></tr>
-            <tr><td><strong>每一轮都忘记前文</strong></td><td><code>Create Quick Chat</code> 应只执行一次，不应每条消息执行一次；确认没有调用 Reset 或 Close。</td></tr>
-            <tr><td><strong>返回字符串像一串 ID</strong></td><td>这是正确的 Request ID；回答在 <code>On Answer → Result.Text</code>。</td></tr>
-            <tr><td><strong>第二次 Ask 被拒绝</strong></td><td>检查 <code>Is Busy</code>。同一个 QuickChat 不应重叠存在多个未完成请求。</td></tr>
-            <tr><td><strong>编辑器可用，打包后失败</strong></td><td>确认模型存在于打包运行时实际路径，并打开 Runtime 返回的诊断目录。</td></tr>
-          </tbody>
-        </table></div>
-      </section>
-
-      <nav class="next-links" aria-label="下一篇教程">
-        <a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">下一步：创建多个独立对话 →</a>
-        <a href="GUIDE_CPP_zh.html">在 C++ 中使用同一套 API →</a>
-      </nav>
     </article>
   </main>
 
-  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index_zh.html">插件总览</a> · <a href="GUIDE_QUICK_START.html" lang="en">English</a></span></div></footer>
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index_zh.html">首页</a> · <a href="SYSTEMS_zh.html">文档索引</a> · <a href="GUIDE_QUICK_START.html" lang="en">English</a></span></div></footer>
 </body>
 </html>

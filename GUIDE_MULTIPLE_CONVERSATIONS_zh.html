@@ -13,13 +13,14 @@
   <a class="skip-link" href="#article">跳到教程</a>
   <header class="site-header"><nav class="nav" aria-label="主导航">
     <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
-    <div class="nav-links"><a href="index_zh.html">插件总览</a><a href="GUIDE_QUICK_START_zh.html">快速单对话</a><a aria-current="page" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">多对话</a><a href="SYSTEMS_zh.html">全部体系</a><a href="GUIDE_CPP_zh.html">C++</a><a class="lang-switch" href="GUIDE_MULTIPLE_CONVERSATIONS.html" lang="en">English</a></div>
+    <div class="nav-links"><a href="index_zh.html">首页</a><a href="GUIDE_QUICK_START_zh.html">快速入门</a><a href="SYSTEMS_zh.html">文档索引</a><a class="lang-switch" href="GUIDE_MULTIPLE_CONVERSATIONS.html" lang="en">English</a></div>
   </nav></header>
 
   <main class="docs-layout">
     <aside class="toc" aria-label="本页目录">
       <p class="toc-title">本页目录</p>
       <a href="#model">多 Agent 的真实模型</a>
+      <a href="#demo">先运行完整狼人杀 Demo</a>
       <a href="#data">1. 准备数据</a>
       <a href="#create">2. 每个身份创建一个 Agent</a>
       <a href="#events">3. 绑定并识别结果</a>
@@ -33,9 +34,9 @@
 
     <article class="article" id="article">
       <header class="article-header">
-        <p class="eyebrow">蓝图 · 玩法 · 独立记忆</p>
-        <h1>让每个角色拥有自己的对话</h1>
-        <p class="hero-copy">本教程为每个游戏身份创建独立 Agent，把信息路由给真正应该知道它的角色，并通过检查记忆判断问题，而不是依靠修改提示词掩盖状态丢失。</p>
+        <p class="eyebrow">狼人杀实机 · 蓝图 · 独立记忆</p>
+        <h1>从完整狼人杀 Demo 学多会话</h1>
+        <p class="hero-copy">先运行现成对局，看见 10 名玩家同时存在；再回到 GameCore，理解每个身份怎样持有独立 Agent、接收公开或私密记忆，并把异步结果送回正确玩家。</p>
       </header>
 
       <section id="model">
@@ -46,6 +47,28 @@
         </table></div>
         <div class="callout good"><strong>创建 6 个 Agent 不会加载 6 份模型。</strong>它只是在同一个 Runtime 上创建 6 段逻辑对话。请求可以排队，但 GPU 推理由插件按设计串行执行。</div>
         <p>凡是对象需要独立记忆，就应该使用 Agent，例如 NPC、队友、裁判、游戏身份、多个聊天标签页，以及狼人杀这类多角色模拟。</p>
+      </section>
+
+      <section class="phase" id="demo">
+        <p class="phase-kicker">Run before reading</p>
+        <h2>先用两张图确认完整 Demo 可以运行</h2>
+        <p>如果还没有完成单对话链路，请先回到 <a href="GUIDE_QUICK_START_zh.html">逐帧快速入门</a>；本页从已经能收到本地回答开始。</p>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">A</span><div><h3>打开 L_WerewolfShowcase，点击 Play，并确认配置页显示 10 名玩家。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/37-werewolf-config-screen.png"><img src="assets/screenshots/quickstart/37-werewolf-config-screen.png" alt="完整狼人杀 Demo 的 10 人配置页"></a>
+            <figcaption>每名 AI 都会在同一份本地 GPU 模型上创建独立 Agent；人数不是模型副本数量。</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">B</span><div><h3>点击 START，确认玩家名册、阶段和现场发言区同时出现。</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/38-werewolf-game-started.png"><img src="assets/screenshots/quickstart/38-werewolf-game-started.png" alt="狼人杀 Demo 中 10 名玩家进入夜晚行动"></a>
+            <figcaption>这张运行画面是后文所有结构的目标：每名玩家有独立记忆，但共享同一 Runtime 与串行 GPU 推理队列。</figcaption>
+          </figure>
+        </div>
       </section>
 
       <section id="data">
@@ -150,6 +173,6 @@ Content: [游戏事件] 第 2 天发言阶段，3 号玩家公开声称自己是
     </article>
   </main>
 
-  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index_zh.html">插件总览</a> · <a href="GUIDE_MULTIPLE_CONVERSATIONS.html" lang="en">English</a></span></div></footer>
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index_zh.html">首页</a> · <a href="SYSTEMS_zh.html">文档索引</a> · <a href="GUIDE_MULTIPLE_CONVERSATIONS.html" lang="en">English</a></span></div></footer>
 </body>
 </html>

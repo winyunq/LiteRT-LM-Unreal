@@ -3,153 +3,76 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LiteRT-LM for Unreal Engine — Learn by Scenario</title>
-  <meta name="description" content="A practical guide to LiteRT-LM for Unreal Engine: quick chat, multiple conversations, memory, tools, MCP, C++, diagnostics, and packaging.">
+  <title>LiteRT-LM Unreal Documentation — Start or Look Up</title>
+  <meta name="description" content="The official LiteRT-LM Unreal documentation: follow screenshots to build your first local AI conversation, or look up conversations, runtime, MCP, C++, and shipping topics.">
   <link rel="stylesheet" href="assets/docs.css">
-  <link rel="alternate" hreflang="zh-CN" href="index_zh.html">
   <link rel="alternate" hreflang="en" href="index.html">
+  <link rel="alternate" hreflang="zh-CN" href="index_zh.html">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <nav class="nav" aria-label="Primary navigation">
-      <a class="brand" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" aria-current="page" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
       <div class="nav-links">
-        <a aria-current="page" href="index.html">Overview</a>
-        <a href="GUIDE_QUICK_START.html">Quick chat</a>
-        <a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Multiple conversations</a>
-        <a href="SYSTEMS.html">All systems</a>
-        <a href="GUIDE_CPP.html">C++</a>
+        <a href="GUIDE_QUICK_START.html">Quick Start</a>
+        <a href="SYSTEMS.html">Docs Index</a>
         <a class="lang-switch" href="index_zh.html" lang="zh-CN">中文</a>
       </div>
     </nav>
   </header>
 
   <main id="main">
-    <section class="hero">
+    <section class="hero home-hero">
       <div class="container">
-        <p class="eyebrow">Local LLM · Blueprint + C++ · Win64 + Android</p>
-        <h1>Start with one chat. Grow into a world of independent AI characters.</h1>
-        <p class="hero-copy">LiteRT-LM Unreal is a scenario-oriented local AI plugin. You can begin with a single automatic conversation, then move to independent Agents, memory, tools, MCP routing, native C++, diagnostics, and shipping—without rebuilding the same runtime layer.</p>
-        <div class="hero-actions">
-          <a class="button primary" href="GUIDE_QUICK_START.html">Build your first chat</a>
-          <a class="button" href="#choose">Choose the right API</a>
-        </div>
+        <p class="eyebrow">Official LiteRT-LM Unreal documentation</p>
+        <h1>New here? Follow the pictures. Already building? Look up exactly what you need.</h1>
+        <p class="hero-copy">This home page has one job: routing. New users follow a single path to a working local AI conversation; experienced users open the separate documentation index.</p>
       </div>
     </section>
 
-    <section class="section compact">
-      <div class="container">
-        <div class="callout good">
-          <strong>The mental model:</strong> the plugin owns one process-wide GPU model and a serial inference queue. Each <code>Quick Chat</code> or <code>Agent</code> owns an independent conversation and memory. “Single conversation” is a convenience facade—not a global singleton.
-        </div>
+    <section class="section compact" aria-label="Choose a documentation path">
+      <div class="container route-grid">
+        <article class="route-card primary-route">
+          <p class="route-label">First time here</p>
+          <h2>Build a working Quick Chat</h2>
+          <p>Follow 40 real UE5 frames. Each frame adds only one variable, node, or wire, ending with a verified local answer.</p>
+          <p class="route-meta">30–45 minutes · Blueprint · No skipped steps</p>
+          <a class="button primary" href="GUIDE_QUICK_START.html">Start the quick start →</a>
+        </article>
+
+        <article class="route-card">
+          <p class="route-label">Already integrated</p>
+          <h2>Browse by topic</h2>
+          <ul class="route-links">
+            <li><a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Learn multi-conversation from the complete Werewolf Demo</a></li>
+            <li><a href="SYSTEMS.html#conversation">Conversations, Agents, and memory</a></li>
+            <li><a href="SYSTEMS.html#mcp">Tool calls and MCP Gateway</a></li>
+            <li><a href="SYSTEMS.html#runtime">Runtime state and diagnostics</a></li>
+            <li><a href="SYSTEMS.html#shipping">Win64 and Android shipping</a></li>
+            <li><a href="GUIDE_CPP.html">C++ and the Native SDK</a></li>
+          </ul>
+          <a class="button" href="SYSTEMS.html">Open the docs index →</a>
+        </article>
       </div>
     </section>
 
-    <section class="section" id="choose">
-      <div class="container">
-        <p class="eyebrow">Choose by what you are building</p>
-        <h2>You should not have to read the whole API first</h2>
-        <p class="section-lead">Pick the object whose lifetime matches your gameplay object. The tutorials introduce the smallest useful surface first; advanced controls stay available underneath.</p>
-        <div class="grid three" style="margin-top:28px">
-          <a class="card-link" href="GUIDE_QUICK_START.html"><article class="card choice-card"><div class="number">1</div><h3>One chat box or assistant</h3><p class="answer">Use Quick Chat</p><p>It creates and owns one normal Agent automatically. Bind the answer event once, then call <code>Ask Once</code> or <code>Ask Streaming</code>.</p></article></a>
-          <a class="card-link" href="GUIDE_MULTIPLE_CONVERSATIONS.html"><article class="card choice-card"><div class="number">N</div><h3>NPCs, players, or roles</h3><p class="answer">Use one Agent per role</p><p>Prompts, tools, and memory stay independent. The runtime and model are shared, so you do not load one model per character.</p></article></a>
-          <a class="card-link" href="SYSTEMS.html#actor-component"><article class="card choice-card"><div class="number">A</div><h3>AI belongs to an Actor</h3><p class="answer">Use LiteRT-LM Component</p><p>The component creates one Agent at BeginPlay and exposes conversation, memory, and tool events on the owning Actor.</p></article></a>
-          <a class="card-link" href="SYSTEMS.html#mcp"><article class="card choice-card"><div class="number">M</div><h3>External tools or MCP routes</h3><p class="answer">Use MCP Gateway</p><p>Use a fixed tool schema, route calls to external systems, submit results, and continue the same conversation.</p></article></a>
-          <a class="card-link" href="GUIDE_CPP.html"><article class="card choice-card"><div class="number">C++</div><h3>Gameplay or plugin code</h3><p class="answer">Use UObject APIs first</p><p>Use the same Quick Chat, Agent, runtime, and gateway objects from C++. Drop to the native SDK only when you need the lower-level ABI.</p></article></a>
-          <a class="card-link" href="GUIDE_CPP.html#shipping"><article class="card choice-card"><div class="number">5.1</div><h3>Download or ship to Win11 / Android</h3><p class="answer">Latest build + memory tuning + crash logs</p><p>Run the v5.1.0 demo, or follow the tutorial to read device memory, inspect the effective context, and export ADB crash evidence.</p></article></a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="eyebrow">Plugin map</p>
-        <h2>One plugin, several learning paths</h2>
-        <p class="section-lead">Learn vertically: finish one scenario, then open only the system you need next.</p>
-        <pre class="tree" aria-label="Documentation structure">LiteRT-LM Unreal
-├── 5-minute quick start
-│   └── Default single conversation (Quick Chat)
-├── Conversation system
-│   ├── Single conversation
-│   ├── Multiple independent Agents
-│   ├── Memory, save/load, correction
-│   └── Tool calls and structured decisions
-├── MCP gateway
-├── Actor Component workflow
-├── C++ integration
-│   ├── Unreal UObject API
-│   └── Native SDK / stable C ABI
-├── Project settings, model delivery, runtime status, diagnostics
-├── Shipping: Win64 / Android
-└── Demo: multi-conversation Werewolf game</pre>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="eyebrow">Recommended order</p>
-        <h2>A human learning path</h2>
-        <div class="grid four" style="margin-top:28px">
-          <article class="card"><span class="pill">15 minutes</span><h3 style="margin-top:15px">1. Make one answer appear</h3><p>Set the model path, create Quick Chat once, bind <code>On Answer</code>, and print the final text.</p></article>
-          <article class="card"><span class="pill">Next</span><h3 style="margin-top:15px">2. Put it behind your UI</h3><p>Send from a button, keep the object reference, choose streaming or final-only output, and handle busy/error states.</p></article>
-          <article class="card"><span class="pill">Gameplay</span><h3 style="margin-top:15px">3. Split characters</h3><p>Create an Agent for each role. Route private knowledge to selected Agents and real public events to everyone’s memory.</p></article>
-          <article class="card"><span class="pill">Production</span><h3 style="margin-top:15px">4. Add tools and shipping</h3><p>Use structured tool calls, MCP if needed, diagnostics, model delivery, and target-device packaging tests.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="eyebrow">Inside Unreal Engine</p>
-        <h2>The tutorials use real UE5 state</h2>
-        <p class="section-lead">The screenshots below were captured from the LiteRTDemo project. The Quick Chat graph was created with the public plugin nodes, compiled, and saved before capture.</p>
-        <div class="grid two" style="margin-top:28px">
-          <figure>
-            <img src="assets/screenshots/ue5-project-settings-model-path.png" alt="Unreal Engine Project Settings showing LiteRT-LM Model Path" loading="lazy">
-            <figcaption>Project Settings → Plugins → LiteRT-LM → Model Path.</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/screenshots/ue5-quick-chat-complete-flow.png" alt="Complete Blueprint flow for Create Quick Chat, bind answer, Ask Once, and Print String" loading="lazy">
-            <figcaption>The complete beginner flow: create once, store it, bind the answer, then ask.</figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="eyebrow">API directory</p>
-        <h2>What each family is responsible for</h2>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Family</th><th>Primary object / node</th><th>Use it for</th><th>Go next</th></tr></thead>
-            <tbody>
-              <tr><td><strong>Quick Start</strong></td><td><code>Create Quick Chat</code></td><td>One automatically managed conversation</td><td><a href="GUIDE_QUICK_START.html">Tutorial</a></td></tr>
-              <tr><td><strong>Conversations</strong></td><td><code>ULiteRtLmAgent</code></td><td>Independent roles, memory, tools, and lifecycle</td><td><a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Tutorial</a></td></tr>
-              <tr><td><strong>Runtime</strong></td><td><code>ULiteRtLmSubsystem</code></td><td>Shared model status, readiness, queue, diagnostics</td><td><a href="SYSTEMS.html#runtime">System map</a></td></tr>
-              <tr><td><strong>MCP</strong></td><td><code>ULiteRtLmMcpGateway</code></td><td>Tool schema and external route dispatch</td><td><a href="SYSTEMS.html#mcp">System map</a></td></tr>
-              <tr><td><strong>Actor Component</strong></td><td><code>ULiteRtLmComponent</code></td><td>One conversation attached to an Actor</td><td><a href="SYSTEMS.html#actor-component">System map</a></td></tr>
-              <tr><td><strong>C++ / native</strong></td><td>Public headers + <code>LiteRtLmNativeSdk.h</code></td><td>Gameplay C++, plugins, and lower-level ABI access</td><td><a href="GUIDE_CPP.html">C++ guide</a></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <div class="card">
-          <p class="eyebrow">Reference is still available</p>
-          <h2>Use tutorials first; use reference when you need a field</h2>
-          <p class="section-lead">The older layer-by-layer pages remain available from the <a href="SYSTEMS.html#reference">reference section</a>. They are no longer the recommended starting point because a first-time user needs a working scenario before wrapper and ABI details.</p>
-        </div>
+    <section class="section" id="preview">
+      <div class="container narrow-section">
+        <p class="eyebrow">Where the quick start ends</p>
+        <h2>Preview the destination, then start at the first frame</h2>
+        <p class="section-lead">This image is only orientation. The Quick Start separates variable creation, every node, and each important wire into its own frame.</p>
+        <figure class="full-shot">
+          <img src="assets/screenshots/quickstart/32-arrange-final-graph.png" alt="The complete Quick Chat Blueprint chain in the English UE5 editor" loading="lazy">
+          <figcaption>Real English UE5 editor capture: BeginPlay → Create Quick Chat → keep the reference → Bind On Answer → Ask Once.</figcaption>
+        </figure>
+        <a class="button primary" href="GUIDE_QUICK_START.html">Build it step by step</a>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="index_zh.html" lang="zh-CN">中文文档</a> · <a href="SYSTEMS.html">Complete system map</a></span></div>
+    <div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="GUIDE_QUICK_START.html">Quick Start</a> · <a href="SYSTEMS.html">Docs Index</a></span></div>
   </footer>
 </body>
 </html>

@@ -3,153 +3,427 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quick Chat Tutorial — LiteRT-LM Unreal</title>
-  <meta name="description" content="A step-by-step Blueprint tutorial for the default single-conversation Quick Chat API in LiteRT-LM Unreal.">
+  <title>Frame-by-frame Quick Start — LiteRT-LM Unreal</title>
+  <meta name="description" content="Follow real English UE5 screenshots frame by frame: create an Actor Blueprint, store Quick Chat, wire every node, and complete a local AI conversation.">
   <link rel="stylesheet" href="assets/docs.css">
-  <link rel="alternate" hreflang="zh-CN" href="GUIDE_QUICK_START_zh.html">
   <link rel="alternate" hreflang="en" href="GUIDE_QUICK_START.html">
+  <link rel="alternate" hreflang="zh-CN" href="GUIDE_QUICK_START_zh.html">
 </head>
 <body>
   <a class="skip-link" href="#article">Skip to tutorial</a>
-  <header class="site-header"><nav class="nav" aria-label="Primary navigation">
-    <a class="brand" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
-    <div class="nav-links"><a href="index.html">Overview</a><a aria-current="page" href="GUIDE_QUICK_START.html">Quick chat</a><a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Multiple conversations</a><a href="SYSTEMS.html">All systems</a><a href="GUIDE_CPP.html">C++</a><a class="lang-switch" href="GUIDE_QUICK_START_zh.html" lang="zh-CN">中文</a></div>
-  </nav></header>
+  <header class="site-header">
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+      <div class="nav-links">
+        <a aria-current="page" href="GUIDE_QUICK_START.html">Quick Start</a>
+        <a href="SYSTEMS.html">Documentation Index</a>
+        <a class="lang-switch" href="GUIDE_QUICK_START_zh.html" lang="zh-CN">中文</a>
+      </div>
+    </nav>
+  </header>
 
   <main class="docs-layout">
-    <aside class="toc" aria-label="On this page">
-      <p class="toc-title">On this page</p>
-      <a href="#result">What you will build</a>
-      <a href="#output-mode">Choose output mode</a>
-      <a href="#enable">1. Enable the plugin</a>
-      <a href="#model">2. Set the model path</a>
-      <a href="#blueprint">3. Create the Blueprint</a>
-      <a href="#graph">4. Build the graph</a>
-      <a href="#ui">5. Send from your UI</a>
-      <a href="#streaming">6. Add streaming</a>
-      <a href="#lifecycle">Conversation lifecycle</a>
-      <a href="#troubleshooting">Troubleshooting</a>
+    <aside class="toc" aria-label="Page steps">
+      <p class="toc-title">Complete from top to bottom</p>
+      <a href="#prepare">0. Plugin and model</a>
+      <a href="#actor">1. Create the Actor Blueprint</a>
+      <a href="#variable">2. Create the QuickChat variable</a>
+      <a href="#request">3. Create and send a request</a>
+      <a href="#answer">4. Receive and display the answer</a>
+      <a href="#run">5. Place the Actor and run</a>
+      <a href="#werewolf">6. Continue with the Werewolf Demo</a>
+      <a href="#done">Completion check</a>
     </aside>
 
     <article class="article" id="article">
       <header class="article-header">
-        <p class="eyebrow">Blueprint · Beginner · 10–15 minutes</p>
-        <h1>Build one local AI conversation</h1>
-        <p class="hero-copy">This tutorial creates a Quick Chat object once, keeps its reference, receives the final answer through an event, and sends more messages through the same conversation.</p>
+        <p class="eyebrow">Blueprint · 38 atomic frames · 40 real English UE5 screenshots</p>
+        <h1>One visible change, one screenshot</h1>
+        <p class="hero-copy">This page has one job: take you from an empty Actor Blueprint to a real local AI answer. Each card performs one visible action. Continue only after your editor matches the picture.</p>
       </header>
 
-      <section id="result">
-        <h2>What you will build</h2>
-        <p>At the end, pressing Play creates one conversation. A test message is queued, and the answer is printed. You can then replace the test message with your UMG input without changing the conversation setup.</p>
-        <div class="callout good"><strong>Quick Chat is the default single-conversation API.</strong> It wraps one normal <code>ULiteRtLmAgent</code>. Every call to <code>Create Quick Chat</code> creates a new independent conversation, so create it once for each chat you intend to keep.</div>
-        <ul class="checklist">
-          <li>A valid <code>.litertlm</code> model is available.</li>
-          <li>The plugin is enabled for the project.</li>
-          <li>You can create an Actor Blueprint or use an existing gameplay Blueprint.</li>
-        </ul>
+      <div class="callout good"><strong>This is a linear tutorial.</strong> Do not jump to the finished graph and copy it. Complete each frame in order. For node, system, C++, MCP, or packaging reference, use the separate <a href="SYSTEMS.html">Documentation Index</a>.</div>
+      <div class="callout"><strong>The Demo and plugin are decoupled.</strong> The Demo repository no longer contains plugin source or a plugin submodule. Install LiteRT-LM separately first. The canonical documentation entry is <a href="https://winyunq.github.io/LiteRT-LM-Unreal">winyunq.github.io/LiteRT-LM-Unreal</a>.</div>
+
+      <section class="phase" id="prepare">
+        <p class="phase-kicker">Preparation</p>
+        <h2>0. Make the plugin and model available</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">0A</span><div><h3>Open Edit → Plugins, search for LiteRT, and enable LiteRT-LM.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/ue5-plugins-enabled.png"><img src="assets/screenshots/ue5-plugins-enabled.png" alt="LiteRT-LM enabled in the English UE5 Plugins window"></a>
+            <figcaption>If Unreal asks for a restart, restart before continuing.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">0B</span><div><h3>Set Model Path in Project Settings, relative to Content.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/ue5-project-settings-model-path.png"><img src="assets/screenshots/ue5-project-settings-model-path.png" alt="LiteRT-LM Model Path in English UE5 Project Settings"></a>
+            <figcaption>The example is <code>Models/gemma-4-E2B-it.litertlm</code>. Your filename may differ, but the file must exist.</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="output-mode">
-        <h2>Choose the output users should see</h2>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Desired behavior</th><th>Call</th><th>Read output from</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Show the complete answer at once</strong></td><td><code>Ask Once</code></td><td><code>On Answer → Result.Text</code></td></tr>
-            <tr><td><strong>Show text as it is generated</strong></td><td><code>Ask Streaming</code></td><td>Append <code>On Text Chunk</code>; use <code>On Answer</code> as the terminal result</td></tr>
-          </tbody>
-        </table></div>
-        <div class="callout warn"><strong>The return value of Ask is a request ID, not the model answer.</strong> Answers are asynchronous. Always read them from the event.</div>
+      <section class="phase" id="actor">
+        <p class="phase-kicker">Actor</p>
+        <h2>1. Create a persistent Actor Blueprint</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">01</span><div><h3>Open the Content Drawer and enter the folder for the tutorial asset.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/01-open-content-drawer.png"><img src="assets/screenshots/quickstart/01-open-content-drawer.png" alt="UE5 Content Drawer open on a content folder"></a>
+            <figcaption>This guide uses <code>/Content/LiteRTLM_Tutorials</code>. You may use your own folder.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">02</span><div><h3>Click Add, then choose Blueprint Class.</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/02-click-add-menu.png"><img src="assets/screenshots/quickstart/02-click-add-menu.png" alt="Add menu in the Content Browser"></a>
+            <figcaption>Choose only <strong>Blueprint Class</strong> for this step.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">03</span><div><h3>Select Actor in the Pick Parent Class window.</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/03-pick-parent-class.png"><img src="assets/screenshots/quickstart/03-pick-parent-class.png" alt="Actor selected in the Pick Parent Class window"></a>
+            <figcaption>Use a regular <strong>Actor</strong>, not Pawn, Character, or Widget.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">04</span><div><h3>Name the new Blueprint BP_LiteRtLm_QuickStart_StepByStep.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/04-name-blueprint.png"><img src="assets/screenshots/quickstart/04-name-blueprint.png" alt="The named tutorial Actor Blueprint in the Content Browser"></a>
+            <figcaption>The Blueprint must retain a Quick Chat reference, so do not substitute a Level Blueprint.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">05</span><div><h3>Double-click the new asset to open the Blueprint Editor.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/05-open-blueprint.png"><img src="assets/screenshots/quickstart/05-open-blueprint.png" alt="The new Actor Blueprint open in the Blueprint Editor"></a>
+            <figcaption>Confirm that the top-right corner says <strong>Parent class: Actor</strong>.</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="enable">
-        <h2>1. Enable LiteRT-LM</h2>
-        <div class="step"><div class="step-head"><span class="step-number">1</span><div><h3>Open the Plugins window</h3><p>In Unreal Editor, open <strong>Edit → Plugins</strong>, search for <strong>LiteRT-LM</strong>, enable it, and restart the editor when prompted.</p></div></div></div>
-        <p>If the plugin does not appear, verify that the plugin directory is inside your project’s <code>Plugins</code> folder or installed through Fab for this engine installation.</p>
+      <section class="phase" id="variable">
+        <p class="phase-kicker">Variable</p>
+        <h2>2. Create the QuickChat object reference one change at a time</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">06</span><div><h3>In My Blueprint, click Add and then Variable.</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/06-add-variable-menu.png"><img src="assets/screenshots/quickstart/06-add-variable-menu.png" alt="Variable selected from the My Blueprint Add menu"></a>
+            <figcaption>This adds one member variable.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">07</span><div><h3>When NewVar appears, leave its type unchanged for the moment.</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/07-variable-created.png"><img src="assets/screenshots/quickstart/07-variable-created.png" alt="NewVar Boolean in My Blueprint"></a>
+            <figcaption>UE creates a Boolean by default. Rename it before changing the type.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">08</span><div><h3>Rename NewVar to QuickChat and press Enter.</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/08-rename-quickchat.png"><img src="assets/screenshots/quickstart/08-rename-quickchat.png" alt="The variable renamed to QuickChat"></a>
+            <figcaption>The name must be <code>QuickChat</code>. It is still Boolean at this frame, which is expected.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">09</span><div><h3>Click the Variable Type dropdown in Details.</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/09-open-variable-type-menu.png"><img src="assets/screenshots/quickstart/09-open-variable-type-menu.png" alt="The Variable Type selection menu"></a>
+            <figcaption>The cursor moves into the search box at the top of the type list.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">10</span><div><h3>Search for Lite Rt Lm Quick Chat.</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/10-search-quick-chat-type.png"><img src="assets/screenshots/quickstart/10-search-quick-chat-type.png" alt="Searching for Lite Rt Lm Quick Chat in the type menu"></a>
+            <figcaption>The result should be reduced to <strong>Lite Rt Lm Quick Chat</strong>.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">11</span><div><h3>Select Lite Rt Lm Quick Chat Object Reference.</h3></div></div>
+          <figure class="focus-shot">
+            <a class="shot-link" href="assets/screenshots/quickstart/11-quickchat-object-reference.png"><img src="assets/screenshots/quickstart/11-quickchat-object-reference.png" alt="QuickChat set to a Lite Rt Lm Quick Chat object reference"></a>
+            <figcaption>The type becomes a blue object reference and On Text Chunk, On Answer, On Error, and other events appear.</figcaption>
+          </figure>
+        </div>
+
+        <div class="callout danger"><strong>Do not create a new Quick Chat for every question.</strong> This member variable must keep the same object if you want conversation memory.</div>
       </section>
 
-      <section id="model">
-        <h2>2. Point the plugin to a model</h2>
-        <div class="step"><div class="step-head"><span class="step-number">2</span><div><h3>Set Model Path</h3><p>Open <strong>Edit → Project Settings</strong>. Search for <strong>LiteRT-LM</strong>, then set <strong>Model Path</strong> to the <code>.litertlm</code> model that will be available at runtime.</p></div></div></div>
-        <figure><img src="assets/screenshots/ue5-project-settings-model-path.png" alt="LiteRT-LM Model Path in Unreal Engine Project Settings"><figcaption>The demo project’s LiteRT-LM settings. Your model name can differ; the important part is that the final runtime path resolves to a real file.</figcaption></figure>
-        <div class="callout"><strong>No Load Model node is required.</strong> The first conversation triggers lazy model initialization. Use <code>Get LiteRT-LM Runtime</code> when you need readiness, status, or diagnostics in a loading screen.</div>
+      <section class="phase" id="request">
+        <p class="phase-kicker">BeginPlay chain</p>
+        <h2>3. Add each node and send the first request</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">12</span><div><h3>Double-click EventGraph to open the event graph.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/12-open-event-graph.png"><img src="assets/screenshots/quickstart/12-open-event-graph.png" alt="The default EventGraph in a new Actor Blueprint"></a>
+            <figcaption>The default graph contains BeginPlay, ActorBeginOverlap, and Tick.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">13</span><div><h3>Delete ActorBeginOverlap and Tick, leaving only Event BeginPlay.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/13-delete-unused-events.png"><img src="assets/screenshots/quickstart/13-delete-unused-events.png" alt="Only Event BeginPlay remains in the EventGraph"></a>
+            <figcaption>The tutorial does not use those events, so removing them makes every later connection easier to verify.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">14</span><div><h3>Right-click empty space, search for Create Quick Chat, and add it.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/14-add-create-quick-chat.png"><img src="assets/screenshots/quickstart/14-add-create-quick-chat.png" alt="Create Quick Chat added to the EventGraph"></a>
+            <figcaption>Add the node first. Do not connect it yet.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">15</span><div><h3>Connect the white BeginPlay execution pin to Create Quick Chat.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/15-connect-begin-play.png"><img src="assets/screenshots/quickstart/15-connect-begin-play.png" alt="BeginPlay connected to Create Quick Chat"></a>
+            <figcaption>The white wire controls execution order.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">16</span><div><h3>Set System Prompt to Answer concisely in the user's language.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/16-set-system-prompt.png"><img src="assets/screenshots/quickstart/16-set-system-prompt.png" alt="System Prompt filled on Create Quick Chat"></a>
+            <figcaption>Keep the first prompt short. Expand it only after the basic path works.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">17</span><div><h3>Drag QuickChat into the graph and choose Set.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/17-add-set-quickchat.png"><img src="assets/screenshots/quickstart/17-add-set-quickchat.png" alt="Set QuickChat added to the EventGraph"></a>
+            <figcaption>Add <strong>SET Quick Chat</strong> and leave it disconnected for this frame.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">18</span><div><h3>Connect the white execution pins from Create Quick Chat to SET Quick Chat.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/18-connect-set-exec.png"><img src="assets/screenshots/quickstart/18-connect-set-exec.png" alt="Create Quick Chat execution connected to Set QuickChat"></a>
+            <figcaption>BeginPlay now creates the object before the assignment executes.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">19</span><div><h3>Connect the blue Return Value pin to the Quick Chat input.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/19-connect-quickchat-object.png"><img src="assets/screenshots/quickstart/19-connect-quickchat-object.png" alt="The Create Quick Chat return object stored in QuickChat"></a>
+            <figcaption>The blue wire stores the real Quick Chat object reference. Do not omit it.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">20</span><div><h3>Add Bind Event to On Answer from the QuickChat reference.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/20-add-assign-on-answer.png"><img src="assets/screenshots/quickstart/20-add-assign-on-answer.png" alt="Bind Event to On Answer and its generated OnAnswer Event"></a>
+            <figcaption>UE also creates a matching <strong>OnAnswer_Event</strong> and connects the red delegate wire automatically.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">21</span><div><h3>Connect the white SET Quick Chat output to Bind Event to On Answer.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/21-connect-bind-exec.png"><img src="assets/screenshots/quickstart/21-connect-bind-exec.png" alt="Set QuickChat execution connected to Bind Event to On Answer"></a>
+            <figcaption>The answer handler must be bound before the first Ask.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">22</span><div><h3>Connect the blue object output on SET to the Bind Target.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/22-connect-bind-target.png"><img src="assets/screenshots/quickstart/22-connect-bind-target.png" alt="The QuickChat object connected to the Bind Target"></a>
+            <figcaption>Target must be the same QuickChat object that was just stored.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">23</span><div><h3>Add Ask Once from that same QuickChat reference.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/23-add-ask-once.png"><img src="assets/screenshots/quickstart/23-add-ask-once.png" alt="Ask Once added to the EventGraph"></a>
+            <figcaption>Add the node only. Its Return Value is a request ID, not the model answer.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">24</span><div><h3>Connect the white Bind Event to On Answer output to Ask Once.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/24-connect-ask-exec.png"><img src="assets/screenshots/quickstart/24-connect-ask-exec.png" alt="Bind Event to On Answer execution connected to Ask Once"></a>
+            <figcaption>The order is now create → store → bind → ask.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">25</span><div><h3>Connect the blue QuickChat object output to the Ask Once Target.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/25-connect-ask-target.png"><img src="assets/screenshots/quickstart/25-connect-ask-target.png" alt="The QuickChat object connected to the Ask Once Target"></a>
+            <figcaption>Bind and Ask must use the same Target.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">26</span><div><h3>Set Message to Hello from Unreal Engine.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/26-set-first-message.png"><img src="assets/screenshots/quickstart/26-set-first-message.png" alt="A short test message entered on Ask Once"></a>
+            <figcaption>Keep the first message short so a real local answer is easy to recognize.</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="blueprint">
-        <h2>3. Create a Blueprint that owns the conversation</h2>
-        <div class="step"><div class="step-head"><span class="step-number">3</span><div><h3>Create or open an Actor Blueprint</h3><p>For the first test, create an Actor Blueprint named <code>BP_LocalChat</code> and place one instance in the level. The same setup can later live in a Player Controller, Game Instance subsystem wrapper, widget owner, or any long-lived gameplay object.</p></div></div></div>
-        <div class="step"><div class="step-head"><span class="step-number">4</span><div><h3>Add the QuickChat variable</h3><p>Add a variable named <code>QuickChat</code>. Set its type to <strong>Lite Rt Lm Quick Chat Object Reference</strong>. This reference is what preserves memory between questions.</p></div></div></div>
-        <div class="callout danger"><strong>Do not create Quick Chat inside every Send button click.</strong> That creates a fresh Agent each time, so every question starts with empty conversation memory.</div>
+      <section class="phase" id="answer">
+        <p class="phase-kicker">On Answer chain</p>
+        <h2>4. Read and display the asynchronous answer one node at a time</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">27</span><div><h3>Add Break Lite Rt Lm Result near OnAnswer_Event.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/27-add-break-result.png"><img src="assets/screenshots/quickstart/27-add-break-result.png" alt="Break Lite Rt Lm Result added near OnAnswer Event"></a>
+            <figcaption>The answer text is inside the Result struct, so the struct must be broken first.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">28</span><div><h3>Connect OnAnswer_Event Result to the Break node input.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/28-connect-result-struct.png"><img src="assets/screenshots/quickstart/28-connect-result-struct.png" alt="OnAnswer Result connected to Break Lite Rt Lm Result"></a>
+            <figcaption>The blue struct wire carries Text, Error, Metrics, and the rest of the result.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">29</span><div><h3>Add Print String on the right.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/29-add-print-string.png"><img src="assets/screenshots/quickstart/29-add-print-string.png" alt="Print String added to the answer chain"></a>
+            <figcaption>Keep the defaults. It will print to both the screen and Output Log.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">30</span><div><h3>Connect the white OnAnswer_Event execution output to Print String.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/30-connect-answer-exec.png"><img src="assets/screenshots/quickstart/30-connect-answer-exec.png" alt="OnAnswer Event execution connected to Print String"></a>
+            <figcaption>Print String now executes only when On Answer actually fires.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">31</span><div><h3>Connect Text on the Break node to In String on Print String.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/31-connect-answer-text.png"><img src="assets/screenshots/quickstart/31-connect-answer-text.png" alt="Break Result Text connected to Print String"></a>
+            <figcaption>This purple wire is the actual model answer.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">32</span><div><h3>Arrange the nodes in two rows and press Home to frame the graph.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/32-arrange-final-graph.png"><img src="assets/screenshots/quickstart/32-arrange-final-graph.png" alt="The completed Quick Chat EventGraph arranged in two rows"></a>
+            <figcaption>The top row creates, binds, and asks. The bottom row receives, breaks, and displays the answer.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">33</span><div><h3>Click Compile, confirm there are no red errors, and then click Save.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/33-compile-success.png"><img src="assets/screenshots/quickstart/33-compile-success.png" alt="The Quick Chat Blueprint compiled successfully"></a>
+            <figcaption>If compilation fails, return to the previous full graph and compare every white, blue, and purple wire.</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="graph">
-        <h2>4. Build the complete BeginPlay graph</h2>
-        <div class="step"><div class="step-head"><span class="step-number">5</span><div><h3>Create and store the conversation</h3><p>From <code>Event BeginPlay</code>, add <code>Create Quick Chat</code>. Enter a short system prompt, such as “Answer concisely in the user’s language.” Connect the return value to <code>Set QuickChat</code>.</p></div></div></div>
-        <div class="step"><div class="step-head"><span class="step-number">6</span><div><h3>Bind the answer before the first Ask</h3><p>Drag from the stored QuickChat reference and add <code>Bind Event to On Answer</code> (or assign the On Answer dispatcher). Create the matching custom event. Break the <code>Lite Rt Lm Result</code>, then connect <code>Text</code> to <code>Print String</code>.</p></div></div></div>
-        <div class="step"><div class="step-head"><span class="step-number">7</span><div><h3>Queue a test question</h3><p>After the binding node, call <code>Ask Once</code> on the same QuickChat reference. Use a small first message, compile, save, and press Play.</p></div></div></div>
-        <figure><img src="assets/screenshots/ue5-quick-chat-complete-flow.png" alt="Complete Quick Chat Blueprint graph"><figcaption>Verified UE5 graph: BeginPlay → Create Quick Chat → store reference → bind On Answer → Ask Once; the answer event extracts Result.Text and prints it.</figcaption></figure>
-        <p>Model initialization can make the first request slower than later requests. Once <code>On Answer</code> fires, the same QuickChat object already contains the user message and assistant answer in its memory.</p>
+      <section class="phase" id="run">
+        <p class="phase-kicker">Level and PIE</p>
+        <h2>5. Place the Actor in the level and see a real answer</h2>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">34</span><div><h3>Drag BP_LiteRtLm_QuickStart_StepByStep from the Content Browser into the level.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/34-actor-instance-in-level.png"><img src="assets/screenshots/quickstart/34-actor-instance-in-level.png" alt="The Quick Start Actor instance visible in the Outliner"></a>
+            <figcaption>After dropping it, an Actor instance must appear in the Outliner. Creating the asset alone does not run BeginPlay.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">35</span><div><h3>Click Play and wait for the first local model initialization.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/35-click-play.png"><img src="assets/screenshots/quickstart/35-click-play.png" alt="UE5 running Play In Editor"></a>
+            <figcaption>The first run loads the GPU model and is usually slower than later questions. Do not click Play repeatedly.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">36</span><div><h3>Open Output Log, search for BlueprintUserMessages, and confirm the model answer.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/36-local-answer-visible.png"><img src="assets/screenshots/quickstart/36-local-answer-visible.png" alt="A real local model answer visible in Output Log"></a>
+            <figcaption>Observed answer: <code>Hello! How can I help you today with Unreal Engine?</code>. Create, Bind, Ask, and On Answer are now all working.</figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="ui">
-        <h2>5. Send later messages from your UI</h2>
-        <p>Keep the BeginPlay setup exactly as it is. In your UMG button handler:</p>
-        <ol>
-          <li>Read the text box value.</li>
-          <li>Check that <code>QuickChat</code> is valid and <code>Is Busy</code> is false.</li>
-          <li>Call <code>Ask Once</code> on the stored QuickChat reference.</li>
-          <li>Disable Send while busy; enable it again from <code>On Answer</code> or <code>On Error</code>.</li>
-          <li>Display <code>Result.Text</code> from <code>On Answer</code>.</li>
-        </ol>
-        <div class="callout good"><strong>Memory test:</strong> ask “My codename is Aurora.” Then ask “What is my codename?” through the same object. If it forgets, inspect whether your UI is creating or resetting QuickChat between the two calls.</div>
+      <section class="phase" id="werewolf">
+        <p class="phase-kicker">Complete demo</p>
+        <h2>6. After the basic path works, continue with the full Werewolf Demo</h2>
+        <p>The Quick Start ends here. The next two frames only move you into the real multi-Agent sample. Independent memories, phases, pause/resume, and orchestration belong in the separate multi-conversation guide.</p>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">37</span><div><h3>Open L_WerewolfShowcase, click Play, and confirm the player count and role preference.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/37-werewolf-config-screen.png"><img src="assets/screenshots/quickstart/37-werewolf-config-screen.png" alt="Match configuration screen in the full Werewolf Demo"></a>
+            <figcaption>The Demo gives every AI character an independent conversation. The default shown here is 10 players on the strict GPU model.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">38</span><div><h3>Click START and confirm that all 10 players enter the Night Action screen.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/38-werewolf-game-started.png"><img src="assets/screenshots/quickstart/38-werewolf-game-started.png" alt="The Werewolf Demo running with 10 players in Night Action"></a>
+            <figcaption>This is the real multi-conversation result: roster, phase, live council, and independent Agent state are active at the same time.</figcaption>
+          </figure>
+        </div>
+
+        <nav class="next-links three" aria-label="Next documentation">
+          <a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Learn multi-conversation from the Werewolf Demo →</a>
+          <a href="SYSTEMS.html">Look up runtime, MCP, and packaging →</a>
+          <a href="GUIDE_CPP.html">C++ integration guide →</a>
+        </nav>
       </section>
 
-      <section id="streaming">
-        <h2>6. Switch to streaming output</h2>
-        <p>Replace <code>Ask Once</code> with <code>Ask Streaming</code> and bind <code>On Text Chunk</code> during setup.</p>
-        <ul>
-          <li>Clear the answer label immediately before calling Ask Streaming.</li>
-          <li><strong>Append</strong> each Text Chunk to the label. Do not replace the full label with only the newest chunk.</li>
-          <li>Use <code>On Answer</code> for the final result, metrics, tool calls, and terminal UI state.</li>
-          <li>Use <code>On Error</code> to restore the Send button and show a useful error.</li>
-        </ul>
+      <section id="done">
+        <div class="completion-card">
+          <p class="eyebrow">Completion criteria</p>
+          <h3>Your first local AI conversation is complete only when all four are true</h3>
+          <ul class="checklist">
+            <li>QuickChat is a <strong>Lite Rt Lm Quick Chat Object Reference</strong>.</li>
+            <li>Quick Chat is created once on BeginPlay and stored in a member variable.</li>
+            <li>On Answer is bound before Ask Once.</li>
+            <li>Output Log shows a real model answer from <code>Result.Text</code>.</li>
+          </ul>
+        </div>
       </section>
-
-      <section id="lifecycle">
-        <h2>Conversation lifecycle</h2>
-        <div class="table-wrap"><table>
-          <thead><tr><th>You want to…</th><th>Use</th><th>What happens</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Ask another question with context</strong></td><td>The same QuickChat object</td><td>Existing memory is reused.</td></tr>
-            <tr><td><strong>Start over but keep the persona</strong></td><td><code>Reset Conversation(true)</code></td><td>Conversation messages are cleared; system prompt remains.</td></tr>
-            <tr><td><strong>Start over completely</strong></td><td><code>Reset Conversation(false)</code></td><td>Memory, including the system prompt, is cleared.</td></tr>
-            <tr><td><strong>Stop the active generation</strong></td><td><code>Cancel</code></td><td>The accepted request is cancelled.</td></tr>
-            <tr><td><strong>Retire this chat</strong></td><td><code>Close</code></td><td>The underlying Agent is closed. Create a new Quick Chat to continue.</td></tr>
-            <tr><td><strong>Use advanced memory/tools</strong></td><td><code>Get Conversation</code></td><td>Returns the underlying Agent without rebuilding the session.</td></tr>
-          </tbody>
-        </table></div>
-      </section>
-
-      <section id="troubleshooting">
-        <h2>Troubleshooting by symptom</h2>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Symptom</th><th>Check this first</th></tr></thead>
-          <tbody>
-            <tr><td><strong>No answer event</strong></td><td>Bind <code>On Answer</code> before Ask; keep the QuickChat reference alive; inspect <code>On Error</code> and runtime diagnostics.</td></tr>
-            <tr><td><strong>It forgets every previous turn</strong></td><td>Make sure <code>Create Quick Chat</code> runs once, not once per message. Confirm no Reset or Close is called.</td></tr>
-            <tr><td><strong>The returned string looks like an ID</strong></td><td>Correct: that is the request ID. Read the answer from <code>On Answer → Result.Text</code>.</td></tr>
-            <tr><td><strong>A second Ask is rejected</strong></td><td>Check <code>Is Busy</code>. One QuickChat should not have overlapping outstanding requests.</td></tr>
-            <tr><td><strong>Works in Editor, fails in a package</strong></td><td>Verify the model exists at the packaged runtime path and open the diagnostics path reported by the runtime.</td></tr>
-          </tbody>
-        </table></div>
-      </section>
-
-      <nav class="next-links" aria-label="Next tutorials">
-        <a href="GUIDE_MULTIPLE_CONVERSATIONS.html">Next: create multiple independent conversations →</a>
-        <a href="GUIDE_CPP.html">Use the same API from C++ →</a>
-      </nav>
     </article>
   </main>
 
-  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="index.html">Overview</a> · <a href="GUIDE_QUICK_START_zh.html" lang="zh-CN">中文</a></span></div></footer>
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal Documentation</span><span><a href="index.html">Home</a> · <a href="SYSTEMS.html">Documentation Index</a> · <a href="GUIDE_QUICK_START_zh.html" lang="zh-CN">中文</a></span></div></footer>
 </body>
 </html>

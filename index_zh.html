@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LiteRT-LM Unreal — 按使用场景学习</title>
-  <meta name="description" content="LiteRT-LM Unreal 实用教程：快速单对话、多对话、记忆、工具、MCP、C++、诊断与打包。">
+  <title>LiteRT-LM Unreal 文档 — 快速入门或查阅</title>
+  <meta name="description" content="LiteRT-LM Unreal 官方文档入口：跟随截图完成第一次本地 AI 对话，或直接查询对话、运行时、MCP、C++ 与打包文档。">
   <link rel="stylesheet" href="assets/docs.css">
   <link rel="alternate" hreflang="zh-CN" href="index_zh.html">
   <link rel="alternate" hreflang="en" href="index.html">
@@ -13,143 +13,66 @@
   <a class="skip-link" href="#main">跳到正文</a>
   <header class="site-header">
     <nav class="nav" aria-label="主导航">
-      <a class="brand" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
+      <a class="brand" aria-current="page" href="index_zh.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
       <div class="nav-links">
-        <a aria-current="page" href="index_zh.html">插件总览</a>
-        <a href="GUIDE_QUICK_START_zh.html">快速单对话</a>
-        <a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">多对话</a>
-        <a href="SYSTEMS_zh.html">全部体系</a>
-        <a href="GUIDE_CPP_zh.html">C++</a>
+        <a href="GUIDE_QUICK_START_zh.html">快速入门</a>
+        <a href="SYSTEMS_zh.html">文档索引</a>
         <a class="lang-switch" href="index.html" lang="en">English</a>
       </div>
     </nav>
   </header>
 
   <main id="main">
-    <section class="hero">
+    <section class="hero home-hero">
       <div class="container">
-        <p class="eyebrow">本地大模型 · 蓝图 + C++ · Win64 + Android</p>
-        <h1>先让一个对话跑起来，再扩展成拥有独立记忆的 AI 世界。</h1>
-        <p class="hero-copy">LiteRT-LM Unreal 是一个按使用场景组织的本地 AI 插件。你可以从自动管理的单对话开始，再进入多 Agent、记忆、工具、MCP、原生 C++、诊断和打包；底层运行时无需反复删除和重做。</p>
-        <div class="hero-actions">
-          <a class="button primary" href="GUIDE_QUICK_START_zh.html">做出第一个对话</a>
-          <a class="button" href="#choose">先选正确的 API</a>
-        </div>
+        <p class="eyebrow">LiteRT-LM Unreal 官方文档</p>
+        <h1>第一次使用，跟着图片走；已经接入，直接查文档。</h1>
+        <p class="hero-copy">首页只负责分流。新用户沿一条主线完成第一个本地 AI 对话；需要查对象、平台或问题时，进入独立的文档索引。</p>
       </div>
     </section>
 
-    <section class="section compact">
-      <div class="container">
-        <div class="callout good">
-          <strong>先记住这个模型：</strong>插件在进程内维护一个共享的 GPU 模型和串行推理队列；每个 <code>Quick Chat</code> 或 <code>Agent</code> 都有独立对话和记忆。“单对话”只是易用的兼容外观，并不是全局唯一会话。
-        </div>
+    <section class="section compact" aria-label="选择文档入口">
+      <div class="container route-grid">
+        <article class="route-card primary-route">
+          <p class="route-label">第一次使用</p>
+          <h2>从零跑通 Quick Chat</h2>
+          <p>按 40 张 UE5 实机图逐帧操作：每次只创建一个变量、节点或连线，最后看到真实本地回答。</p>
+          <p class="route-meta">预计 30–45 分钟 · Blueprint · 不跳步骤</p>
+          <a class="button primary" href="GUIDE_QUICK_START_zh.html">开始快速入门 →</a>
+        </article>
+
+        <article class="route-card">
+          <p class="route-label">已经用过</p>
+          <h2>按主题查询文档</h2>
+          <ul class="route-links">
+            <li><a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">从完整狼人杀 Demo 学多会话</a></li>
+            <li><a href="SYSTEMS_zh.html#conversation">对话、Agent 与独立记忆</a></li>
+            <li><a href="SYSTEMS_zh.html#mcp">工具调用与 MCP Gateway</a></li>
+            <li><a href="SYSTEMS_zh.html#runtime">运行时、状态与诊断</a></li>
+            <li><a href="SYSTEMS_zh.html#shipping">Win64 / Android 打包</a></li>
+            <li><a href="GUIDE_CPP_zh.html">C++ 与 Native SDK</a></li>
+          </ul>
+          <a class="button" href="SYSTEMS_zh.html">打开文档索引 →</a>
+        </article>
       </div>
     </section>
 
-    <section class="section" id="choose">
-      <div class="container">
-        <p class="eyebrow">按你正在做的东西选择</p>
-        <h2>开始之前，不需要先读完全部 API</h2>
-        <p class="section-lead">让 AI 对象的生命周期与游戏对象一致。教程先给出最小可用接口；复杂能力仍然完整保留在底层。</p>
-        <div class="grid three" style="margin-top:28px">
-          <a class="card-link" href="GUIDE_QUICK_START_zh.html"><article class="card choice-card"><div class="number">1</div><h3>一个聊天框或助手</h3><p class="answer">使用 Quick Chat</p><p>它会自动创建并持有一个普通 Agent。只绑定一次回答事件，然后调用 <code>Ask Once</code> 或 <code>Ask Streaming</code>。</p></article></a>
-          <a class="card-link" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html"><article class="card choice-card"><div class="number">N</div><h3>多个 NPC、玩家或身份</h3><p class="answer">每个身份一个 Agent</p><p>提示词、工具和记忆彼此独立；运行时与模型共享，因此不会为每个角色各加载一份模型。</p></article></a>
-          <a class="card-link" href="SYSTEMS_zh.html#actor-component"><article class="card choice-card"><div class="number">A</div><h3>AI 就属于某个 Actor</h3><p class="answer">使用 LiteRT-LM Component</p><p>组件在 BeginPlay 创建一个 Agent，并把对话、记忆和工具事件直接暴露给所属 Actor。</p></article></a>
-          <a class="card-link" href="SYSTEMS_zh.html#mcp"><article class="card choice-card"><div class="number">M</div><h3>外部工具或 MCP 路由</h3><p class="answer">使用 MCP Gateway</p><p>固定工具结构，把调用路由到外部系统，提交结果后在同一段对话中继续推理。</p></article></a>
-          <a class="card-link" href="GUIDE_CPP_zh.html"><article class="card choice-card"><div class="number">C++</div><h3>玩法代码或其他插件</h3><p class="answer">优先使用 UObject API</p><p>C++ 同样可以使用 Quick Chat、Agent、Runtime 和 Gateway；只有确实需要更低层 ABI 时才进入 Native SDK。</p></article></a>
-          <a class="card-link" href="GUIDE_CPP_zh.html#shipping"><article class="card choice-card"><div class="number">5.1</div><h3>下载或发布到 Win11 / Android</h3><p class="answer">最新版下载 + 内存调参 + 崩溃日志</p><p>直接运行 v5.1.0 Demo，或按教程读取手机可用内存、检查有效上下文并导出 ADB 崩溃证据。</p></article></a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="eyebrow">插件结构树</p>
-        <h2>一个插件，可以拆成多条学习路线</h2>
-        <p class="section-lead">按纵向场景学习：先完成一个真实功能，再只打开下一项所需体系。</p>
-        <pre class="tree" aria-label="文档结构树">LiteRT-LM Unreal
-├── 5 分钟快速开始
-│   └── 缺省单对话（Quick Chat）
-├── Conversation 对话体系
-│   ├── 单对话
-│   ├── 多个独立 Agent
-│   ├── 记忆、存档、纠错
-│   └── 工具调用与结构化决策
-├── MCP Gateway 体系
-├── Actor Component 体系
-├── C++ 开发
-│   ├── Unreal UObject API
-│   └── Native SDK / 稳定 C ABI
-├── 项目设置、模型交付、运行时状态与诊断
-├── 打包：Win64 / Android
-└── Demo：多对话狼人杀</pre>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="eyebrow">推荐顺序</p>
-        <h2>符合人类习惯的学习路径</h2>
-        <div class="grid four" style="margin-top:28px">
-          <article class="card"><span class="pill">15 分钟</span><h3 style="margin-top:15px">1. 先看到一条回答</h3><p>设置模型路径，只创建一次 Quick Chat，绑定 <code>On Answer</code>，把最终文本打印出来。</p></article>
-          <article class="card"><span class="pill">下一步</span><h3 style="margin-top:15px">2. 接入自己的 UI</h3><p>按钮发送消息，保存对象引用，选择流式或整段输出，并处理忙碌与错误状态。</p></article>
-          <article class="card"><span class="pill">玩法</span><h3 style="margin-top:15px">3. 拆成多个角色</h3><p>每个身份创建一个 Agent；私密信息只发给对应角色，真实公共事件写入所有相关记忆。</p></article>
-          <article class="card"><span class="pill">发布</span><h3 style="margin-top:15px">4. 增加工具并打包</h3><p>加入结构化工具调用，按需接入 MCP，开启诊断，完成模型交付与真机打包测试。</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="eyebrow">来自 UE5 的真实截图</p>
-        <h2>教程步骤与编辑器状态一一对应</h2>
-        <p class="section-lead">以下截图来自 LiteRTDemo 项目。Quick Chat 节点链使用插件公开节点实际搭建，并在截图前完成了编译和保存。</p>
-        <div class="grid two" style="margin-top:28px">
-          <figure>
-            <img src="assets/screenshots/ue5-project-settings-model-path.png" alt="UE5 项目设置中的 LiteRT-LM 模型路径" loading="lazy">
-            <figcaption>项目设置 → 插件 → LiteRT-LM → Model Path。</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/screenshots/ue5-quick-chat-complete-flow.png" alt="Create Quick Chat、绑定回答、Ask Once 与 Print String 的完整蓝图节点链" loading="lazy">
-            <figcaption>完整入门流程：创建一次、保存引用、先绑定回答事件、再提问。</figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="eyebrow">API 导航</p>
-        <h2>每一组接口到底负责什么</h2>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>体系</th><th>主要对象 / 节点</th><th>用来做什么</th><th>下一页</th></tr></thead>
-            <tbody>
-              <tr><td><strong>Quick Start</strong></td><td><code>Create Quick Chat</code></td><td>自动管理的一段单对话</td><td><a href="GUIDE_QUICK_START_zh.html">教程</a></td></tr>
-              <tr><td><strong>Conversations</strong></td><td><code>ULiteRtLmAgent</code></td><td>独立角色、记忆、工具与生命周期</td><td><a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html">教程</a></td></tr>
-              <tr><td><strong>Runtime</strong></td><td><code>ULiteRtLmSubsystem</code></td><td>共享模型状态、就绪状态、队列与诊断</td><td><a href="SYSTEMS_zh.html#runtime">体系说明</a></td></tr>
-              <tr><td><strong>MCP</strong></td><td><code>ULiteRtLmMcpGateway</code></td><td>工具结构与外部路由</td><td><a href="SYSTEMS_zh.html#mcp">体系说明</a></td></tr>
-              <tr><td><strong>Actor Component</strong></td><td><code>ULiteRtLmComponent</code></td><td>附着在 Actor 上的一段对话</td><td><a href="SYSTEMS_zh.html#actor-component">体系说明</a></td></tr>
-              <tr><td><strong>C++ / Native</strong></td><td>公开头文件 + <code>LiteRtLmNativeSdk.h</code></td><td>玩法 C++、其他插件与更低层 ABI</td><td><a href="GUIDE_CPP_zh.html">C++ 指南</a></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <div class="card">
-          <p class="eyebrow">参考文档仍然保留</p>
-          <h2>先按教程做功能，需要查字段时再看参考</h2>
-          <p class="section-lead">旧的分层与封装说明仍可从<a href="SYSTEMS_zh.html#reference">参考资料区</a>进入，但它们不再作为第一入口。第一次使用插件的人，应当先完成一个能发送、能回答、能保持记忆的实际场景。</p>
-        </div>
+    <section class="section" id="preview">
+      <div class="container narrow-section">
+        <p class="eyebrow">快速入门的终点</p>
+        <h2>先看终点，教程仍然从第一帧开始</h2>
+        <p class="section-lead">下面只用于建立方向感；快速入门会把变量创建、每个节点和每条关键连线拆成独立画面。</p>
+        <figure class="full-shot">
+          <img src="assets/screenshots/quickstart/32-arrange-final-graph.png" alt="UE5 英文界面中的 Quick Chat 完整蓝图节点链" loading="lazy">
+          <figcaption>UE5 英文实机截图：BeginPlay → Create Quick Chat → 保存引用 → Bind On Answer → Ask Once。</figcaption>
+        </figure>
+        <a class="button primary" href="GUIDE_QUICK_START_zh.html">跟着截图一步一步做</a>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="index.html" lang="en">English</a> · <a href="SYSTEMS_zh.html">完整体系图</a></span></div>
+    <div class="container footer-row"><span>LiteRT-LM Unreal 文档</span><span><a href="GUIDE_QUICK_START_zh.html">快速入门</a> · <a href="SYSTEMS_zh.html">文档索引</a></span></div>
   </footer>
 </body>
 </html>

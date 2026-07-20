@@ -13,13 +13,14 @@
   <a class="skip-link" href="#article">Skip to tutorial</a>
   <header class="site-header"><nav class="nav" aria-label="Primary navigation">
     <a class="brand" href="index.html"><span class="brand-mark">LM</span>LiteRT-LM Unreal</a>
-    <div class="nav-links"><a href="index.html">Overview</a><a href="GUIDE_QUICK_START.html">Quick chat</a><a aria-current="page" href="GUIDE_MULTIPLE_CONVERSATIONS.html">Multiple conversations</a><a href="SYSTEMS.html">All systems</a><a href="GUIDE_CPP.html">C++</a><a class="lang-switch" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html" lang="zh-CN">中文</a></div>
+    <div class="nav-links"><a href="index.html">Home</a><a href="GUIDE_QUICK_START.html">Quick Start</a><a href="SYSTEMS.html">Docs Index</a><a class="lang-switch" href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html" lang="zh-CN">中文</a></div>
   </nav></header>
 
   <main class="docs-layout">
     <aside class="toc" aria-label="On this page">
       <p class="toc-title">On this page</p>
       <a href="#model">The multi-Agent model</a>
+      <a href="#demo">Run the full Werewolf Demo first</a>
       <a href="#data">1. Prepare your data</a>
       <a href="#create">2. Create one Agent per role</a>
       <a href="#events">3. Bind and identify results</a>
@@ -33,9 +34,9 @@
 
     <article class="article" id="article">
       <header class="article-header">
-        <p class="eyebrow">Blueprint · Gameplay · Independent memory</p>
-        <h1>Give every character its own conversation</h1>
-        <p class="hero-copy">This tutorial creates one Agent per game role, routes knowledge to the Agents that should know it, and verifies memory instead of trying to repair missing state with prompt wording.</p>
+        <p class="eyebrow">Live Werewolf Demo · Blueprint · Independent memory</p>
+        <h1>Learn multiple conversations from the complete Werewolf Demo</h1>
+        <p class="hero-copy">Run the finished match first and see 10 players coexist. Then return to GameCore to understand how every role owns an independent Agent, receives public or private memory, and routes asynchronous results back to the correct player.</p>
       </header>
 
       <section id="model">
@@ -46,6 +47,28 @@
         </table></div>
         <div class="callout good"><strong>Creating six Agents does not load six models.</strong> It creates six logical conversations on one runtime. Requests can be queued, but GPU inference is serialized by design.</div>
         <p>Use an Agent when an object needs its own memory. Examples include NPCs, party members, judges, game roles, multiple chat tabs, and simulations such as Werewolf.</p>
+      </section>
+
+      <section class="phase" id="demo">
+        <p class="phase-kicker">Run before reading</p>
+        <h2>Use two frames to verify that the complete Demo runs</h2>
+        <p>If the single-conversation path is not working yet, finish the <a href="GUIDE_QUICK_START.html">frame-by-frame Quick Start</a> first. This page starts after a local answer already works.</p>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">A</span><div><h3>Open L_WerewolfShowcase, click Play, and confirm that the setup screen shows 10 players.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/37-werewolf-config-screen.png"><img src="assets/screenshots/quickstart/37-werewolf-config-screen.png" alt="The complete Werewolf Demo setup screen with 10 players"></a>
+            <figcaption>Every AI creates an independent Agent on the same local GPU model. The player count is not a model-copy count.</figcaption>
+          </figure>
+        </div>
+
+        <div class="step atomic-step">
+          <div class="step-head"><span class="step-number">B</span><div><h3>Click START and confirm that the roster, phase, and Live Council appear together.</h3></div></div>
+          <figure>
+            <a class="shot-link" href="assets/screenshots/quickstart/38-werewolf-game-started.png"><img src="assets/screenshots/quickstart/38-werewolf-game-started.png" alt="Ten players in the Werewolf Demo Night Action phase"></a>
+            <figcaption>This running screen is the target of every structure below: independent memory per player, one shared Runtime, and a serialized GPU inference queue.</figcaption>
+          </figure>
+        </div>
       </section>
 
       <section id="data">
@@ -150,6 +173,6 @@ Content: [Game Event] During day 2, Player 3 openly claimed to be a werewolf.</c
     </article>
   </main>
 
-  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="index.html">Overview</a> · <a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html" lang="zh-CN">中文</a></span></div></footer>
+  <footer class="site-footer"><div class="container footer-row"><span>LiteRT-LM Unreal documentation</span><span><a href="index.html">Home</a> · <a href="SYSTEMS.html">Docs Index</a> · <a href="GUIDE_MULTIPLE_CONVERSATIONS_zh.html" lang="zh-CN">中文</a></span></div></footer>
 </body>
 </html>
